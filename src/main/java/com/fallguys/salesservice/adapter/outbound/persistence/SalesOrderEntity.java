@@ -82,12 +82,21 @@ public class SalesOrderEntity {
     public SalesOrderEntity update(SalesOrder domain) {
         applyDomain(domain);
         Map<Long, SalesOrderLineEntity> lineMap = lines.stream()
+                .filter(l -> l.getId() != null)
                 .collect(Collectors.toMap(SalesOrderLineEntity::getId, l -> l));
+        List<SalesOrderLineEntity> updated = new ArrayList<>();
         domain.getLines().forEach(domainLine -> {
-            if (domainLine.getId() != null && lineMap.containsKey(domainLine.getId())) {
-                lineMap.get(domainLine.getId()).update(domainLine);
+            SalesOrderLineEntity existing =
+                    domainLine.getId() != null ? lineMap.get(domainLine.getId()) : null;
+            if (existing != null) {
+                existing.update(domainLine);
+                updated.add(existing);
+            } else {
+                updated.add(SalesOrderLineEntity.from(domainLine));
             }
         });
+        lines.clear();
+        lines.addAll(updated);
         return this;
     }
 
