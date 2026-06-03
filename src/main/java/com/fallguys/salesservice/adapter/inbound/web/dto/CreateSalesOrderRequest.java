@@ -27,10 +27,10 @@ public record CreateSalesOrderRequest(
         @Valid
         List<CreateSalesOrderLineRequest> lines
 ) {
-    public CreateSalesOrderCommand toCommand() {
+    public CreateSalesOrderCommand toCommand(String requestedBy) {
         List<CreateSalesOrderLineCommand> lineCommands = lines.stream()
                 .map(CreateSalesOrderLineRequest::toCommand)
                 .toList();
-        return new CreateSalesOrderCommand(warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.REQUESTED, lineCommands);
+        return new CreateSalesOrderCommand(warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.REQUESTED, lineCommands, requestedBy);
     }
 }

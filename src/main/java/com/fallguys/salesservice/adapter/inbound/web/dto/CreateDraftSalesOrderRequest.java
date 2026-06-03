@@ -24,10 +24,12 @@ public record CreateDraftSalesOrderRequest(
         @Valid
         List<CreateSalesOrderLineRequest> lines
 ) {
-    public CreateSalesOrderCommand toCommand() {
-        List<CreateSalesOrderLineCommand> lineCommands = lines == null ? List.of() : lines.stream()
-                .map(CreateSalesOrderLineRequest::toCommand)
-                .toList();
-        return new CreateSalesOrderCommand(warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.DRAFT, lineCommands);
+    public CreateSalesOrderCommand toCommand(String requestedBy) {
+        List<CreateSalesOrderLineCommand> lineCommands = lines == null
+                ? List.of()
+                : lines.stream()
+                    .map(CreateSalesOrderLineRequest::toCommand)
+                    .toList();
+        return new CreateSalesOrderCommand(warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.DRAFT, lineCommands, requestedBy);
     }
 }

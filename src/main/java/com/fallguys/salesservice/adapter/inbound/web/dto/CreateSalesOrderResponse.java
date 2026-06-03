@@ -1,6 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
 import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 
 import java.time.Instant;
@@ -8,7 +9,8 @@ import java.time.LocalDate;
 
 public record CreateSalesOrderResponse(
         String code,
-        String warehouseCode,
+        String fromWarehouseCode,
+        String toWarehouseCode,
         LocalDate desiredArrivalDate,
         SalesOrderStatus status,
         int totalQuantity,
@@ -16,10 +18,11 @@ public record CreateSalesOrderResponse(
 ) {
     public static CreateSalesOrderResponse from(SalesOrder domain) {
         int totalQuantity = domain.getLines().stream()
-                .mapToInt(line -> line.getRequestedQuantity())
+                .mapToInt(SalesOrderLine::getRequestedQuantity)
                 .sum();
         return new CreateSalesOrderResponse(
                 domain.getCode(),
+                domain.getFromWarehouseCode(),
                 domain.getToWarehouseCode(),
                 domain.getDesiredArrivalDate(),
                 domain.getStatus(),

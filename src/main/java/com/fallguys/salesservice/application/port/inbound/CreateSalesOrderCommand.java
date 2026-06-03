@@ -6,10 +6,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record CreateSalesOrderCommand(
-        String warehouseCode,
+        String toWarehouseCode,
         LocalDate desiredArrivalDate,
         String requestMemo,
         SalesOrderStatus status,
-        List<CreateSalesOrderLineCommand> lines
+        List<CreateSalesOrderLineCommand> lines,
+        String requestedBy
 ) {
 }
