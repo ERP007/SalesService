@@ -59,15 +59,15 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
         BranchUserInfo branchUser = checkUserPermissionPort.verify(command.requestedBy());
 
+        String soCode = generateSoCodePort.generate();
+
         List<SalesOrderLine> lines;
         if (command.status() == SalesOrderStatus.REQUESTED) {
             verifyWarehousePort.verify(command.toWarehouseCode());
-            lines = buildRequestedLines(command.lines());
+            lines = buildRequestedLines(soCode, command.lines());
         } else {
-            lines = buildDraftLines(command.lines());
+            lines = buildDraftLines(soCode, command.lines());
         }
-
-        String soCode = generateSoCodePort.generate();
         Instant now = Instant.now();
 
         SalesOrder salesOrder = new SalesOrder(
@@ -110,7 +110,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         }
     }
 
-    private List<SalesOrderLine> buildRequestedLines(List<CreateSalesOrderLineCommand> lineCommands) {
+    private List<SalesOrderLine> buildRequestedLines(String soCode, List<CreateSalesOrderLineCommand> lineCommands) {
         List<String> itemCodes = lineCommands.stream()
                 .map(CreateSalesOrderLineCommand::itemCode)
                 .toList();
@@ -120,7 +120,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
                 .map(cmd -> {
                     ItemInfo item = itemMap.get(cmd.itemCode());
                     return new SalesOrderLine(
-                            null, null, cmd.itemCode(),
+                            null, soCode, cmd.itemCode(),
                             item.itemName(), item.unit(),
                             cmd.quantity(), null, null, cmd.priority()
                     );
@@ -128,10 +128,10 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
                 .toList();
     }
 
-    private List<SalesOrderLine> buildDraftLines(List<CreateSalesOrderLineCommand> lineCommands) {
+    private List<SalesOrderLine> buildDraftLines(String soCode, List<CreateSalesOrderLineCommand> lineCommands) {
         return lineCommands.stream()
                 .map(cmd -> new SalesOrderLine(
-                        null, null, cmd.itemCode(),
+                        null, soCode, cmd.itemCode(),
                         null, null,
                         cmd.quantity(), null, null, cmd.priority()
                 ))
