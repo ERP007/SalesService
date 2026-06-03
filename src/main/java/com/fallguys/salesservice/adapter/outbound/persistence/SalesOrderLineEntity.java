@@ -18,10 +18,8 @@ public class SalesOrderLineEntity {
     @Column(nullable = false)
     private String itemSku;
 
-    @Column(nullable = false)
     private String itemNameSnapshot;
 
-    @Column(nullable = false)
     private String unitSnapshot;
 
     @Column(nullable = false)

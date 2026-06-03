@@ -19,6 +19,9 @@ public class SalesOrderEntity {
     @Id
     private String code;
 
+    @Column(name = "from_warehouse_code", nullable = false)
+    private String fromWarehouseCode;
+
     @Column(name = "to_warehouse_code", nullable = false)
     private String toWarehouseCode;
 
@@ -59,7 +62,7 @@ public class SalesOrderEntity {
                 .toList();
 
         return new SalesOrder(
-                code, toWarehouseCode, status, desiredArrivalDate, requestMemo,
+                code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
                 approval != null ? approval.toDomain() : null,
@@ -102,6 +105,7 @@ public class SalesOrderEntity {
 
     private void applyDomain(SalesOrder domain) {
         this.code = domain.getCode();
+        this.fromWarehouseCode = domain.getFromWarehouseCode();
         this.toWarehouseCode = domain.getToWarehouseCode();
         this.status = domain.getStatus();
         this.desiredArrivalDate = domain.getDesiredArrivalDate();
