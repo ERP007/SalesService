@@ -29,6 +29,7 @@ public class SalesOrderEntity {
     @Column(nullable = false)
     private SalesOrderStatus status;
 
+    @Column(nullable = false)
     private LocalDate desiredArrivalDate;
 
     @Column(columnDefinition = "text")
@@ -53,7 +54,7 @@ public class SalesOrderEntity {
     private CancellationEmbeddable cancellation;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "so_number", nullable = false)
+    @JoinColumn(name = "so_code", nullable = false)
     private List<SalesOrderLineEntity> lines = new ArrayList<>();
 
     public SalesOrder toDomain() {

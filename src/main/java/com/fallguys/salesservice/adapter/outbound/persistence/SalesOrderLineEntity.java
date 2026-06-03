@@ -40,7 +40,7 @@ public class SalesOrderLineEntity {
 
     public static SalesOrderLineEntity from(SalesOrderLine domain) {
         SalesOrderLineEntity entity = new SalesOrderLineEntity();
-        entity.itemCode = domain.getItemSku();
+        entity.itemCode = domain.getItemCode();
         entity.itemNameSnapshot = domain.getItemNameSnapshot();
         entity.unitSnapshot = domain.getUnitSnapshot();
         entity.requestedQuantity = domain.getRequestedQuantity();
@@ -51,6 +51,7 @@ public class SalesOrderLineEntity {
     }
 
     public SalesOrderLineEntity update(SalesOrderLine domain) {
+        // TODO: DRAFT → REQUESTED 전환 시 itemCode·itemNameSnapshot·unitSnapshot 갱신 필요
         this.requestedQuantity = domain.getRequestedQuantity();
         this.approvedQuantity = domain.getApprovedQuantity();
         this.deliveredQuantity = domain.getDeliveredQuantity();
