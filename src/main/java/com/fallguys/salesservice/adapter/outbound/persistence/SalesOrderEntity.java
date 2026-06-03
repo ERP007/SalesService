@@ -26,7 +26,7 @@ public class SalesOrderEntity {
     @Column(nullable = false)
     private SalesOrderStatus status;
 
-    private LocalDate expectedArrivalDate;
+    private LocalDate desiredArrivalDate;
 
     @Column(columnDefinition = "text")
     private String requestMemo;
@@ -59,7 +59,7 @@ public class SalesOrderEntity {
                 .toList();
 
         return new SalesOrder(
-                code, toWarehouseCode, status, expectedArrivalDate, requestMemo,
+                code, toWarehouseCode, status, desiredArrivalDate, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
                 approval != null ? approval.toDomain() : null,
@@ -104,7 +104,7 @@ public class SalesOrderEntity {
         this.code = domain.getCode();
         this.toWarehouseCode = domain.getToWarehouseCode();
         this.status = domain.getStatus();
-        this.expectedArrivalDate = domain.getExpectedArrivalDate();
+        this.desiredArrivalDate = domain.getDesiredArrivalDate();
         this.requestMemo = domain.getRequestMemo();
         this.creation = CreationEmbeddable.from(domain.getCreation());
         this.request = RequestEmbeddable.from(domain.getRequest());
