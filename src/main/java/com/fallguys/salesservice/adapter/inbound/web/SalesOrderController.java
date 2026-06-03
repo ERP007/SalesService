@@ -8,6 +8,7 @@ import com.fallguys.salesservice.domain.model.SalesOrder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,24 +19,24 @@ public class SalesOrderController {
     private final CreateSalesOrderUseCase createSalesOrderUseCase;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public CreateSalesOrderResponse create(
+    public ResponseEntity<CreateSalesOrderResponse> create(
             // TODO: Gateway가 주입하는 사용자 식별 헤더 키 확정 필요
             @RequestHeader("X-User-Id") String userId,
             @Valid @RequestBody CreateSalesOrderRequest request
     ) {
         SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userId));
-        return CreateSalesOrderResponse.from(salesOrder);
+        CreateSalesOrderResponse response = CreateSalesOrderResponse.from(salesOrder);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/drafts")
-    @ResponseStatus(HttpStatus.CREATED)
-    public CreateSalesOrderResponse createDraft(
+    public ResponseEntity<CreateSalesOrderResponse> createDraft(
             // TODO: Gateway가 주입하는 사용자 식별 헤더 키 확정 필요
             @RequestHeader("X-User-Id") String userId,
             @Valid @RequestBody CreateDraftSalesOrderRequest request
     ) {
         SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userId));
-        return CreateSalesOrderResponse.from(salesOrder);
+        CreateSalesOrderResponse response = CreateSalesOrderResponse.from(salesOrder);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
