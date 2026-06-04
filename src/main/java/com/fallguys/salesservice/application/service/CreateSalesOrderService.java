@@ -45,9 +45,9 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * 1) 중복 부품 코드 검증 (local)
      * 2) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 3) User 서비스 호출 → 사번으로 지점 창고 코드(fromWarehouseCode) 확보
-     * 4) [REQUESTED만] 창고 존재 검증 (Inventory 서비스, 미정)
-     * 5) [REQUESTED만] 부품 존재 확인 및 스냅샷 수집 (Item 서비스, 미정)
-     * 6) SO 코드 채번 (연도별 시퀀스, 비관적 락)
+     * 4) [REQUESTED만] 창고 존재 검증 (Inventory 서비스)
+     * 5) [REQUESTED만] 부품 존재 확인 및 스냅샷 수집 (Item 서비스)
+     * 6) SO 코드 채번 (월별 시퀀스, 비관적 락) — 원격 호출 완료 후 락 획득으로 락 범위 최소화
      * 7) 도메인 객체 생성 및 저장
      *
      * 트랜잭션: 쓰기. SO 코드 채번·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
@@ -69,12 +69,20 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
         BranchUserInfo branchUser = loadBranchUserPort.load(command.requestedBy());
 
+        Map<String, ItemInfo> itemMap = null;
+        if (command.status() == SalesOrderStatus.REQUESTED) {
+            verifyWarehousePort.verify(command.toWarehouseCode());
+            List<String> itemCodes = command.lines().stream()
+                    .map(CreateSalesOrderLineCommand::itemCode)
+                    .toList();
+            itemMap = loadItemPort.loadAll(itemCodes);
+        }
+
         String soCode = generateSoCodePort.generate();
 
         List<SalesOrderLine> lines;
         if (command.status() == SalesOrderStatus.REQUESTED) {
-            verifyWarehousePort.verify(command.toWarehouseCode());
-            lines = buildRequestedLines(soCode, command.lines());
+            lines = buildRequestedLines(soCode, command.lines(), itemMap);
         } else {
             lines = buildDraftLines(soCode, command.lines());
         }
@@ -120,12 +128,11 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         }
     }
 
-    private List<SalesOrderLine> buildRequestedLines(String soCode, List<CreateSalesOrderLineCommand> lineCommands) {
-        List<String> itemCodes = lineCommands.stream()
-                .map(CreateSalesOrderLineCommand::itemCode)
-                .toList();
-        Map<String, ItemInfo> itemMap = loadItemPort.loadAll(itemCodes);
-
+    private List<SalesOrderLine> buildRequestedLines(
+            String soCode,
+            List<CreateSalesOrderLineCommand> lineCommands,
+            Map<String, ItemInfo> itemMap
+    ) {
         return lineCommands.stream()
                 .map(cmd -> {
                     ItemInfo item = itemMap.get(cmd.itemCode());
