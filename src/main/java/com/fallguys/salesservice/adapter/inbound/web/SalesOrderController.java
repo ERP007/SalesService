@@ -3,7 +3,9 @@ package com.fallguys.salesservice.adapter.inbound.web;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateDraftSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.Valid;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class SalesOrderController {
 
     private final CreateSalesOrderUseCase createSalesOrderUseCase;
+    private final SubmitSalesOrderUseCase submitSalesOrderUseCase;
 
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
@@ -41,5 +44,17 @@ public class SalesOrderController {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode));
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
+    }
+
+    @PutMapping("/{code}")
+    public ResponseEntity<CreateSalesOrderResponse> submit(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code,
+            @Valid @RequestBody SubmitSalesOrderRequest request
+    ) {
+        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode));
+        return ResponseEntity.ok(CreateSalesOrderResponse.from(salesOrder));
     }
 }
