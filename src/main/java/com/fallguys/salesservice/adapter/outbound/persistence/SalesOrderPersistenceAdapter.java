@@ -1,23 +1,54 @@
 package com.fallguys.salesservice.adapter.outbound.persistence;
 
 import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
+import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, GenerateSoCodePort {
+public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadSalesOrderKpiPort, GenerateSoCodePort {
+
+    private static final Set<SalesOrderStatus> ACTIVE_STATUSES = Set.of(
+            SalesOrderStatus.DRAFT,
+            SalesOrderStatus.REQUESTED,
+            SalesOrderStatus.APPROVED,
+            SalesOrderStatus.DELIVERED
+    );
 
     private final SalesOrderJpaDao salesOrderJpaDao;
     private final SoNumberSequenceJpaDao soNumberSequenceJpaDao;
+
+    // totalCount는 CANCELED·REJECTED 제외한 활성 발주만 집계
+    @Override
+    public SalesOrderKpi loadByBranchCode(String branchCode) {
+        List<Object[]> rows = salesOrderJpaDao.countGroupByStatus(branchCode);
+        Map<SalesOrderStatus, Long> counts = rows.stream()
+                .collect(Collectors.toMap(r -> (SalesOrderStatus) r[0], r -> (Long) r[1]));
+        long total = ACTIVE_STATUSES.stream()
+                .mapToLong(s -> counts.getOrDefault(s, 0L))
+                .sum();
+        return new SalesOrderKpi(
+                total,
+                counts.getOrDefault(SalesOrderStatus.DRAFT, 0L),
+                counts.getOrDefault(SalesOrderStatus.REQUESTED, 0L),
+                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L)
+        );
+    }
 
     @Override
     public SalesOrder load(String soCode) {
