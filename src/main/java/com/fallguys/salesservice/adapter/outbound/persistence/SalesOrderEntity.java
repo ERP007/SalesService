@@ -4,6 +4,7 @@ import com.fallguys.salesservice.domain.model.*;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -53,6 +54,7 @@ public class SalesOrderEntity {
     @Embedded
     private CancellationEmbeddable cancellation;
 
+    @BatchSize(size = 50)
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "so_code", nullable = false)
     private List<SalesOrderLineEntity> lines = new ArrayList<>();
