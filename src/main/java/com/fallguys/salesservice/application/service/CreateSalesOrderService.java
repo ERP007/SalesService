@@ -3,7 +3,13 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.*;
+import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
+import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
+import com.fallguys.salesservice.application.port.outbound.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
+import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
@@ -22,7 +28,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
-    private final CheckUserPermissionPort checkUserPermissionPort;
+    private final LoadBranchUserPort loadBranchUserPort;
     private final VerifyWarehousePort verifyWarehousePort;
     private final LoadItemPort loadItemPort;
     private final GenerateSoCodePort generateSoCodePort;
@@ -34,7 +40,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * 흐름:
      * 1) 중복 부품 코드 검증 (local)
      * 2) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
-     * 3) 사용자 권한 검증 → fromWarehouseCode 확보 (User 서비스 또는 JWT, 미정)
+     * 3) User 서비스 호출 → 사번으로 지점 창고 코드(fromWarehouseCode) 확보
      * 4) [REQUESTED만] 창고 존재 검증 (Inventory 서비스, 미정)
      * 5) [REQUESTED만] 부품 존재 확인 및 스냅샷 수집 (Item 서비스, 미정)
      * 6) SO 코드 채번 (연도별 시퀀스, 비관적 락)
@@ -47,7 +53,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * 예외:
      * - 중복 부품: SalesOrderException (SO-05-01, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-05-02, 400)
-     * - 권한 없음: ForbiddenException (SO-05-03, 403)
+     * - 사번 미존재: ResourceNotFoundException (SO-05-03, 404)
      * - 창고 미존재: ResourceNotFoundException (SO-05-04, 404)
      * - 부품 미존재: ResourceNotFoundException (SO-05-05, 404)
      */
@@ -57,7 +63,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         validateNoDuplicateItems(command.lines());
         validateDesiredArrivalDate(command.desiredArrivalDate());
 
-        BranchUserInfo branchUser = checkUserPermissionPort.verify(command.requestedBy());
+        BranchUserInfo branchUser = loadBranchUserPort.load(command.requestedBy());
 
         String soCode = generateSoCodePort.generate();
 
