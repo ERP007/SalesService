@@ -25,7 +25,7 @@ public record CreateSalesOrderRequest(
         @NotNull
         @Size(min = 1, max = 50, message = "발주 품목은 1개 이상 50개 이하여야 합니다")
         @Valid
-        List<CreateSalesOrderLineRequest> lines
+        List<@NotNull CreateSalesOrderLineRequest> lines
 ) {
     public CreateSalesOrderCommand toCommand(String requestedBy) {
         List<CreateSalesOrderLineCommand> lineCommands = lines.stream()
