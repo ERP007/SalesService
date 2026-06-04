@@ -43,13 +43,15 @@ class SubmitSalesOrderServiceTest {
     private static final String USER_CODE = "branch001";
     private static final String FROM_WAREHOUSE = "WH-BRANCH-01";
     private static final String TO_WAREHOUSE = "WH-HQ-01";
+    private static final String DRAFT_TO_WAREHOUSE = "WH-HQ-DRAFT";
     private static final LocalDate VALID_DATE = LocalDate.now().plusDays(3);
+    private static final LocalDate DRAFT_DATE = LocalDate.now().plusDays(10);
 
     @BeforeEach
     void setUp() {
         SalesOrder draftSalesOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.DRAFT, VALID_DATE, null,
+                SO_CODE, FROM_WAREHOUSE, DRAFT_TO_WAREHOUSE,
+                SalesOrderStatus.DRAFT, DRAFT_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 null, null, null, null, null,
                 List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
@@ -76,7 +78,8 @@ class SubmitSalesOrderServiceTest {
         assertThat(result.getRequest().requestedBy()).isEqualTo(USER_CODE);
         assertThat(result.getLines()).hasSize(1);
         assertThat(result.getLines().getFirst().getItemNameSnapshot()).isEqualTo("브레이크패드");
-        assertThat(result.getToWarehouseCode()).isEqualTo(TO_WAREHOUSE);
+        assertThat(result.getToWarehouseCode()).isEqualTo(TO_WAREHOUSE).isNotEqualTo(DRAFT_TO_WAREHOUSE);
+        assertThat(result.getDesiredArrivalDate()).isEqualTo(VALID_DATE).isNotEqualTo(DRAFT_DATE);
     }
 
     @Test
