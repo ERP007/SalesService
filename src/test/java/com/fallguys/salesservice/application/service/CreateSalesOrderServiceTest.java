@@ -40,7 +40,7 @@ class CreateSalesOrderServiceTest {
     private static final String USER_CODE = "branch001";
     private static final String FROM_WAREHOUSE = "WH-BRANCH-01";
     private static final String TO_WAREHOUSE = "WH-HQ-01";
-    private static final String SO_CODE = "SO-2026-00001";
+    private static final String SO_CODE = "SO-2026-06-00001";
     private static final LocalDate VALID_DATE = LocalDate.now().plusDays(3);
 
     @BeforeEach
