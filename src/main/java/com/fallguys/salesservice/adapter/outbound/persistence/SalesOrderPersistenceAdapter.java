@@ -1,18 +1,27 @@
 package com.fallguys.salesservice.adapter.outbound.persistence;
 
+import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
+import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.SalesOrderSummary;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +30,12 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadSalesOrderKpiPort, GenerateSoCodePort {
+public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadSalesOrderKpiPort, GenerateSoCodePort, LoadBranchSalesOrdersPort {
+
+    private static final Map<String, String> SORT_FIELD_TO_JPA = Map.of(
+            "requestedAt", "request.requestedAt",
+            "desiredArrivalDate", "desiredArrivalDate"
+    );
 
     private static final Set<SalesOrderStatus> ACTIVE_STATUSES = Set.of(
             SalesOrderStatus.DRAFT,
@@ -84,6 +98,62 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
         SoNumberSequenceEntity seq = resolveSequence(monthKey);
         return String.format("SO-%d-%02d-%04d", today.getYear(), today.getMonthValue(), seq.getLastSeq());
+    }
+
+    @Override
+    public SalesOrderSummaryPage load(BranchSalesOrderFilter filter) {
+        Sort.Direction direction = "asc".equals(filter.sortDirection()) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
+        Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
+
+        String searchPattern = filter.search() != null ? "%" + filter.search() + "%" : null;
+
+        Page<SalesOrderEntity> page = salesOrderJpaDao.findBranchOrders(
+                filter.warehouseCode(),
+                searchPattern,
+                filter.statuses(),
+                filter.startInstant(),
+                filter.endInstant(),
+                pageable
+        );
+
+        List<SalesOrderSummary> summaries = page.getContent().stream()
+                .map(this::toSummary)
+                .toList();
+
+        return new SalesOrderSummaryPage(
+                summaries,
+                filter.page() + 1,
+                filter.size(),
+                page.getTotalElements(),
+                page.getTotalPages()
+        );
+    }
+
+    private SalesOrderSummary toSummary(SalesOrderEntity entity) {
+        List<SalesOrderLineEntity> lines = entity.getLines();
+        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getRequestedQuantity).sum();
+
+        String unitSnapshot = null;
+        if (!lines.isEmpty()) {
+            long distinctUnits = lines.stream()
+                    .map(SalesOrderLineEntity::getUnitSnapshot)
+                    .distinct()
+                    .count();
+            unitSnapshot = distinctUnits == 1 ? lines.getFirst().getUnitSnapshot() : null;
+        }
+
+        Instant requestedAt = entity.getRequest() != null ? entity.getRequest().requestedAt() : null;
+
+        return new SalesOrderSummary(
+                entity.getCode(),
+                entity.getStatus(),
+                entity.getDesiredArrivalDate(),
+                requestedAt,
+                lines.size(),
+                totalQuantity,
+                unitSnapshot
+        );
     }
 
     // 월 첫 채번 시 동시 insert 충돌 방어: DataIntegrityViolationException 발생 시 재조회 후 증가
