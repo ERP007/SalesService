@@ -1,0 +1,65 @@
+package com.fallguys.salesservice.adapter.inbound.web;
+
+import com.fallguys.salesservice.domain.exception.BusinessException;
+import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+import java.time.Instant;
+import java.util.stream.Collectors;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(BusinessException.class)
+    public ProblemDetail handleBusiness(BusinessException ex) {
+        log.warn("Business exception: code={}, message={}", ex.getCode(), ex.getMessage());
+        return build(HttpStatus.BAD_REQUEST, ex.getCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
+        log.warn("Resource not found: code={}, message={}", ex.getCode(), ex.getMessage());
+        return build(HttpStatus.NOT_FOUND, ex.getCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ProblemDetail handleForbidden(ForbiddenException ex) {
+        log.warn("Forbidden: code={}, message={}", ex.getCode(), ex.getMessage());
+        return build(HttpStatus.FORBIDDEN, ex.getCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception ex) {
+        log.error("Unexpected error", ex);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "SO-00-00", "서버 오류가 발생했습니다");
+    }
+
+    @Override
+    protected org.springframework.http.ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex,
+            org.springframework.http.@NonNull HttpHeaders headers,
+            org.springframework.http.@NonNull HttpStatusCode status,
+            org.springframework.web.context.request.@NonNull WebRequest request) {
+        String detail = ex.getBindingResult().getFieldErrors().stream()
+                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                .collect(Collectors.joining(", "));
+        ProblemDetail pd = build(HttpStatus.BAD_REQUEST, "SO-00-01", detail);
+        return org.springframework.http.ResponseEntity.badRequest().body(pd);
+    }
+
+    private ProblemDetail build(HttpStatus status, String errorCode, String detail) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, detail);
+        pd.setProperty("errorCode", errorCode);
+        pd.setProperty("timestamp", Instant.now().toString());
+        return pd;
+    }
+}

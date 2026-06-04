@@ -11,9 +11,10 @@ import java.util.List;
 public class SalesOrder {
 
     private final String code;
+    private final String fromWarehouseCode;
     private final String toWarehouseCode;
     private SalesOrderStatus status;
-    private LocalDate expectedArrivalDate;
+    private LocalDate desiredArrivalDate;
     private String requestMemo;
 
     private final SalesOrderCreation creation;

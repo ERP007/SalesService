@@ -19,6 +19,9 @@ public class SalesOrderEntity {
     @Id
     private String code;
 
+    @Column(name = "from_warehouse_code", nullable = false)
+    private String fromWarehouseCode;
+
     @Column(name = "to_warehouse_code", nullable = false)
     private String toWarehouseCode;
 
@@ -26,7 +29,8 @@ public class SalesOrderEntity {
     @Column(nullable = false)
     private SalesOrderStatus status;
 
-    private LocalDate expectedArrivalDate;
+    @Column(nullable = false)
+    private LocalDate desiredArrivalDate;
 
     @Column(columnDefinition = "text")
     private String requestMemo;
@@ -50,7 +54,7 @@ public class SalesOrderEntity {
     private CancellationEmbeddable cancellation;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JoinColumn(name = "so_number", nullable = false)
+    @JoinColumn(name = "so_code", nullable = false)
     private List<SalesOrderLineEntity> lines = new ArrayList<>();
 
     public SalesOrder toDomain() {
@@ -59,7 +63,7 @@ public class SalesOrderEntity {
                 .toList();
 
         return new SalesOrder(
-                code, toWarehouseCode, status, expectedArrivalDate, requestMemo,
+                code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
                 approval != null ? approval.toDomain() : null,
@@ -102,9 +106,10 @@ public class SalesOrderEntity {
 
     private void applyDomain(SalesOrder domain) {
         this.code = domain.getCode();
+        this.fromWarehouseCode = domain.getFromWarehouseCode();
         this.toWarehouseCode = domain.getToWarehouseCode();
         this.status = domain.getStatus();
-        this.expectedArrivalDate = domain.getExpectedArrivalDate();
+        this.desiredArrivalDate = domain.getDesiredArrivalDate();
         this.requestMemo = domain.getRequestMemo();
         this.creation = CreationEmbeddable.from(domain.getCreation());
         this.request = RequestEmbeddable.from(domain.getRequest());
