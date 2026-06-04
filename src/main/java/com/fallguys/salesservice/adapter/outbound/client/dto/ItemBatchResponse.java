@@ -4,7 +4,7 @@ import java.util.List;
 
 public record ItemBatchResponse(
         List<ItemData> items,
-        List<Long> missingIds
+        List<String> missingCodes
 ) {
     public record ItemData(
             String itemCode,

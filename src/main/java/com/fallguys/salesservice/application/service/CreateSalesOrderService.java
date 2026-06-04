@@ -12,7 +12,11 @@ import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.SalesOrderLine;
+import com.fallguys.salesservice.domain.model.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,7 +57,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * 예외:
      * - 중복 부품: SalesOrderException (SO-05-01, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-05-02, 400)
-     * - 사번 미존재: ResourceNotFoundException (SO-05-03, 404)
+     * - 사번 미존재: ResourceNotFoundException (SO-05-06, 404)
      * - 창고 미존재: ResourceNotFoundException (SO-05-04, 404)
      * - 부품 미존재: ResourceNotFoundException (SO-05-05, 404)
      */
