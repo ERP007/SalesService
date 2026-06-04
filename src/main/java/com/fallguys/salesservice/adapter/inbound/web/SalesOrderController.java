@@ -1,14 +1,18 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
+import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderPageResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateDraftSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.Valid;
@@ -27,6 +31,7 @@ public class SalesOrderController {
     private final CreateSalesOrderUseCase createSalesOrderUseCase;
     private final SubmitSalesOrderUseCase submitSalesOrderUseCase;
     private final GetSalesOrderKpiUseCase getSalesOrderKpiUseCase;
+    private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
 
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
@@ -70,6 +75,18 @@ public class SalesOrderController {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(userCode);
         SalesOrderKpiResponse response = SalesOrderKpiResponse.from(kpi);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/branch")
+    public ResponseEntity<BranchSalesOrderPageResponse> getBranchOrders(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @ModelAttribute BranchSalesOrderRequest request
+    ) {
+        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        SalesOrderSummaryPage summaryPage = getBranchSalesOrdersUseCase.getBranchOrders(request.toQuery(userCode));
+        BranchSalesOrderPageResponse response = BranchSalesOrderPageResponse.from(summaryPage);
         return ResponseEntity.ok(response);
     }
 }
