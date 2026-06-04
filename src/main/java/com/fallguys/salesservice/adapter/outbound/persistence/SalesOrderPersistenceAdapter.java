@@ -4,6 +4,7 @@ import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -39,11 +40,22 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, Generat
         LocalDate today = LocalDate.now();
         LocalDate monthKey = today.withDayOfMonth(1);
 
-        SoNumberSequenceEntity seq = soNumberSequenceJpaDao.findByIdWithLock(monthKey)
-                .map(SoNumberSequenceEntity::increment)
-                .orElseGet(() -> SoNumberSequenceEntity.createFirst(monthKey));
-        soNumberSequenceJpaDao.save(seq);
-
+        SoNumberSequenceEntity seq = resolveSequence(monthKey);
         return String.format("SO-%d-%02d-%04d", today.getYear(), today.getMonthValue(), seq.getLastSeq());
+    }
+
+    // 월 첫 채번 시 동시 insert 충돌 방어: DataIntegrityViolationException 발생 시 재조회 후 증가
+    private SoNumberSequenceEntity resolveSequence(LocalDate monthKey) {
+        try {
+            SoNumberSequenceEntity seq = soNumberSequenceJpaDao.findByIdWithLock(monthKey)
+                    .map(SoNumberSequenceEntity::increment)
+                    .orElseGet(() -> SoNumberSequenceEntity.createFirst(monthKey));
+            return soNumberSequenceJpaDao.save(seq);
+        } catch (DataIntegrityViolationException e) {
+            SoNumberSequenceEntity seq = soNumberSequenceJpaDao.findByIdWithLock(monthKey)
+                    .orElseThrow(() -> new IllegalStateException("SO 채번 시퀀스 재조회 실패"));
+            seq.increment();
+            return soNumberSequenceJpaDao.save(seq);
+        }
     }
 }
