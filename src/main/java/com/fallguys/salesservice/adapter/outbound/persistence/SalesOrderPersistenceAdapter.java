@@ -1,7 +1,10 @@
 package com.fallguys.salesservice.adapter.outbound.persistence;
 
 import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
+import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
+import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -11,10 +14,18 @@ import java.time.LocalDate;
 
 @Component
 @RequiredArgsConstructor
-public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, GenerateSoCodePort {
+public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, GenerateSoCodePort {
 
     private final SalesOrderJpaDao salesOrderJpaDao;
     private final SoNumberSequenceJpaDao soNumberSequenceJpaDao;
+
+    @Override
+    public SalesOrder load(String soCode) {
+        return salesOrderJpaDao.findById(soCode)
+                .map(SalesOrderEntity::toDomain)
+                .orElseThrow(() -> new ResourceNotFoundException(SalesErrorCode.SO_NOT_FOUND,
+                        "발주를 찾을 수 없습니다: " + soCode));
+    }
 
     @Override
     public SalesOrder save(SalesOrder salesOrder) {
