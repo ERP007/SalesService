@@ -21,6 +21,7 @@ public record CreateDraftSalesOrderRequest(
         @Size(max = 500, message = "메모는 500자 이하여야 합니다")
         String memo,
 
+        @Size(max = 50, message = "발주 품목은 50개 이하여야 합니다")
         @Valid
         List<CreateSalesOrderLineRequest> lines
 ) {
