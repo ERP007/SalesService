@@ -38,3 +38,6 @@ out/
 
 /node_modules
 CLAUDE.md
+
+src/main/resources/application-prod.yml
+src/main/resources/application.prod.yml
