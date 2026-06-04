@@ -14,7 +14,8 @@ public enum SalesErrorCode {
     USER_NOT_FOUND("SO-05-06", "존재하지 않는 사용자입니다"),
     INVALID_STATUS_TRANSITION("SO-05-07", "현재 상태에서 허용되지 않는 작업입니다"),
     SO_NOT_FOUND("SO-06-01", "존재하지 않는 발주입니다"),
-    SO_FORBIDDEN("SO-06-02", "해당 발주에 대한 접근 권한이 없습니다");
+    SO_FORBIDDEN("SO-06-02", "해당 발주에 대한 접근 권한이 없습니다"),
+    INVALID_QUERY_PARAM("SO-05-08", "유효하지 않은 조회 파라미터입니다");
 
     private final String code;
     private final String defaultMessage;
