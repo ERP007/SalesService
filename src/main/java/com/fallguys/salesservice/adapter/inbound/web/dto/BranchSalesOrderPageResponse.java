@@ -10,11 +10,10 @@ public record BranchSalesOrderPageResponse(
         int size,
         long totalElements,
         int totalPages,
-        String sort,
         boolean hasPrevious,
         boolean hasNext
 ) {
-    public static BranchSalesOrderPageResponse from(SalesOrderSummaryPage summaryPage, String sort) {
+    public static BranchSalesOrderPageResponse from(SalesOrderSummaryPage summaryPage) {
         List<BranchSalesOrderSummaryResponse> content = summaryPage.content().stream()
                 .map(BranchSalesOrderSummaryResponse::from)
                 .toList();
@@ -24,7 +23,6 @@ public record BranchSalesOrderPageResponse(
                 summaryPage.size(),
                 summaryPage.totalElements(),
                 summaryPage.totalPages(),
-                sort,
                 summaryPage.page() > 1,
                 summaryPage.page() < summaryPage.totalPages()
         );

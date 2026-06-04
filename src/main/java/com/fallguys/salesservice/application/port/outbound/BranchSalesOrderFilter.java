@@ -7,7 +7,7 @@ import java.util.List;
 
 public record BranchSalesOrderFilter(
         String warehouseCode,
-        String searchPattern,
+        String search,
         List<SalesOrderStatus> statuses,
         Instant startInstant,
         Instant endInstant,
