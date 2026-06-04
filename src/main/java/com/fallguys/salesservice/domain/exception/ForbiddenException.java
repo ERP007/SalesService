@@ -1,15 +1,8 @@
 package com.fallguys.salesservice.domain.exception;
 
-public class ForbiddenException extends RuntimeException {
-
-    private final String code;
+public class ForbiddenException extends BusinessException {
 
     public ForbiddenException(SalesErrorCode errorCode) {
-        super(errorCode.getDefaultMessage());
-        this.code = errorCode.getCode();
-    }
-
-    public String getCode() {
-        return code;
+        super(errorCode.getCode(), errorCode.getDefaultMessage());
     }
 }
