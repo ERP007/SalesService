@@ -62,14 +62,13 @@ public class SalesOrderController {
         return ResponseEntity.ok(CreateSalesOrderResponse.from(salesOrder));
     }
 
-    @GetMapping("/kpi")
-    public ResponseEntity<SalesOrderKpiResponse> getKpi(
-            @AuthenticationPrincipal Jwt jwt,
-            @RequestParam String branchCode
+    @GetMapping("/kpi/branch")
+    public ResponseEntity<SalesOrderKpiResponse> getBranchKpi(
+            @AuthenticationPrincipal Jwt jwt
     ) {
         JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
-        SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(branchCode, userCode);
+        SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(userCode);
         SalesOrderKpiResponse response = SalesOrderKpiResponse.from(kpi);
         return ResponseEntity.ok(response);
     }
