@@ -1,23 +1,44 @@
 package com.fallguys.salesservice.adapter.outbound.persistence;
 
 import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
+import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, GenerateSoCodePort {
+public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadSalesOrderKpiPort, GenerateSoCodePort {
 
     private final SalesOrderJpaDao salesOrderJpaDao;
     private final SoNumberSequenceJpaDao soNumberSequenceJpaDao;
+
+    // 상태가 없는 지점은 count 0으로 처리
+    @Override
+    public SalesOrderKpi loadByBranchCode(String branchCode) {
+        List<Object[]> rows = salesOrderJpaDao.countGroupByStatus(branchCode);
+        Map<SalesOrderStatus, Long> counts = rows.stream()
+                .collect(Collectors.toMap(r -> (SalesOrderStatus) r[0], r -> (Long) r[1]));
+        long total = counts.values().stream().mapToLong(Long::longValue).sum();
+        return new SalesOrderKpi(
+                total,
+                counts.getOrDefault(SalesOrderStatus.REQUESTED, 0L),
+                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L),
+                counts.getOrDefault(SalesOrderStatus.DELIVERED, 0L)
+        );
+    }
 
     @Override
     public SalesOrder load(String soCode) {
