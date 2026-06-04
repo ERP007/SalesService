@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 
@@ -48,7 +49,7 @@ public class GetBranchSalesOrdersService implements GetBranchSalesOrdersUseCase 
         BranchUserInfo branchUser = loadBranchUserPort.load(query.userCode());
 
         Instant startInstant = query.startDate().atStartOfDay(ZoneOffset.UTC).toInstant();
-        Instant endInstant = query.endDate().atTime(23, 59, 59).atOffset(ZoneOffset.UTC).toInstant();
+        Instant endInstant = query.endDate().atTime(LocalTime.MAX).atOffset(ZoneOffset.UTC).toInstant();
 
         BranchSalesOrderFilter filter = new BranchSalesOrderFilter(
                 branchUser.warehouseCode(),
