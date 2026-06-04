@@ -16,27 +16,37 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadSalesOrderKpiPort, GenerateSoCodePort {
 
+    private static final Set<SalesOrderStatus> ACTIVE_STATUSES = Set.of(
+            SalesOrderStatus.DRAFT,
+            SalesOrderStatus.REQUESTED,
+            SalesOrderStatus.APPROVED,
+            SalesOrderStatus.DELIVERED
+    );
+
     private final SalesOrderJpaDao salesOrderJpaDao;
     private final SoNumberSequenceJpaDao soNumberSequenceJpaDao;
 
-    // 상태가 없는 지점은 count 0으로 처리
+    // totalCount는 CANCELED·REJECTED 제외한 활성 발주만 집계
     @Override
     public SalesOrderKpi loadByBranchCode(String branchCode) {
         List<Object[]> rows = salesOrderJpaDao.countGroupByStatus(branchCode);
         Map<SalesOrderStatus, Long> counts = rows.stream()
                 .collect(Collectors.toMap(r -> (SalesOrderStatus) r[0], r -> (Long) r[1]));
-        long total = counts.values().stream().mapToLong(Long::longValue).sum();
+        long total = ACTIVE_STATUSES.stream()
+                .mapToLong(s -> counts.getOrDefault(s, 0L))
+                .sum();
         return new SalesOrderKpi(
                 total,
+                counts.getOrDefault(SalesOrderStatus.DRAFT, 0L),
                 counts.getOrDefault(SalesOrderStatus.REQUESTED, 0L),
-                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L),
-                counts.getOrDefault(SalesOrderStatus.DELIVERED, 0L)
+                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L)
         );
     }
 

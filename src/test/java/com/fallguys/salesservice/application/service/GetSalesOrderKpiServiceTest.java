@@ -36,7 +36,7 @@ class GetSalesOrderKpiServiceTest {
         String userCode = "EMP-001";
         String branchCode = "WH-BRANCH-01";
         BranchUserInfo branchUser = new BranchUserInfo(branchCode);
-        SalesOrderKpi expected = new SalesOrderKpi(10L, 4L, 3L, 3L);
+        SalesOrderKpi expected = new SalesOrderKpi(10L, 3L, 4L, 3L);
 
         given(loadBranchUserPort.load(userCode)).willReturn(branchUser);
         given(loadSalesOrderKpiPort.loadByBranchCode(branchCode)).willReturn(expected);
@@ -46,9 +46,9 @@ class GetSalesOrderKpiServiceTest {
 
         // then
         assertThat(result.totalCount()).isEqualTo(10L);
+        assertThat(result.draftCount()).isEqualTo(3L);
         assertThat(result.requestedCount()).isEqualTo(4L);
         assertThat(result.approvedCount()).isEqualTo(3L);
-        assertThat(result.deliveredCount()).isEqualTo(3L);
     }
 
     @Test
@@ -67,9 +67,9 @@ class GetSalesOrderKpiServiceTest {
 
         // then
         assertThat(result.totalCount()).isZero();
+        assertThat(result.draftCount()).isZero();
         assertThat(result.requestedCount()).isZero();
         assertThat(result.approvedCount()).isZero();
-        assertThat(result.deliveredCount()).isZero();
     }
 
     @Test
@@ -112,7 +112,7 @@ class GetSalesOrderKpiServiceTest {
         String userCode = "EMP-001";
         String branchCode = "WH-BRANCH-01";
         BranchUserInfo branchUser = new BranchUserInfo(branchCode);
-        SalesOrderKpi kpi = new SalesOrderKpi(5L, 2L, 2L, 1L);
+        SalesOrderKpi kpi = new SalesOrderKpi(5L, 1L, 2L, 2L);
 
         given(loadBranchUserPort.load(userCode)).willReturn(branchUser);
         given(loadSalesOrderKpiPort.loadByBranchCode(branchCode)).willReturn(kpi);
