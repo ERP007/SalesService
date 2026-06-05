@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.domain.model;
 
+import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -44,7 +44,7 @@ public class SalesOrder {
                               LocalDate desiredArrivalDate, String requestMemo,
                               List<SalesOrderLine> lines) {
         if (this.status != SalesOrderStatus.DRAFT) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DRAFT 상태에서만 요청 가능합니다. 현재 상태: " + this.status);
         }
         this.toWarehouseCode = toWarehouseCode;
@@ -70,7 +70,7 @@ public class SalesOrder {
      */
     public void cancel(String canceledBy, Instant now, String reason) {
         if (this.status != SalesOrderStatus.REQUESTED) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "REQUESTED 상태에서만 취소 가능합니다. 현재 상태: " + this.status);
         }
         this.cancellation = new SalesOrderCancellation(canceledBy, now, reason);
