@@ -3,6 +3,7 @@ package com.fallguys.salesservice.adapter.inbound.web.dto;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.UserRole;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -27,10 +28,10 @@ public record CreateSalesOrderRequest(
         @Valid
         List<@NotNull CreateSalesOrderLineRequest> lines
 ) {
-    public CreateSalesOrderCommand toCommand(String requestedBy) {
+    public CreateSalesOrderCommand toCommand(String requestedBy, UserRole role) {
         List<CreateSalesOrderLineCommand> lineCommands = lines.stream()
                 .map(CreateSalesOrderLineRequest::toCommand)
                 .toList();
-        return new CreateSalesOrderCommand(warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.REQUESTED, lineCommands, requestedBy);
+        return new CreateSalesOrderCommand(warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.REQUESTED, lineCommands, requestedBy, role);
     }
 }

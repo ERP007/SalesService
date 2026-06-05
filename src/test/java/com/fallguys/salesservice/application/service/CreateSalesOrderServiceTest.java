@@ -109,7 +109,7 @@ class CreateSalesOrderServiceTest {
         CreateSalesOrderCommand command = new CreateSalesOrderCommand(
                 TO_WAREHOUSE, LocalDate.now(), null, SalesOrderStatus.REQUESTED,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)),
-                USER_CODE
+                USER_CODE, UserRole.BRANCH_STAFF
         );
 
         assertThatThrownBy(() -> service.create(command))
@@ -121,7 +121,7 @@ class CreateSalesOrderServiceTest {
         CreateSalesOrderCommand command = new CreateSalesOrderCommand(
                 TO_WAREHOUSE, LocalDate.now().plusDays(61), null, SalesOrderStatus.REQUESTED,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)),
-                USER_CODE
+                USER_CODE, UserRole.BRANCH_STAFF
         );
 
         assertThatThrownBy(() -> service.create(command))
@@ -179,10 +179,10 @@ class CreateSalesOrderServiceTest {
     }
 
     private CreateSalesOrderCommand requestedCommand(List<CreateSalesOrderLineCommand> lines) {
-        return new CreateSalesOrderCommand(TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.REQUESTED, lines, USER_CODE);
+        return new CreateSalesOrderCommand(TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.REQUESTED, lines, USER_CODE, UserRole.BRANCH_STAFF);
     }
 
     private CreateSalesOrderCommand draftCommand(List<CreateSalesOrderLineCommand> lines) {
-        return new CreateSalesOrderCommand(TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.DRAFT, lines, USER_CODE);
+        return new CreateSalesOrderCommand(TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.DRAFT, lines, USER_CODE, UserRole.BRANCH_STAFF);
     }
 }

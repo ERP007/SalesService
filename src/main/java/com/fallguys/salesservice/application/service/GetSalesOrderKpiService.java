@@ -5,6 +5,9 @@ import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
 import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
+import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +29,15 @@ public class GetSalesOrderKpiService implements GetSalesOrderKpiUseCase {
      * 트랜잭션: 읽기 전용.
      *
      * 예외:
+     * - HQ 계열 또는 미허용 역할: ForbiddenException (SO-05-03, 403)
      * - 사번 미존재: ResourceNotFoundException (SO-05-06, 404)
      */
     @Override
     @Transactional(readOnly = true)
-    public SalesOrderKpi getKpi(String requestedBy) {
+    public SalesOrderKpi getKpi(String requestedBy, UserRole role) {
+        if (role != UserRole.BRANCH_MANAGER && role != UserRole.BRANCH_STAFF) {
+            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+        }
         BranchUserInfo branchUser = loadBranchUserPort.load(requestedBy);
         return loadSalesOrderKpiPort.loadByBranchCode(branchUser.warehouseCode());
     }

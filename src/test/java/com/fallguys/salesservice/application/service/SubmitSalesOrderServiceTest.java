@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.outbound.*;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -105,7 +106,7 @@ class SubmitSalesOrderServiceTest {
 
         assertThatThrownBy(() -> service.submit(command(List.of(
                 new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
-        )))).isInstanceOf(SalesOrderException.class);
+        )))).isInstanceOf(InvalidStatusTransitionException.class);
     }
 
     @Test
@@ -120,7 +121,7 @@ class SubmitSalesOrderServiceTest {
     @Test
     void submit_desiredArrivalDateToday_throwsSalesOrderException() {
         SubmitSalesOrderCommand command = new SubmitSalesOrderCommand(
-                SO_CODE, USER_CODE, TO_WAREHOUSE, LocalDate.now(), null,
+                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, TO_WAREHOUSE, LocalDate.now(), null,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
         );
 
@@ -131,7 +132,7 @@ class SubmitSalesOrderServiceTest {
     @Test
     void submit_desiredArrivalDateOver60Days_throwsSalesOrderException() {
         SubmitSalesOrderCommand command = new SubmitSalesOrderCommand(
-                SO_CODE, USER_CODE, TO_WAREHOUSE, LocalDate.now().plusDays(61), null,
+                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, TO_WAREHOUSE, LocalDate.now().plusDays(61), null,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
         );
 
@@ -180,6 +181,6 @@ class SubmitSalesOrderServiceTest {
     }
 
     private SubmitSalesOrderCommand command(List<CreateSalesOrderLineCommand> lines) {
-        return new SubmitSalesOrderCommand(SO_CODE, USER_CODE, TO_WAREHOUSE, VALID_DATE, null, lines);
+        return new SubmitSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, TO_WAREHOUSE, VALID_DATE, null, lines);
     }
 }

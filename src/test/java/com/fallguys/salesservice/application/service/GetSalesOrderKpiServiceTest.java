@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderKpiPort
 import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.model.UserRole;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -41,7 +42,7 @@ class GetSalesOrderKpiServiceTest {
         given(loadSalesOrderKpiPort.loadByBranchCode(warehouseCode)).willReturn(expected);
 
         // when
-        SalesOrderKpi result = sut.getKpi(userCode);
+        SalesOrderKpi result = sut.getKpi(userCode, UserRole.BRANCH_STAFF);
 
         // then
         assertThat(result.totalCount()).isEqualTo(10L);
@@ -62,7 +63,7 @@ class GetSalesOrderKpiServiceTest {
         given(loadSalesOrderKpiPort.loadByBranchCode(warehouseCode)).willReturn(emptyKpi);
 
         // when
-        SalesOrderKpi result = sut.getKpi(userCode);
+        SalesOrderKpi result = sut.getKpi(userCode, UserRole.BRANCH_STAFF);
 
         // then
         assertThat(result.totalCount()).isZero();
@@ -80,7 +81,7 @@ class GetSalesOrderKpiServiceTest {
                 .willThrow(new ResourceNotFoundException(SalesErrorCode.USER_NOT_FOUND));
 
         // when / then
-        assertThatThrownBy(() -> sut.getKpi(userCode))
+        assertThatThrownBy(() -> sut.getKpi(userCode, UserRole.BRANCH_STAFF))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining(SalesErrorCode.USER_NOT_FOUND.getDefaultMessage());
 
@@ -99,7 +100,7 @@ class GetSalesOrderKpiServiceTest {
         given(loadSalesOrderKpiPort.loadByBranchCode(warehouseCode)).willReturn(kpi);
 
         // when
-        sut.getKpi(userCode);
+        sut.getKpi(userCode, UserRole.BRANCH_STAFF);
 
         // then
         then(loadSalesOrderKpiPort).should().loadByBranchCode(warehouseCode);

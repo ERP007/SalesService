@@ -15,7 +15,7 @@ import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderLine;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,8 +55,9 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * 추후 외부 호출을 트랜잭션 진입 전으로 분리하는 리팩토링 고려.
      *
      * 예외:
+     * - HQ 계열 또는 미허용 역할: ForbiddenException (SO-05-03, 403)
      * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
-     * - DRAFT 아님: SalesOrderException (SO-05-07, 400)
+     * - DRAFT 아님: InvalidStatusTransitionException (SO-05-07, 409)
      * - 중복 부품: SalesOrderException (SO-05-01, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-05-02, 400)
      * - 사번 미존재: ResourceNotFoundException (SO-05-06, 404)
@@ -67,12 +68,10 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder submit(SubmitSalesOrderCommand command) {
-        SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
-
-        if (salesOrder.getStatus() != SalesOrderStatus.DRAFT) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_STATUS_TRANSITION,
-                    "DRAFT 상태에서만 요청 가능합니다. 현재 상태: " + salesOrder.getStatus());
+        if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
+            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
         }
+        SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
         validateNoDuplicateItems(command.lines());
         validateDesiredArrivalDate(command.desiredArrivalDate());
