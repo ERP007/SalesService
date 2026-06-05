@@ -1,6 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
 import com.fallguys.salesservice.domain.exception.BusinessException;
+import com.fallguys.salesservice.domain.exception.ConflictException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleForbidden(ForbiddenException ex) {
         log.warn("Forbidden: code={}, message={}", ex.getCode(), ex.getMessage());
         return build(HttpStatus.FORBIDDEN, ex.getCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ProblemDetail handleConflict(ConflictException ex) {
+        log.warn("Conflict: code={}, message={}", ex.getCode(), ex.getMessage());
+        return build(HttpStatus.CONFLICT, ex.getCode(), ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
