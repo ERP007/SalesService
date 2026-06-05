@@ -2,6 +2,7 @@ package com.fallguys.salesservice.adapter.inbound.web.dto;
 
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
 import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.SalesOrderApproval;
 import com.fallguys.salesservice.domain.model.SalesOrderLine;
 
 import java.time.Instant;
@@ -37,9 +38,10 @@ public record BranchSalesOrderDetailResponse(
 
     public static BranchSalesOrderDetailResponse from(SalesOrderDetail detail) {
         SalesOrder order = detail.salesOrder();
-        Instant approvedAt = order.getApproval() != null ? order.getApproval().approvedAt() : null;
-        String invoiceNumber = order.getApproval() != null ? order.getApproval().invoiceNumber() : null;
-        String carrierType = order.getApproval() != null ? order.getApproval().carrierType() : null;
+        SalesOrderApproval approval = order.getApproval();
+        Instant approvedAt = approval != null ? approval.approvedAt() : null;
+        String invoiceNumber = approval != null ? approval.invoiceNumber() : null;
+        String carrierType = approval != null ? approval.carrierType() : null;
 
         List<LineResponse> lines = order.getLines() != null
                 ? order.getLines().stream().map(LineResponse::from).toList()
