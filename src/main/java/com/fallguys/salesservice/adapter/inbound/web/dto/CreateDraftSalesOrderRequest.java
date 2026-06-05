@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record CreateDraftSalesOrderRequest(
-        @NotBlank(message = "수신 창고 지정은 필수입니다")
+        @NotBlank(message = "창고 지정은 필수입니다")
         String warehouseCode,
 
         @NotNull(message = "도착 희망일은 필수입니다")
