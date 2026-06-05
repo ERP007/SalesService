@@ -43,9 +43,9 @@ public class SalesOrderController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateSalesOrderRequest request
     ) {
-        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
-        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode));
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role));
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
     }
 
@@ -54,9 +54,9 @@ public class SalesOrderController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateDraftSalesOrderRequest request
     ) {
-        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
-        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode));
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role));
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
     }
 
@@ -66,9 +66,9 @@ public class SalesOrderController {
             @PathVariable String code,
             @Valid @RequestBody SubmitSalesOrderRequest request
     ) {
-        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
-        SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode));
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode, role));
         return ResponseEntity.ok(CreateSalesOrderResponse.from(salesOrder));
     }
 
@@ -78,7 +78,6 @@ public class SalesOrderController {
             @PathVariable String code,
             @Valid @RequestBody CancelSalesOrderRequest request
     ) {
-        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         SalesOrder salesOrder = cancelSalesOrderUseCase.cancel(
@@ -91,9 +90,9 @@ public class SalesOrderController {
     public ResponseEntity<SalesOrderKpiResponse> getBranchKpi(
             @AuthenticationPrincipal Jwt jwt
     ) {
-        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
-        SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(userCode);
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(userCode, role);
         SalesOrderKpiResponse response = SalesOrderKpiResponse.from(kpi);
         return ResponseEntity.ok(response);
     }
@@ -103,9 +102,9 @@ public class SalesOrderController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @ModelAttribute BranchSalesOrderRequest request
     ) {
-        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
-        SalesOrderSummaryPage summaryPage = getBranchSalesOrdersUseCase.getBranchOrders(request.toQuery(userCode));
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrderSummaryPage summaryPage = getBranchSalesOrdersUseCase.getBranchOrders(request.toQuery(userCode, role));
         BranchSalesOrderPageResponse response = BranchSalesOrderPageResponse.from(summaryPage);
         return ResponseEntity.ok(response);
     }
