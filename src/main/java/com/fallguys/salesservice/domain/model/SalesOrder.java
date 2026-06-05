@@ -54,4 +54,26 @@ public class SalesOrder {
         this.status = SalesOrderStatus.REQUESTED;
         this.request = new SalesOrderRequest(requestedBy, now);
     }
+
+    /**
+     * REQUESTED 상태의 발주를 CANCELED로 전환한다.
+     *
+     * 흐름:
+     * 1) REQUESTED 상태인지 검증한다.
+     * 2) 취소 이력(canceledBy, canceledAt, reason)을 기록한다.
+     * 3) 상태를 CANCELED로 전환한다.
+     *
+     * 트랜잭션: 쓰기. 조회·취소·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
+     *
+     * 예외:
+     * - REQUESTED가 아닌 경우: SalesOrderException (SO-05-07, 400)
+     */
+    public void cancel(String canceledBy, Instant now, String reason) {
+        if (this.status != SalesOrderStatus.REQUESTED) {
+            throw new SalesOrderException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "REQUESTED 상태에서만 취소 가능합니다. 현재 상태: " + this.status);
+        }
+        this.cancellation = new SalesOrderCancellation(canceledBy, now, reason);
+        this.status = SalesOrderStatus.CANCELED;
+    }
 }
