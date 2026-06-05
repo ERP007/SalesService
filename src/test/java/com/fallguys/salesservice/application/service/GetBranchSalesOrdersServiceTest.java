@@ -11,6 +11,7 @@ import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.SalesOrderSummary;
+import com.fallguys.salesservice.domain.model.UserRole;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -98,7 +99,7 @@ class GetBranchSalesOrdersServiceTest {
         // given
         String userCode = "EMP-001";
         GetBranchSalesOrdersQuery query = new GetBranchSalesOrdersQuery(
-                userCode, "엔진오일", defaultStatuses(),
+                userCode, UserRole.BRANCH_STAFF, "엔진오일", defaultStatuses(),
                 LocalDate.now().minusDays(30), LocalDate.now(),
                 "requestedAt", "desc", 1, 20
         );
@@ -169,7 +170,7 @@ class GetBranchSalesOrdersServiceTest {
 
     private GetBranchSalesOrdersQuery defaultQuery(String userCode, LocalDate startDate, LocalDate endDate) {
         return new GetBranchSalesOrdersQuery(
-                userCode, null, defaultStatuses(),
+                userCode, UserRole.BRANCH_STAFF, null, defaultStatuses(),
                 startDate, endDate,
                 "requestedAt", "desc", 1, 20
         );
