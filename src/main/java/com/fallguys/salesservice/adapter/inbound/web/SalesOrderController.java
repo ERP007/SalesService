@@ -2,11 +2,15 @@ package com.fallguys.salesservice.adapter.inbound.web;
 
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderRequest;
+import com.fallguys.salesservice.adapter.inbound.web.dto.CancelSalesOrderRequest;
+import com.fallguys.salesservice.adapter.inbound.web.dto.CancelSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateDraftSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
+import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetSalesOrderKpiUseCase;
@@ -30,6 +34,7 @@ public class SalesOrderController {
 
     private final CreateSalesOrderUseCase createSalesOrderUseCase;
     private final SubmitSalesOrderUseCase submitSalesOrderUseCase;
+    private final CancelSalesOrderUseCase cancelSalesOrderUseCase;
     private final GetSalesOrderKpiUseCase getSalesOrderKpiUseCase;
     private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
 
@@ -65,6 +70,21 @@ public class SalesOrderController {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode));
         return ResponseEntity.ok(CreateSalesOrderResponse.from(salesOrder));
+    }
+
+    @PatchMapping("/{code}/cancel")
+    public ResponseEntity<CancelSalesOrderResponse> cancel(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code,
+            @Valid @RequestBody CancelSalesOrderRequest request
+    ) {
+        JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF);
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrder salesOrder = cancelSalesOrderUseCase.cancel(
+                new CancelSalesOrderCommand(code, userCode, role, request.reason())
+        );
+        return ResponseEntity.ok(CancelSalesOrderResponse.from(salesOrder));
     }
 
     @GetMapping("/kpi/branch")
