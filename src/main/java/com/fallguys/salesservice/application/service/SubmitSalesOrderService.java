@@ -15,7 +15,6 @@ import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderLine;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,11 +67,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
     @Transactional
     public SalesOrder submit(SubmitSalesOrderCommand command) {
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
-
-        if (salesOrder.getStatus() != SalesOrderStatus.DRAFT) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_STATUS_TRANSITION,
-                    "DRAFT 상태에서만 요청 가능합니다. 현재 상태: " + salesOrder.getStatus());
-        }
 
         validateNoDuplicateItems(command.lines());
         validateDesiredArrivalDate(command.desiredArrivalDate());
