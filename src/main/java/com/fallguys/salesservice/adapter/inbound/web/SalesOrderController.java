@@ -1,5 +1,6 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
+import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderDetailResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CancelSalesOrderRequest;
@@ -12,8 +13,11 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailQuery;
+import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetSalesOrderKpiUseCase;
+import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
@@ -35,6 +39,7 @@ public class SalesOrderController {
     private final CreateSalesOrderUseCase createSalesOrderUseCase;
     private final SubmitSalesOrderUseCase submitSalesOrderUseCase;
     private final CancelSalesOrderUseCase cancelSalesOrderUseCase;
+    private final GetBranchSalesOrderDetailUseCase getBranchSalesOrderDetailUseCase;
     private final GetSalesOrderKpiUseCase getSalesOrderKpiUseCase;
     private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
 
@@ -84,6 +89,19 @@ public class SalesOrderController {
                 new CancelSalesOrderCommand(code, userCode, role, request.reason())
         );
         return ResponseEntity.ok(CancelSalesOrderResponse.from(salesOrder));
+    }
+
+    @GetMapping("/branch/{code}")
+    public ResponseEntity<BranchSalesOrderDetailResponse> getBranchOrderDetail(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code
+    ) {
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrderDetail detail = getBranchSalesOrderDetailUseCase.get(
+                new GetBranchSalesOrderDetailQuery(code, userCode, role)
+        );
+        return ResponseEntity.ok(BranchSalesOrderDetailResponse.from(detail));
     }
 
     @GetMapping("/kpi/branch")
