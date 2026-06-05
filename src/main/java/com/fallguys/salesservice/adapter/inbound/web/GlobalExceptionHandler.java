@@ -1,8 +1,8 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
 import com.fallguys.salesservice.domain.exception.BusinessException;
-import com.fallguys.salesservice.domain.exception.ConflictException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -38,9 +38,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.FORBIDDEN, ex.getCode(), ex.getMessage());
     }
 
-    @ExceptionHandler(ConflictException.class)
-    public ProblemDetail handleConflict(ConflictException ex) {
-        log.warn("Conflict: code={}, message={}", ex.getCode(), ex.getMessage());
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ProblemDetail handleConflict(InvalidStatusTransitionException ex) {
+        log.warn("Invalid status transition: code={}, message={}", ex.getCode(), ex.getMessage());
         return build(HttpStatus.CONFLICT, ex.getCode(), ex.getMessage());
     }
 
