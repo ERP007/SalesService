@@ -151,6 +151,22 @@ class CancelSalesOrderServiceTest {
     }
 
     @Test
+    void STAFF_REQUESTED_아닌_상태_취소_시도시_InvalidStatusTransitionException() {
+        SalesOrder draftOrder = new SalesOrder(
+                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
+                SalesOrderStatus.DRAFT, LocalDate.now().plusDays(3), null,
+                new SalesOrderCreation(USER_CODE, Instant.now()),
+                null, null, null, null, null, List.of()
+        );
+        given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
+
+        assertThatThrownBy(() -> service.cancel(command(USER_CODE, UserRole.BRANCH_STAFF)))
+                .isInstanceOf(InvalidStatusTransitionException.class);
+
+        then(saveSalesOrderPort).shouldHaveNoInteractions();
+    }
+
+    @Test
     void 취소_성공시_CANCELED_상태로_저장됨() {
         CancelSalesOrderCommand command = command(USER_CODE, UserRole.BRANCH_MANAGER);
 
