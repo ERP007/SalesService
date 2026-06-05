@@ -9,6 +9,7 @@ import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -57,9 +58,10 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        if (command.role() == UserRole.BRANCH_STAFF) {
+        if (command.role() == UserRole.BRANCH_STAFF &&
+                salesOrder.getStatus() == SalesOrderStatus.REQUESTED) {
             String requestedBy = salesOrder.getRequest().requestedBy();
-            if (!requestedBy.equals(command.canceledBy())) {
+            if (requestedBy == null || !requestedBy.equals(command.canceledBy())) {
                 throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
             }
         }
