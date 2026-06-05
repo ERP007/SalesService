@@ -15,6 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.EnumSet;
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDetailUseCase {
@@ -22,6 +25,11 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final LoadBranchUserPort loadBranchUserPort;
     private final LoadWarehousePort loadWarehousePort;
+
+    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
+        UserRole.BRANCH_MANAGER,
+        UserRole.BRANCH_STAFF
+    );
 
     /**
      * 지점 발주 상세를 조회한다.
@@ -43,7 +51,7 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
     @Override
     @Transactional(readOnly = true)
     public SalesOrderDetail get(GetBranchSalesOrderDetailQuery query) {
-        if (query.role() != UserRole.BRANCH_MANAGER && query.role() != UserRole.BRANCH_STAFF) {
+        if (!ALLOWED_ROLES.contains(query.role())) {
             throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
         }
 
