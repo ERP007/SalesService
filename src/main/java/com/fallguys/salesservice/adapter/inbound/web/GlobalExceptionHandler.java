@@ -1,6 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
 import com.fallguys.salesservice.domain.exception.BusinessException;
+import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -42,6 +43,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ProblemDetail handleConflict(InvalidStatusTransitionException ex) {
         log.warn("Invalid status transition: code={}, message={}", ex.getCode(), ex.getMessage());
         return build(HttpStatus.CONFLICT, ex.getCode(), ex.getMessage());
+    }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    public ProblemDetail handleExternalService(ExternalServiceException ex) {
+        log.error("External service error: code={}, message={}", ex.getCode(), ex.getMessage(), ex);
+        return build(HttpStatus.BAD_GATEWAY, ex.getCode(), ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
