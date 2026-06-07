@@ -17,10 +17,10 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
     @Query("""
             SELECT s.status, COUNT(s)
             FROM SalesOrderEntity s
-            WHERE s.fromWarehouseCode = :branchCode
+            WHERE s.fromWarehouseCode = :warehouseCode
             GROUP BY s.status
             """)
-    List<Object[]> countGroupByStatus(@Param("branchCode") String branchCode);
+    List<Object[]> countGroupByStatus(@Param("warehouseCode") String warehouseCode);
 
     // 전체 상태 집계 — HQ KPI 조회용 (창고 필터 없음)
     @Query("""

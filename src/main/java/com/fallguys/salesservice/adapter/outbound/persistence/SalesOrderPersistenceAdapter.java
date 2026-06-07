@@ -51,8 +51,8 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
     // totalCount는 CANCELED·REJECTED 제외한 활성 발주만 집계
     @Override
-    public BranchSalesOrderKpi loadByBranchCode(String branchCode) {
-        List<Object[]> rows = salesOrderJpaDao.countGroupByStatus(branchCode);
+    public BranchSalesOrderKpi loadByBranchCode(String warehouseCode) {
+        List<Object[]> rows = salesOrderJpaDao.countGroupByStatus(warehouseCode);
         Map<SalesOrderStatus, Long> counts = rows.stream()
                 .collect(Collectors.toMap(r -> (SalesOrderStatus) r[0], r -> (Long) r[1]));
         long total = ACTIVE_STATUSES.stream()
