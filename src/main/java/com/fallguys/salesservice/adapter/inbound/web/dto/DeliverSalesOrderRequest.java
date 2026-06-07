@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 public record DeliverSalesOrderRequest(
         @NotNull(message = "도착일은 필수입니다")
-        @PastOrPresent(message = "도착일은 오늘 이전이어야 합니다")
+        @PastOrPresent(message = "도착일은 오늘 또는 과거여야 합니다")
         LocalDate deliveredDate
 ) {
 }
