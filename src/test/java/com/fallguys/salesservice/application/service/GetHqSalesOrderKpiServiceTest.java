@@ -45,6 +45,9 @@ class GetHqSalesOrderKpiServiceTest {
         HqSalesOrderKpi result = sut.getKpi(UserRole.HQ_STAFF);
 
         assertThat(result.totalCount()).isEqualTo(10L);
+        assertThat(result.requestedCount()).isEqualTo(3L);
+        assertThat(result.approvedCount()).isEqualTo(4L);
+        assertThat(result.delayedCount()).isEqualTo(1L);
     }
 
     @Test
@@ -55,6 +58,9 @@ class GetHqSalesOrderKpiServiceTest {
         HqSalesOrderKpi result = sut.getKpi(UserRole.ADMIN);
 
         assertThat(result.totalCount()).isEqualTo(5L);
+        assertThat(result.requestedCount()).isEqualTo(1L);
+        assertThat(result.approvedCount()).isEqualTo(2L);
+        assertThat(result.delayedCount()).isEqualTo(0L);
     }
 
     @Test
