@@ -15,4 +15,8 @@ public class SalesOrderLine {
     private Integer approvedQuantity;
     private Integer deliveredQuantity;
     private Priority priority;
+
+    public void confirmDelivery() {
+        this.deliveredQuantity = this.approvedQuantity;
+    }
 }
