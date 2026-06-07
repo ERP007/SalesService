@@ -58,13 +58,14 @@ public record BranchSalesOrderRequest(
         }
     }
 
-    public GetBranchSalesOrdersQuery toQuery(String userCode, UserRole role) {
+    public GetBranchSalesOrdersQuery toQuery(String userCode, UserRole role, String warehouseCode) {
         List<SalesOrderStatus> statuses = (status != null && !status.isBlank())
                 ? Arrays.stream(status.split(",")).map(String::trim).map(SalesOrderStatus::valueOf).toList()
                 : DEFAULT_STATUSES;
 
         return new GetBranchSalesOrdersQuery(
                 userCode,
+                warehouseCode,
                 role,
                 (search != null && !search.isBlank()) ? search.trim() : null,
                 statuses,

@@ -28,7 +28,6 @@ import static org.mockito.BDDMockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateSalesOrderServiceTest {
 
-    @Mock LoadBranchUserPort loadBranchUserPort;
     @Mock VerifyWarehousePort verifyWarehousePort;
     @Mock LoadItemPort loadItemPort;
     @Mock GenerateSoCodePort generateSoCodePort;
@@ -45,8 +44,6 @@ class CreateSalesOrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        given(loadBranchUserPort.load(USER_CODE))
-                .willReturn(new BranchUserInfo(FROM_WAREHOUSE));
         given(generateSoCodePort.generate()).willReturn(SO_CODE);
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
     }
@@ -107,7 +104,7 @@ class CreateSalesOrderServiceTest {
     @Test
     void create_desiredArrivalDateToday_throwsSalesOrderException() {
         CreateSalesOrderCommand command = new CreateSalesOrderCommand(
-                TO_WAREHOUSE, LocalDate.now(), null, SalesOrderStatus.REQUESTED,
+                FROM_WAREHOUSE, TO_WAREHOUSE, LocalDate.now(), null, SalesOrderStatus.REQUESTED,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)),
                 USER_CODE, UserRole.BRANCH_STAFF
         );
@@ -119,26 +116,13 @@ class CreateSalesOrderServiceTest {
     @Test
     void create_desiredArrivalDateOver60Days_throwsSalesOrderException() {
         CreateSalesOrderCommand command = new CreateSalesOrderCommand(
-                TO_WAREHOUSE, LocalDate.now().plusDays(61), null, SalesOrderStatus.REQUESTED,
+                FROM_WAREHOUSE, TO_WAREHOUSE, LocalDate.now().plusDays(61), null, SalesOrderStatus.REQUESTED,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)),
                 USER_CODE, UserRole.BRANCH_STAFF
         );
 
         assertThatThrownBy(() -> service.create(command))
                 .isInstanceOf(SalesOrderException.class);
-    }
-
-    @Test
-    void create_userNotFound_throwsResourceNotFoundException() {
-        given(loadBranchUserPort.load(USER_CODE))
-                .willThrow(new ResourceNotFoundException(com.fallguys.salesservice.domain.exception.SalesErrorCode.USER_NOT_FOUND));
-
-        CreateSalesOrderCommand command = requestedCommand(
-                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
-        );
-
-        assertThatThrownBy(() -> service.create(command))
-                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -179,10 +163,10 @@ class CreateSalesOrderServiceTest {
     }
 
     private CreateSalesOrderCommand requestedCommand(List<CreateSalesOrderLineCommand> lines) {
-        return new CreateSalesOrderCommand(TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.REQUESTED, lines, USER_CODE, UserRole.BRANCH_STAFF);
+        return new CreateSalesOrderCommand(FROM_WAREHOUSE, TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.REQUESTED, lines, USER_CODE, UserRole.BRANCH_STAFF);
     }
 
     private CreateSalesOrderCommand draftCommand(List<CreateSalesOrderLineCommand> lines) {
-        return new CreateSalesOrderCommand(TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.DRAFT, lines, USER_CODE, UserRole.BRANCH_STAFF);
+        return new CreateSalesOrderCommand(FROM_WAREHOUSE, TO_WAREHOUSE, VALID_DATE, null, SalesOrderStatus.DRAFT, lines, USER_CODE, UserRole.BRANCH_STAFF);
     }
 }

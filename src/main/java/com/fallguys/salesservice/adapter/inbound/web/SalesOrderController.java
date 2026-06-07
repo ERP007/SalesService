@@ -55,7 +55,8 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role));
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role, warehouseCode));
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
     }
 
@@ -66,7 +67,8 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role));
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role, warehouseCode));
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
     }
 
@@ -78,7 +80,8 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode, role));
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+        SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode, role, warehouseCode));
         return ResponseEntity.ok(CreateSalesOrderResponse.from(salesOrder));
     }
 
@@ -90,8 +93,9 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = cancelSalesOrderUseCase.cancel(
-                new CancelSalesOrderCommand(code, userCode, role, request.reason())
+                new CancelSalesOrderCommand(code, userCode, role, warehouseCode, request.reason())
         );
         return ResponseEntity.ok(CancelSalesOrderResponse.from(salesOrder));
     }
@@ -118,8 +122,9 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrderDetail detail = getBranchSalesOrderDetailUseCase.get(
-                new GetBranchSalesOrderDetailQuery(code, userCode, role)
+                new GetBranchSalesOrderDetailQuery(code, userCode, role, warehouseCode)
         );
         return ResponseEntity.ok(BranchSalesOrderDetailResponse.from(detail));
     }
@@ -128,9 +133,9 @@ public class SalesOrderController {
     public ResponseEntity<SalesOrderKpiResponse> getBranchKpi(
             @AuthenticationPrincipal Jwt jwt
     ) {
-        String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(userCode, role);
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+        SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(warehouseCode, role);
         SalesOrderKpiResponse response = SalesOrderKpiResponse.from(kpi);
         return ResponseEntity.ok(response);
     }
@@ -142,7 +147,8 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrderSummaryPage summaryPage = getBranchSalesOrdersUseCase.getBranchOrders(request.toQuery(userCode, role));
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+        SalesOrderSummaryPage summaryPage = getBranchSalesOrdersUseCase.getBranchOrders(request.toQuery(userCode, role, warehouseCode));
         BranchSalesOrderPageResponse response = BranchSalesOrderPageResponse.from(summaryPage);
         return ResponseEntity.ok(response);
     }

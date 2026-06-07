@@ -3,8 +3,6 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.LoadWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -23,7 +21,6 @@ import java.util.Set;
 public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDetailUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
-    private final LoadBranchUserPort loadBranchUserPort;
     private final LoadWarehousePort loadWarehousePort;
 
     private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
@@ -57,8 +54,7 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
 
         SalesOrder salesOrder = loadSalesOrderPort.load(query.soCode());
 
-        BranchUserInfo branchUser = loadBranchUserPort.load(query.userCode());
-        if (!branchUser.warehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!query.warehouseCode().equals(salesOrder.getFromWarehouseCode())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 

@@ -3,9 +3,7 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
 import com.fallguys.salesservice.application.port.outbound.ItemInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
@@ -32,7 +30,6 @@ import java.util.Set;
 public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
-    private final LoadBranchUserPort loadBranchUserPort;
     private final VerifyWarehousePort verifyWarehousePort;
     private final LoadItemPort loadItemPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
@@ -76,8 +73,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
         validateNoDuplicateItems(command.lines());
         validateDesiredArrivalDate(command.desiredArrivalDate());
 
-        BranchUserInfo branchUser = loadBranchUserPort.load(command.requestedBy());
-        if (!branchUser.warehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 

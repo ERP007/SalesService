@@ -2,8 +2,6 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.WarehouseInfo;
@@ -32,7 +30,6 @@ import static org.mockito.BDDMockito.*;
 class GetBranchSalesOrderDetailServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
-    @Mock LoadBranchUserPort loadBranchUserPort;
     @Mock LoadWarehousePort loadWarehousePort;
 
     @InjectMocks
@@ -48,7 +45,6 @@ class GetBranchSalesOrderDetailServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(FROM_WAREHOUSE, TO_WAREHOUSE));
-        given(loadBranchUserPort.load(USER_CODE)).willReturn(new BranchUserInfo(FROM_WAREHOUSE));
         given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME));
         given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, TO_WAREHOUSE_NAME));
     }
@@ -100,9 +96,7 @@ class GetBranchSalesOrderDetailServiceTest {
 
     @Test
     void 소속_창고_불일치시_ForbiddenException() {
-        given(loadBranchUserPort.load(USER_CODE)).willReturn(new BranchUserInfo("WH-BRANCH-99"));
-
-        assertThatThrownBy(() -> service.get(query(USER_CODE, UserRole.BRANCH_MANAGER)))
+        assertThatThrownBy(() -> service.get(new GetBranchSalesOrderDetailQuery(SO_CODE, USER_CODE, UserRole.BRANCH_MANAGER, "WH-BRANCH-99")))
                 .isInstanceOf(ForbiddenException.class);
 
         then(loadWarehousePort).shouldHaveNoInteractions();
@@ -119,7 +113,7 @@ class GetBranchSalesOrderDetailServiceTest {
     }
 
     private GetBranchSalesOrderDetailQuery query(String userCode, UserRole role) {
-        return new GetBranchSalesOrderDetailQuery(SO_CODE, userCode, role);
+        return new GetBranchSalesOrderDetailQuery(SO_CODE, userCode, role, FROM_WAREHOUSE);
     }
 
     private SalesOrder requestedOrder(String fromWarehouseCode, String toWarehouseCode) {

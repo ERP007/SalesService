@@ -6,6 +6,7 @@ public record CancelSalesOrderCommand(
         String soCode,
         String canceledBy,
         UserRole role,
+        String requesterWarehouseCode,
         String reason
 ) {
 }

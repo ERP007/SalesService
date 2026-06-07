@@ -32,7 +32,6 @@ import static org.mockito.BDDMockito.*;
 class SubmitSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
-    @Mock LoadBranchUserPort loadBranchUserPort;
     @Mock VerifyWarehousePort verifyWarehousePort;
     @Mock LoadItemPort loadItemPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
@@ -59,7 +58,6 @@ class SubmitSalesOrderServiceTest {
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
-        given(loadBranchUserPort.load(USER_CODE)).willReturn(new BranchUserInfo(FROM_WAREHOUSE));
         given(loadItemPort.loadAll(any())).willReturn(
                 Map.of("ITEM-01", new ItemInfo("ITEM-01", "브레이크패드", "EA"))
         );
@@ -121,7 +119,7 @@ class SubmitSalesOrderServiceTest {
     @Test
     void submit_desiredArrivalDateToday_throwsSalesOrderException() {
         SubmitSalesOrderCommand command = new SubmitSalesOrderCommand(
-                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, TO_WAREHOUSE, LocalDate.now(), null,
+                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE, TO_WAREHOUSE, LocalDate.now(), null,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
         );
 
@@ -132,7 +130,7 @@ class SubmitSalesOrderServiceTest {
     @Test
     void submit_desiredArrivalDateOver60Days_throwsSalesOrderException() {
         SubmitSalesOrderCommand command = new SubmitSalesOrderCommand(
-                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, TO_WAREHOUSE, LocalDate.now().plusDays(61), null,
+                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE, TO_WAREHOUSE, LocalDate.now().plusDays(61), null,
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
         );
 
@@ -141,23 +139,14 @@ class SubmitSalesOrderServiceTest {
     }
 
     @Test
-    void submit_userNotFound_throwsResourceNotFoundException() {
-        given(loadBranchUserPort.load(USER_CODE))
-                .willThrow(new ResourceNotFoundException(SalesErrorCode.USER_NOT_FOUND));
-
-        assertThatThrownBy(() -> service.submit(command(List.of(
-                new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
-        )))).isInstanceOf(ResourceNotFoundException.class);
-    }
-
-    @Test
     void submit_warehouseMismatch_throwsForbiddenException() {
-        given(loadBranchUserPort.load(USER_CODE))
-                .willReturn(new BranchUserInfo("WH-BRANCH-99"));
+        SubmitSalesOrderCommand command = new SubmitSalesOrderCommand(
+                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, "WH-BRANCH-99", TO_WAREHOUSE, VALID_DATE, null,
+                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
+        );
 
-        assertThatThrownBy(() -> service.submit(command(List.of(
-                new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
-        )))).isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> service.submit(command))
+                .isInstanceOf(ForbiddenException.class);
     }
 
     @Test
@@ -181,6 +170,6 @@ class SubmitSalesOrderServiceTest {
     }
 
     private SubmitSalesOrderCommand command(List<CreateSalesOrderLineCommand> lines) {
-        return new SubmitSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, TO_WAREHOUSE, VALID_DATE, null, lines);
+        return new SubmitSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE, TO_WAREHOUSE, VALID_DATE, null, lines);
     }
 }
