@@ -7,6 +7,8 @@ import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrderK
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
@@ -30,7 +32,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadBranchSalesOrderKpiPort, GenerateSoCodePort, LoadBranchSalesOrdersPort {
+public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadBranchSalesOrderKpiPort, LoadHqSalesOrderKpiPort, GenerateSoCodePort, LoadBranchSalesOrdersPort {
 
     private static final Map<String, String> SORT_FIELD_TO_JPA = Map.of(
             "requestedAt", "request.requestedAt",
@@ -61,6 +63,35 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
                 counts.getOrDefault(SalesOrderStatus.DRAFT, 0L),
                 counts.getOrDefault(SalesOrderStatus.REQUESTED, 0L),
                 counts.getOrDefault(SalesOrderStatus.APPROVED, 0L)
+        );
+    }
+
+    private static final List<SalesOrderStatus> DELAYED_STATUSES = List.of(
+            SalesOrderStatus.REQUESTED,
+            SalesOrderStatus.APPROVED
+    );
+
+    private static final Set<SalesOrderStatus> HQ_ACTIVE_STATUSES = Set.of(
+            SalesOrderStatus.REQUESTED,
+            SalesOrderStatus.APPROVED,
+            SalesOrderStatus.DELIVERED
+    );
+
+    // totalCount는 DRAFT·CANCELED·REJECTED 제외한 활성 발주만 집계
+    @Override
+    public HqSalesOrderKpi loadHqKpi() {
+        List<Object[]> rows = salesOrderJpaDao.countAllGroupByStatus();
+        Map<SalesOrderStatus, Long> counts = rows.stream()
+                .collect(Collectors.toMap(r -> (SalesOrderStatus) r[0], r -> (Long) r[1]));
+        long total = HQ_ACTIVE_STATUSES.stream()
+                .mapToLong(s -> counts.getOrDefault(s, 0L))
+                .sum();
+        long delayed = salesOrderJpaDao.countDelayed(DELAYED_STATUSES, LocalDate.now());
+        return new HqSalesOrderKpi(
+                total,
+                counts.getOrDefault(SalesOrderStatus.REQUESTED, 0L),
+                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L),
+                delayed
         );
     }
 
