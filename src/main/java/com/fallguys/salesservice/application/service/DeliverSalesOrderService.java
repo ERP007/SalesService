@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 
 @Service
 @RequiredArgsConstructor
@@ -73,10 +73,12 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
         return saveSalesOrderPort.save(order);
     }
 
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
+
     private void validateDeliveredDate(LocalDate deliveredDate, SalesOrder order) {
-        LocalDate approvedDate = order.getApproval().approvedAt().atZone(ZoneOffset.UTC).toLocalDate();
+        LocalDate approvedDate = order.getApproval().approvedAt().atZone(BUSINESS_ZONE).toLocalDate();
         if (deliveredDate.isBefore(approvedDate)) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
+            throw new SalesOrderException(SalesErrorCode.INVALID_DELIVERED_DATE,
                     "도착일은 출고일(" + approvedDate + ")보다 이전일 수 없습니다");
         }
     }
