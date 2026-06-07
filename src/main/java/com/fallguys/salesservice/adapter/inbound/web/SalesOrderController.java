@@ -8,11 +8,15 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.CancelSalesOrderRespons
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateDraftSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderRequest;
+import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
@@ -39,6 +43,7 @@ public class SalesOrderController {
     private final CreateSalesOrderUseCase createSalesOrderUseCase;
     private final SubmitSalesOrderUseCase submitSalesOrderUseCase;
     private final CancelSalesOrderUseCase cancelSalesOrderUseCase;
+    private final DeliverSalesOrderUseCase deliverSalesOrderUseCase;
     private final GetBranchSalesOrderDetailUseCase getBranchSalesOrderDetailUseCase;
     private final GetSalesOrderKpiUseCase getSalesOrderKpiUseCase;
     private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
@@ -89,6 +94,21 @@ public class SalesOrderController {
                 new CancelSalesOrderCommand(code, userCode, role, request.reason())
         );
         return ResponseEntity.ok(CancelSalesOrderResponse.from(salesOrder));
+    }
+
+    @PatchMapping("/{code}/deliver")
+    public ResponseEntity<DeliverSalesOrderResponse> deliver(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code,
+            @Valid @RequestBody DeliverSalesOrderRequest request
+    ) {
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+        SalesOrder salesOrder = deliverSalesOrderUseCase.deliver(
+                new DeliverSalesOrderCommand(code, warehouseCode, userCode, role, request.deliveredDate())
+        );
+        return ResponseEntity.ok(DeliverSalesOrderResponse.from(salesOrder));
     }
 
     @GetMapping("/branch/{code}")
