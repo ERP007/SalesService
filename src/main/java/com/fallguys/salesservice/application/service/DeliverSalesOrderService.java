@@ -62,7 +62,9 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        validateDeliveredDate(command.deliveredDate(), order);
+        if (order.getApproval() != null) {
+            validateDeliveredDate(command.deliveredDate(), order);
+        }
 
         order.deliver(command.deliveredBy(), command.deliveredDate(), Instant.now());
 
