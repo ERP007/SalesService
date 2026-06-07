@@ -3,10 +3,8 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
 import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
 import com.fallguys.salesservice.application.port.outbound.ItemInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
@@ -34,7 +32,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
-    private final LoadBranchUserPort loadBranchUserPort;
     private final VerifyWarehousePort verifyWarehousePort;
     private final LoadItemPort loadItemPort;
     private final GenerateSoCodePort generateSoCodePort;
@@ -73,8 +70,6 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         validateNoDuplicateItems(command.lines());
         validateDesiredArrivalDate(command.desiredArrivalDate());
 
-        BranchUserInfo branchUser = loadBranchUserPort.load(command.requestedBy());
-
         Map<String, ItemInfo> itemMap = null;
         if (command.status() == SalesOrderStatus.REQUESTED) {
             verifyWarehousePort.verify(command.toWarehouseCode());
@@ -96,7 +91,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
         SalesOrder salesOrder = new SalesOrder(
                 soCode,
-                branchUser.warehouseCode(),
+                command.fromWarehouseCode(),
                 command.toWarehouseCode(),
                 command.status(),
                 command.desiredArrivalDate(),

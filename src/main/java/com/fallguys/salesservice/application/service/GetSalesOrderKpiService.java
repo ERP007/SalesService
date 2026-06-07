@@ -1,8 +1,6 @@
 package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.GetSalesOrderKpiUseCase;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -16,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GetSalesOrderKpiService implements GetSalesOrderKpiUseCase {
 
-    private final LoadBranchUserPort loadBranchUserPort;
     private final LoadSalesOrderKpiPort loadSalesOrderKpiPort;
 
     /**
@@ -34,11 +31,10 @@ public class GetSalesOrderKpiService implements GetSalesOrderKpiUseCase {
      */
     @Override
     @Transactional(readOnly = true)
-    public SalesOrderKpi getKpi(String requestedBy, UserRole role) {
+    public SalesOrderKpi getKpi(String warehouseCode, UserRole role) {
         if (role != UserRole.BRANCH_MANAGER && role != UserRole.BRANCH_STAFF) {
             throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
         }
-        BranchUserInfo branchUser = loadBranchUserPort.load(requestedBy);
-        return loadSalesOrderKpiPort.loadByBranchCode(branchUser.warehouseCode());
+        return loadSalesOrderKpiPort.loadByBranchCode(warehouseCode);
     }
 }

@@ -3,9 +3,7 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersQuery;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
 import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
@@ -25,7 +23,6 @@ import java.time.temporal.ChronoUnit;
 @RequiredArgsConstructor
 public class GetBranchSalesOrdersService implements GetBranchSalesOrdersUseCase {
 
-    private final LoadBranchUserPort loadBranchUserPort;
     private final LoadBranchSalesOrdersPort loadBranchSalesOrdersPort;
 
     /**
@@ -52,13 +49,12 @@ public class GetBranchSalesOrdersService implements GetBranchSalesOrdersUseCase 
             throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
         }
         validateDateRange(query.startDate(), query.endDate());
-        BranchUserInfo branchUser = loadBranchUserPort.load(query.userCode());
 
         Instant startInstant = query.startDate().atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant endInstant = query.endDate().atTime(LocalTime.MAX).atOffset(ZoneOffset.UTC).toInstant();
 
         BranchSalesOrderFilter filter = new BranchSalesOrderFilter(
-                branchUser.warehouseCode(),
+                query.warehouseCode(),
                 query.search(),
                 query.statuses(),
                 startInstant,

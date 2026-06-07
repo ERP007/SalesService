@@ -8,6 +8,7 @@ import java.util.List;
 
 public record GetBranchSalesOrdersQuery(
         String userCode,
+        String warehouseCode,
         UserRole role,
         String search,
         List<SalesOrderStatus> statuses,

@@ -5,6 +5,7 @@ import com.fallguys.salesservice.domain.model.UserRole;
 public record GetBranchSalesOrderDetailQuery(
         String soCode,
         String userCode,
-        UserRole role
+        UserRole role,
+        String warehouseCode
 ) {
 }

@@ -9,6 +9,7 @@ public record SubmitSalesOrderCommand(
         String soCode,
         String requestedBy,
         UserRole role,
+        String requesterWarehouseCode,
         String toWarehouseCode,
         LocalDate desiredArrivalDate,
         String requestMemo,

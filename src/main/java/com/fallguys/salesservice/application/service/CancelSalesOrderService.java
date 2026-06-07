@@ -2,8 +2,6 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -22,7 +20,6 @@ import java.time.Instant;
 public class CancelSalesOrderService implements CancelSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
-    private final LoadBranchUserPort loadBranchUserPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
 
     /**
@@ -53,8 +50,7 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
 
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
-        BranchUserInfo branchUser = loadBranchUserPort.load(command.canceledBy());
-        if (!branchUser.warehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 

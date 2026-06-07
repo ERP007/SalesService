@@ -2,11 +2,13 @@ package com.fallguys.salesservice.application.port.inbound;
 
 import com.fallguys.salesservice.domain.model.UserRole;
 
-public record CancelSalesOrderCommand(
+import java.time.LocalDate;
+
+public record DeliverSalesOrderCommand(
         String soCode,
-        String canceledBy,
-        UserRole role,
         String requesterWarehouseCode,
-        String reason
+        String deliveredBy,
+        UserRole role,
+        LocalDate deliveredDate
 ) {
 }

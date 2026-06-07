@@ -1,8 +1,6 @@
 package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.BranchUserInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchUserPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -32,7 +30,6 @@ import static org.mockito.BDDMockito.*;
 class CancelSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
-    @Mock LoadBranchUserPort loadBranchUserPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
 
     @InjectMocks
@@ -48,7 +45,6 @@ class CancelSalesOrderServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(USER_CODE));
-        given(loadBranchUserPort.load(USER_CODE)).willReturn(new BranchUserInfo(FROM_WAREHOUSE));
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
     }
 
@@ -77,7 +73,6 @@ class CancelSalesOrderServiceTest {
     @Test
     void MANAGER_타인_발주_취소_성공() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(OTHER_USER_CODE));
-        given(loadBranchUserPort.load(USER_CODE)).willReturn(new BranchUserInfo(FROM_WAREHOUSE));
         CancelSalesOrderCommand command = command(USER_CODE, UserRole.BRANCH_MANAGER);
 
         SalesOrder result = service.cancel(command);
@@ -116,9 +111,9 @@ class CancelSalesOrderServiceTest {
 
     @Test
     void 소속_창고_불일치시_ForbiddenException() {
-        given(loadBranchUserPort.load(USER_CODE)).willReturn(new BranchUserInfo(OTHER_WAREHOUSE));
+        CancelSalesOrderCommand badCommand = new CancelSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_MANAGER, OTHER_WAREHOUSE, REASON);
 
-        assertThatThrownBy(() -> service.cancel(command(USER_CODE, UserRole.BRANCH_MANAGER)))
+        assertThatThrownBy(() -> service.cancel(badCommand))
                 .isInstanceOf(ForbiddenException.class);
 
         then(saveSalesOrderPort).shouldHaveNoInteractions();
@@ -179,7 +174,7 @@ class CancelSalesOrderServiceTest {
     }
 
     private CancelSalesOrderCommand command(String userCode, UserRole role) {
-        return new CancelSalesOrderCommand(SO_CODE, userCode, role, REASON);
+        return new CancelSalesOrderCommand(SO_CODE, userCode, role, FROM_WAREHOUSE, REASON);
     }
 
     private SalesOrder requestedOrder(String requestedBy) {

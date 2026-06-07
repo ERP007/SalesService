@@ -37,6 +37,14 @@ public class JwtClaimExtractor {
         }
     }
 
+    public static String extractWarehouseCode(Jwt jwt) {
+        String warehouseCode = jwt.getClaimAsString("warehouse_code");
+        if (warehouseCode == null) {
+            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+        }
+        return warehouseCode;
+    }
+
     /**
      * JWT에서 역할을 추출하고 허용된 역할인지 검증한다.
      * 미인가 시 ForbiddenException(SO-05-03) 발생.

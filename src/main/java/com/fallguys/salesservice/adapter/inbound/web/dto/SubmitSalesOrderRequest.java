@@ -26,10 +26,10 @@ public record SubmitSalesOrderRequest(
         @Valid
         List<SubmitSalesOrderLineRequest> lines
 ) {
-    public SubmitSalesOrderCommand toCommand(String soCode, String requestedBy, UserRole role) {
+    public SubmitSalesOrderCommand toCommand(String soCode, String requestedBy, UserRole role, String requesterWarehouseCode) {
         List<CreateSalesOrderLineCommand> lineCommands = lines.stream()
                 .map(SubmitSalesOrderLineRequest::toCommand)
                 .toList();
-        return new SubmitSalesOrderCommand(soCode, requestedBy, role, warehouseCode, desiredArrivalDate, memo, lineCommands);
+        return new SubmitSalesOrderCommand(soCode, requestedBy, role, requesterWarehouseCode, warehouseCode, desiredArrivalDate, memo, lineCommands);
     }
 }
