@@ -10,7 +10,8 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRequest
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderResponse;
-import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderKpiResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderKpiResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
@@ -20,10 +21,12 @@ import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderUseCa
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
-import com.fallguys.salesservice.application.port.inbound.GetSalesOrderKpiUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderKpiUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.UserRole;
@@ -45,7 +48,8 @@ public class SalesOrderController {
     private final CancelSalesOrderUseCase cancelSalesOrderUseCase;
     private final DeliverSalesOrderUseCase deliverSalesOrderUseCase;
     private final GetBranchSalesOrderDetailUseCase getBranchSalesOrderDetailUseCase;
-    private final GetSalesOrderKpiUseCase getSalesOrderKpiUseCase;
+    private final GetBranchSalesOrderKpiUseCase getBranchSalesOrderKpiUseCase;
+    private final GetHqSalesOrderKpiUseCase getHqSalesOrderKpiUseCase;
     private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
 
     @PostMapping
@@ -130,14 +134,22 @@ public class SalesOrderController {
     }
 
     @GetMapping("/kpi/branch")
-    public ResponseEntity<SalesOrderKpiResponse> getBranchKpi(
+    public ResponseEntity<BranchSalesOrderKpiResponse> getBranchKpi(
             @AuthenticationPrincipal Jwt jwt
     ) {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
-        SalesOrderKpi kpi = getSalesOrderKpiUseCase.getKpi(warehouseCode, role);
-        SalesOrderKpiResponse response = SalesOrderKpiResponse.from(kpi);
-        return ResponseEntity.ok(response);
+        BranchSalesOrderKpi kpi = getBranchSalesOrderKpiUseCase.getKpi(warehouseCode, role);
+        return ResponseEntity.ok(BranchSalesOrderKpiResponse.from(kpi));
+    }
+
+    @GetMapping("/kpi/hq")
+    public ResponseEntity<HqSalesOrderKpiResponse> getHqKpi(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        HqSalesOrderKpi kpi = getHqSalesOrderKpiUseCase.getKpi(role);
+        return ResponseEntity.ok(HqSalesOrderKpiResponse.from(kpi));
     }
 
     @GetMapping("/branch")

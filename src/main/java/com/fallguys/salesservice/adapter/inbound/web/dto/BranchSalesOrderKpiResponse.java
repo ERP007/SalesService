@@ -1,15 +1,15 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.outbound.SalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
 
-public record SalesOrderKpiResponse(
+public record BranchSalesOrderKpiResponse(
         long totalCount,
         long draftCount,
         long requestedCount,
         long approvedCount
 ) {
-    public static SalesOrderKpiResponse from(SalesOrderKpi kpi) {
-        return new SalesOrderKpiResponse(
+    public static BranchSalesOrderKpiResponse from(BranchSalesOrderKpi kpi) {
+        return new BranchSalesOrderKpiResponse(
                 kpi.totalCount(),
                 kpi.draftCount(),
                 kpi.requestedCount(),
