@@ -11,7 +11,10 @@ public record RejectSalesOrderRequest(
         @Size(max = 500, message = "메모는 500자 이하여야 합니다") String memo
 ) {
     public RejectSalesOrderRequest {
-        if (memo != null) memo = memo.trim();
+        if (memo != null) {
+            String trimmed = memo.trim();
+            memo = !trimmed.isBlank() ? trimmed : null;
+        }
     }
 
     public RejectSalesOrderCommand toCommand(String soCode, String rejectedBy, UserRole role) {
