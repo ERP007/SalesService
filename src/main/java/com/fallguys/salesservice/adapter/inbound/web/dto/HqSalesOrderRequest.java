@@ -2,6 +2,7 @@ package com.fallguys.salesservice.adapter.inbound.web.dto;
 
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersQuery;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -56,12 +57,13 @@ public record HqSalesOrderRequest(
         }
     }
 
-    public GetHqSalesOrdersQuery toQuery() {
+    public GetHqSalesOrdersQuery toQuery(UserRole role) {
         List<SalesOrderStatus> statuses = (status != null && !status.isBlank())
                 ? Arrays.stream(status.split(",")).map(String::trim).map(SalesOrderStatus::valueOf).toList()
                 : DEFAULT_STATUSES;
 
         return new GetHqSalesOrdersQuery(
+                role,
                 (warehouseCode != null && !warehouseCode.isBlank()) ? warehouseCode.trim() : null,
                 (search != null && !search.isBlank()) ? search.trim() : null,
                 statuses,
