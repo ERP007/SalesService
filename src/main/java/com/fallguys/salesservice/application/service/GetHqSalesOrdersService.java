@@ -92,7 +92,7 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
 
         List<HqSalesOrderSummary> enriched = rawPage.content().stream()
                 .map(summary -> {
-                    UserInfoResponse info = userInfoMap.get(summary.requestedBy());
+                    UserInfoResponse info = summary.requestedBy() != null ? userInfoMap.get(summary.requestedBy()) : null;
                     return new HqSalesOrderSummary(
                             summary.code(),
                             summary.fromWarehouseCode(),
