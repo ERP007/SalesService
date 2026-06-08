@@ -1,6 +1,6 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.adapter.outbound.client.dto.UserInfoResponse;
+import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersQuery;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
@@ -193,7 +193,7 @@ class GetHqSalesOrdersServiceTest {
         GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(30), LocalDate.now());
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(rawPage);
         given(loadUserInfoPort.loadByUserCodes(List.of("EMP-001")))
-                .willReturn(Map.of("EMP-001", new UserInfoResponse("EMP-001", "정유진", "서비스 매니저")));
+                .willReturn(Map.of("EMP-001", new UserInfo("EMP-001", "정유진", "서비스 매니저")));
 
         // when
         HqSalesOrderSummaryPage result = sut.getOrders(query);

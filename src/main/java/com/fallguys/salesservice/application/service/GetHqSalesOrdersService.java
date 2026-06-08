@@ -2,11 +2,11 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersQuery;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersUseCase;
-import com.fallguys.salesservice.adapter.outbound.client.dto.UserInfoResponse;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrdersPort;
 import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
+import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
@@ -86,13 +86,13 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
                 .distinct()
                 .collect(Collectors.toList());
 
-        Map<String, UserInfoResponse> userInfoMap = userCodes.isEmpty()
+        Map<String, UserInfo> userInfoMap = userCodes.isEmpty()
                 ? Map.of()
                 : loadUserInfoPort.loadByUserCodes(userCodes);
 
         List<HqSalesOrderSummary> enriched = rawPage.content().stream()
                 .map(summary -> {
-                    UserInfoResponse info = summary.requestedBy() != null ? userInfoMap.get(summary.requestedBy()) : null;
+                    UserInfo info = summary.requestedBy() != null ? userInfoMap.get(summary.requestedBy()) : null;
                     return new HqSalesOrderSummary(
                             summary.code(),
                             summary.fromWarehouseCode(),
