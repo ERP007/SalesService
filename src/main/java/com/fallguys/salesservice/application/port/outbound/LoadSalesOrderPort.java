@@ -6,4 +6,5 @@ import com.fallguys.salesservice.domain.model.SalesOrder;
 // 미존재 시 ResourceNotFoundException(SO-06-01) 발생
 public interface LoadSalesOrderPort {
     SalesOrder load(String soCode);
+    boolean existsByInvoiceNumber(String invoiceNumber);
 }

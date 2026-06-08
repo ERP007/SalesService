@@ -108,6 +108,11 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     }
 
     @Override
+    public boolean existsByInvoiceNumber(String invoiceNumber) {
+        return salesOrderJpaDao.existsByApprovalInvoiceNumber(invoiceNumber);
+    }
+
+    @Override
     public SalesOrder save(SalesOrder salesOrder) {
         SalesOrderEntity entity = salesOrderJpaDao.findById(salesOrder.getCode())
                 .map(existing -> existing.update(salesOrder))
