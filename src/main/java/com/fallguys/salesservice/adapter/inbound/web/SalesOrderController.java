@@ -11,6 +11,7 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRespons
 import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderKpiResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderDetailResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderRequest;
@@ -25,8 +26,11 @@ import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDet
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderKpiUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailQuery;
+import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersUseCase;
+import com.fallguys.salesservice.application.port.inbound.HqSalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
@@ -58,6 +62,7 @@ public class SalesOrderController {
     private final GetHqSalesOrderKpiUseCase getHqSalesOrderKpiUseCase;
     private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
     private final GetHqSalesOrdersUseCase getHqSalesOrdersUseCase;
+    private final GetHqSalesOrderDetailUseCase getHqSalesOrderDetailUseCase;
 
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
@@ -157,6 +162,16 @@ public class SalesOrderController {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         HqSalesOrderKpi kpi = getHqSalesOrderKpiUseCase.getKpi(role);
         return ResponseEntity.ok(HqSalesOrderKpiResponse.from(kpi));
+    }
+
+    @GetMapping("/hq/{code}")
+    public ResponseEntity<HqSalesOrderDetailResponse> getHqOrderDetail(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code
+    ) {
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        HqSalesOrderDetail detail = getHqSalesOrderDetailUseCase.get(new GetHqSalesOrderDetailQuery(code, role));
+        return ResponseEntity.ok(HqSalesOrderDetailResponse.from(detail));
     }
 
     @GetMapping("/hq")
