@@ -190,7 +190,7 @@ class DeliverSalesOrderServiceTest {
                 SalesOrderStatus.APPROVED, LocalDate.of(2026, 6, 5), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                new SalesOrderApproval("hq001", APPROVED_AT, LocalDate.now(), CarrierType.VEHICLE, "INV-2026-001"),
+                new SalesOrderApproval("hq001", APPROVED_AT, LocalDate.of(2026, 6, 1), CarrierType.VEHICLE, "INV-2026-001"),
                 null, null, null, lines
         );
     }
