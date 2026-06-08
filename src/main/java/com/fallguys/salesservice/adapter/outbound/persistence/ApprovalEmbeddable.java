@@ -9,18 +9,17 @@ import java.time.Instant;
 public record ApprovalEmbeddable(
         String approvedBy,
         Instant approvedAt,
-        String fromWarehouseCode,
         String carrierType,
         String invoiceNumber
 ) {
     public static ApprovalEmbeddable from(SalesOrderApproval domain) {
         if (domain == null) return null;
         return new ApprovalEmbeddable(domain.approvedBy(), domain.approvedAt(),
-                domain.fromWarehouseCode(), domain.carrierType(), domain.invoiceNumber());
+                domain.carrierType(), domain.invoiceNumber());
     }
 
     public SalesOrderApproval toDomain() {
         if (approvedBy == null) return null;
-        return new SalesOrderApproval(approvedBy, approvedAt, fromWarehouseCode, carrierType, invoiceNumber);
+        return new SalesOrderApproval(approvedBy, approvedAt, carrierType, invoiceNumber);
     }
 }
