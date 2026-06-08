@@ -12,6 +12,9 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderReques
 import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderKpiResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderPageResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderRequest;
+import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderSummaryResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
@@ -23,14 +26,17 @@ import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDet
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderKpiUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +57,7 @@ public class SalesOrderController {
     private final GetBranchSalesOrderKpiUseCase getBranchSalesOrderKpiUseCase;
     private final GetHqSalesOrderKpiUseCase getHqSalesOrderKpiUseCase;
     private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
+    private final GetHqSalesOrdersUseCase getHqSalesOrdersUseCase;
 
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
@@ -150,6 +157,19 @@ public class SalesOrderController {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         HqSalesOrderKpi kpi = getHqSalesOrderKpiUseCase.getKpi(role);
         return ResponseEntity.ok(HqSalesOrderKpiResponse.from(kpi));
+    }
+
+    @GetMapping("/hq")
+    public ResponseEntity<HqSalesOrderPageResponse> getHqOrders(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @ModelAttribute HqSalesOrderRequest request
+    ) {
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        HqSalesOrderSummaryPage summaryPage = getHqSalesOrdersUseCase.getOrders(request.toQuery(role));
+        List<HqSalesOrderSummaryResponse> content = summaryPage.content().stream()
+                .map(HqSalesOrderSummaryResponse::from)
+                .toList();
+        return ResponseEntity.ok(HqSalesOrderPageResponse.from(summaryPage, content));
     }
 
     @GetMapping("/branch")
