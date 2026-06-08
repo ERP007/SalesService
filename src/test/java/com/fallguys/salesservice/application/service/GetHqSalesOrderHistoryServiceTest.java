@@ -98,7 +98,9 @@ class GetHqSalesOrderHistoryServiceTest {
                 .willThrow(new ResourceNotFoundException(SalesErrorCode.SO_NOT_FOUND));
 
         assertThatThrownBy(() -> service.get(query(UserRole.HQ_MANAGER)))
-                .isInstanceOf(ResourceNotFoundException.class);
+                .isInstanceOf(ResourceNotFoundException.class)
+                .satisfies(ex -> assertThat(((ResourceNotFoundException) ex).getCode())
+                        .isEqualTo(SalesErrorCode.SO_NOT_FOUND.getCode()));
     }
 
     @Test

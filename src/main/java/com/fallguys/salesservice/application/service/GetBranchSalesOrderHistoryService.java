@@ -7,6 +7,7 @@ import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
@@ -17,10 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -61,8 +62,8 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
 
         SalesOrder order = loadSalesOrderPort.load(query.soCode());
 
-        if (!query.warehouseCode().equals(order.getFromWarehouseCode())) {
-            throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
+        if (!Objects.equals(query.warehouseCode(), order.getFromWarehouseCode())) {
+            throw new ResourceNotFoundException(SalesErrorCode.SO_NOT_FOUND);
         }
 
         List<String> actorCodes = collectActorCodes(order);
