@@ -21,7 +21,13 @@ public enum SalesErrorCode {
     INVENTORY_ALREADY_PROCESSED("SO-07-02", "이미 입고 처리된 발주입니다"),
     INVENTORY_WAREHOUSE_INACTIVE("SO-07-03", "비활성 창고로는 입고할 수 없습니다"),
     INVENTORY_SERVICE_ERROR("SO-07-04", "재고 서비스 호출에 실패했습니다"),
-    REJECT_MEMO_REQUIRED("SO-05-10", "기타 사유 선택 시 메모는 필수입니다");
+    REJECT_MEMO_REQUIRED("SO-05-10", "기타 사유 선택 시 메모는 필수입니다"),
+    INVENTORY_OUTBOUND_FAILED("SO-07-05", "재고 출고 처리에 실패했습니다"),
+    INSUFFICIENT_STOCK("SO-07-06", "가용 재고가 부족합니다"),
+    INVENTORY_LOCK_TIMEOUT("SO-07-07", "재고 처리 중 타임아웃이 발생했습니다"),
+    STOCK_NOT_FOUND("SO-07-08", "존재하지 않는 재고입니다"),
+    INVALID_APPROVED_DATE("SO-05-11", "승인일은 요청일보다 이전일 수 없습니다"),
+    DUPLICATE_INVOICE_NUMBER("SO-05-12", "이미 사용된 송장 번호입니다");
 
     private final String code;
     private final String defaultMessage;

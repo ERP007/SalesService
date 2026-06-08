@@ -156,7 +156,7 @@ class RejectSalesOrderServiceTest {
                 SalesOrderStatus.APPROVED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(HQ_USER_CODE, Instant.now()),
                 new SalesOrderRequest(HQ_USER_CODE, Instant.now()),
-                new SalesOrderApproval(HQ_USER_CODE, Instant.now(), "TRUCK", "INV-001"),
+                new SalesOrderApproval(HQ_USER_CODE, Instant.now(), LocalDate.now(), CarrierType.VEHICLE, "INV-001"),
                 null, null, null, List.of()
         );
     }

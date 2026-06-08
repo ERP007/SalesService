@@ -1,5 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
+import com.fallguys.salesservice.adapter.inbound.web.dto.ApproveSalesOrderRequest;
+import com.fallguys.salesservice.adapter.inbound.web.dto.ApproveSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderDetailResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderRequest;
@@ -35,6 +37,7 @@ import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailQ
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderHistoryQuery;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderHistoryUseCase;
+import com.fallguys.salesservice.application.port.inbound.ApproveSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.RejectSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersUseCase;
@@ -75,6 +78,7 @@ public class SalesOrderController {
     private final GetBranchSalesOrderHistoryUseCase getBranchSalesOrderHistoryUseCase;
     private final GetHqSalesOrderHistoryUseCase getHqSalesOrderHistoryUseCase;
     private final RejectSalesOrderUseCase rejectSalesOrderUseCase;
+    private final ApproveSalesOrderUseCase approveSalesOrderUseCase;
 
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
@@ -197,6 +201,18 @@ public class SalesOrderController {
                 .map(HqSalesOrderSummaryResponse::from)
                 .toList();
         return ResponseEntity.ok(HqSalesOrderPageResponse.from(summaryPage, content));
+    }
+
+    @PatchMapping("/{code}/approve")
+    public ResponseEntity<ApproveSalesOrderResponse> approve(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code,
+            @Valid @RequestBody ApproveSalesOrderRequest request
+    ) {
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrder order = approveSalesOrderUseCase.approve(request.toCommand(code, userCode, role));
+        return ResponseEntity.ok(ApproveSalesOrderResponse.from(order));
     }
 
     @PatchMapping("/{code}/reject")

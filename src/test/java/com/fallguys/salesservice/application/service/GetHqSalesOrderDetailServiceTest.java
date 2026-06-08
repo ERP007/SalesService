@@ -201,7 +201,7 @@ class GetHqSalesOrderDetailServiceTest {
                 SalesOrderStatus.APPROVED, FIXED_DATE.plusDays(3), null,
                 new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
                 new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
-                new SalesOrderApproval(APPROVER_CODE, FIXED_INSTANT, "TRUCK", "INV-001"),
+                new SalesOrderApproval(APPROVER_CODE, FIXED_INSTANT, FIXED_DATE, CarrierType.VEHICLE, "INV-001"),
                 null, null, null, List.of()
         );
     }
@@ -212,7 +212,7 @@ class GetHqSalesOrderDetailServiceTest {
                 SalesOrderStatus.APPROVED, FIXED_DATE.plusDays(3), null,
                 new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
                 new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
-                new SalesOrderApproval(REQUESTER_CODE, FIXED_INSTANT, "TRUCK", "INV-001"),
+                new SalesOrderApproval(REQUESTER_CODE, FIXED_INSTANT, FIXED_DATE, CarrierType.VEHICLE, "INV-001"),
                 null, null, null, List.of()
         );
     }
