@@ -2,6 +2,7 @@ package com.fallguys.salesservice.adapter.outbound.persistence;
 
 import com.fallguys.salesservice.domain.model.CarrierType;
 import com.fallguys.salesservice.domain.model.SalesOrderApproval;
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -15,7 +16,7 @@ public record ApprovalEmbeddable(
         Instant approvedAt,
         LocalDate approvedDate,
         @Enumerated(EnumType.STRING) CarrierType carrierType,
-        String invoiceNumber
+        @Column(unique = true) String invoiceNumber
 ) {
     public static ApprovalEmbeddable from(SalesOrderApproval domain) {
         if (domain == null) return null;
