@@ -89,6 +89,27 @@ public class SalesOrder {
      * 예외:
      * - REQUESTED가 아닌 경우: SalesOrderException (SO-05-07, 400)
      */
+    /**
+     * REQUESTED 상태의 발주를 REJECTED로 전환한다.
+     *
+     * 흐름:
+     * 1) REQUESTED 상태인지 검증한다.
+     * 2) 반려 이력(rejectedBy, rejectedAt, category, memo)을 기록하고 상태를 REJECTED로 전환한다.
+     *
+     * 트랜잭션: 쓰기. 조회·반려·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
+     *
+     * 예외:
+     * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-05-07, 409)
+     */
+    public void reject(String rejectedBy, Instant now, RejectReasonCategory reasonCategory, String memo) {
+        if (this.status != SalesOrderStatus.REQUESTED) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "REQUESTED 상태에서만 반려 가능합니다. 현재 상태: " + this.status);
+        }
+        this.rejection = new SalesOrderRejection(rejectedBy, now, reasonCategory, memo);
+        this.status = SalesOrderStatus.REJECTED;
+    }
+
     public void cancel(String canceledBy, Instant now, String reason) {
         if (this.status != SalesOrderStatus.REQUESTED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
