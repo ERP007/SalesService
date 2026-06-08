@@ -7,7 +7,7 @@ public record SalesOrderApproval(
         String approvedBy,
         Instant approvedAt,
         LocalDate approvedDate,
-        String carrierType,
+        CarrierType carrierType,
         String invoiceNumber
 ) {
 }

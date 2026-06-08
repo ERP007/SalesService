@@ -185,7 +185,7 @@ class GetHqSalesOrderHistoryServiceTest {
                 SalesOrderStatus.APPROVED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(BRANCH_USER_CODE, T1),
                 new SalesOrderRequest(BRANCH_USER_CODE, T2),
-                new SalesOrderApproval(HQ_USER_CODE, T3, "TRUCK", "INV-001"),
+                new SalesOrderApproval(HQ_USER_CODE, T3, T3.atZone(java.time.ZoneOffset.UTC).toLocalDate(), CarrierType.VEHICLE, "INV-001"),
                 null, null, null, List.of()
         );
     }

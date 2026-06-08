@@ -11,7 +11,7 @@ public record ApproveSalesOrderResponse(
         String fromWarehouseCode,
         String toWarehouseCode,
         LocalDate approvedDate,
-        String carrierType,
+        String carrierType, // CarrierType.name()
         String invoiceNumber,
         String status,
         int totalQuantity,
@@ -26,7 +26,7 @@ public record ApproveSalesOrderResponse(
                 order.getFromWarehouseCode(),
                 order.getToWarehouseCode(),
                 order.getApproval().approvedDate(),
-                order.getApproval().carrierType(),
+                order.getApproval().carrierType() != null ? order.getApproval().carrierType().name() : null,
                 order.getApproval().invoiceNumber(),
                 order.getStatus().name(),
                 totalQuantity,

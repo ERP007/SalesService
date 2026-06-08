@@ -41,7 +41,7 @@ public record BranchSalesOrderDetailResponse(
         SalesOrderApproval approval = order.getApproval();
         Instant approvedAt = approval != null ? approval.approvedAt() : null;
         String invoiceNumber = approval != null ? approval.invoiceNumber() : null;
-        String carrierType = approval != null ? approval.carrierType() : null;
+        String carrierType = approval != null && approval.carrierType() != null ? approval.carrierType().name() : null;
 
         List<LineResponse> lines = order.getLines() != null
                 ? order.getLines().stream().map(LineResponse::from).toList()
