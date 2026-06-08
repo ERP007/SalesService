@@ -20,7 +20,8 @@ public enum SalesErrorCode {
     INVENTORY_INBOUND_FAILED("SO-07-01", "재고 입고 처리에 실패했습니다"),
     INVENTORY_ALREADY_PROCESSED("SO-07-02", "이미 입고 처리된 발주입니다"),
     INVENTORY_WAREHOUSE_INACTIVE("SO-07-03", "비활성 창고로는 입고할 수 없습니다"),
-    INVENTORY_SERVICE_ERROR("SO-07-04", "재고 서비스 호출에 실패했습니다");
+    INVENTORY_SERVICE_ERROR("SO-07-04", "재고 서비스 호출에 실패했습니다"),
+    REJECT_MEMO_REQUIRED("SO-05-10", "기타 사유 선택 시 메모는 필수입니다");
 
     private final String code;
     private final String defaultMessage;

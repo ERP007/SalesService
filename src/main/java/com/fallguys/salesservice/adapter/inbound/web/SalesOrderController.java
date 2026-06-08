@@ -16,6 +16,8 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderKpiResponse
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderSummaryResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.RejectSalesOrderRequest;
+import com.fallguys.salesservice.adapter.inbound.web.dto.RejectSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderHistoryResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
@@ -33,6 +35,7 @@ import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailQ
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderHistoryQuery;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderHistoryUseCase;
+import com.fallguys.salesservice.application.port.inbound.RejectSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.HqSalesOrderDetail;
@@ -71,6 +74,7 @@ public class SalesOrderController {
     private final GetHqSalesOrderDetailUseCase getHqSalesOrderDetailUseCase;
     private final GetBranchSalesOrderHistoryUseCase getBranchSalesOrderHistoryUseCase;
     private final GetHqSalesOrderHistoryUseCase getHqSalesOrderHistoryUseCase;
+    private final RejectSalesOrderUseCase rejectSalesOrderUseCase;
 
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
@@ -193,6 +197,18 @@ public class SalesOrderController {
                 .map(HqSalesOrderSummaryResponse::from)
                 .toList();
         return ResponseEntity.ok(HqSalesOrderPageResponse.from(summaryPage, content));
+    }
+
+    @PatchMapping("/{code}/reject")
+    public ResponseEntity<RejectSalesOrderResponse> reject(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code,
+            @Valid @RequestBody RejectSalesOrderRequest request
+    ) {
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        SalesOrder order = rejectSalesOrderUseCase.reject(request.toCommand(code, userCode, role));
+        return ResponseEntity.ok(RejectSalesOrderResponse.from(order));
     }
 
     @GetMapping("/{code}/histories")
