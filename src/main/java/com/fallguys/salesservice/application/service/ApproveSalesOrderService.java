@@ -45,8 +45,9 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      * 6) 재고 서비스 출고 호출
      * 7) 저장
      *
-     * 트랜잭션: 쓰기. 재고 서비스 호출은 트랜잭션 경계 밖(외부 호출).
-     * 재고 호출 실패 시 트랜잭션이 롤백되어 DB 변경도 취소된다.
+     * 트랜잭션: 쓰기. DB 저장 후 재고 서비스 출고를 호출한다.
+     * 재고 호출 실패 시 SO는 APPROVED 상태로 남고 출고만 미처리된다(재시도 가능).
+     * 반대 순서(출고 후 저장 실패)보다 정합성 측면에서 낫다.
      *
      * 예외:
      * - 미허용 역할: ForbiddenException (SO-05-03, 403)
@@ -75,9 +76,11 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
         order.approve(command.approvedBy(), Instant.now(), command.approvedDate(),
                 command.carrierType(), command.invoiceNumber());
 
-        outboundStockPort.outbound(order);
+        SalesOrder saved = saveSalesOrderPort.save(order);
 
-        return saveSalesOrderPort.save(order);
+        outboundStockPort.outbound(saved);
+
+        return saved;
     }
 
     private void validateApprovedDate(LocalDate approvedDate, SalesOrder order) {

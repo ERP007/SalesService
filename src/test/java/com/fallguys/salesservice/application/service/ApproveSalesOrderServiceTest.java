@@ -243,7 +243,7 @@ class ApproveSalesOrderServiceTest {
     // ── 재고 출고 실패 ─────────────────────────────────────────────────────────
 
     @Test
-    void 재고_출고_실패시_예외_전파되고_저장_미실행() {
+    void 재고_출고_실패시_예외_전파되고_저장은_실행됨() {
         willThrow(new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED))
                 .given(outboundStockPort).outbound(any());
         ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
@@ -251,7 +251,7 @@ class ApproveSalesOrderServiceTest {
         assertThatThrownBy(() -> service.approve(command))
                 .isInstanceOf(SalesOrderException.class);
 
-        then(saveSalesOrderPort).shouldHaveNoInteractions();
+        then(saveSalesOrderPort).should().save(any());
     }
 
     // ── 헬퍼 ──────────────────────────────────────────────────────────────────
