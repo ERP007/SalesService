@@ -101,6 +101,30 @@ public class SalesOrder {
      * 예외:
      * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-05-07, 409)
      */
+    /**
+     * REQUESTED 상태의 발주를 APPROVED로 전환한다.
+     *
+     * 흐름:
+     * 1) REQUESTED 상태인지 검증한다.
+     * 2) 각 라인의 approvedQuantity를 requestedQuantity로 확정한다.
+     * 3) 승인 이력(approvedBy, approvedAt, approvedDate, carrierType, invoiceNumber)을 기록하고 상태를 APPROVED로 전환한다.
+     *
+     * 트랜잭션: 쓰기. 조회·승인·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
+     *
+     * 예외:
+     * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-05-07, 409)
+     */
+    public void approve(String approvedBy, Instant now, LocalDate approvedDate,
+                        CarrierType carrierType, String invoiceNumber) {
+        if (this.status != SalesOrderStatus.REQUESTED) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "REQUESTED 상태에서만 승인 가능합니다. 현재 상태: " + this.status);
+        }
+        this.lines.forEach(SalesOrderLine::approve);
+        this.approval = new SalesOrderApproval(approvedBy, now, approvedDate, carrierType, invoiceNumber);
+        this.status = SalesOrderStatus.APPROVED;
+    }
+
     public void reject(String rejectedBy, Instant now, RejectReasonCategory reasonCategory, String memo) {
         if (this.status != SalesOrderStatus.REQUESTED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,

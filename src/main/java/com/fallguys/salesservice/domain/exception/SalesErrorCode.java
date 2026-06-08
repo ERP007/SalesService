@@ -25,7 +25,9 @@ public enum SalesErrorCode {
     INVENTORY_OUTBOUND_FAILED("SO-07-05", "재고 출고 처리에 실패했습니다"),
     INSUFFICIENT_STOCK("SO-07-06", "가용 재고가 부족합니다"),
     INVENTORY_LOCK_TIMEOUT("SO-07-07", "재고 처리 중 타임아웃이 발생했습니다"),
-    STOCK_NOT_FOUND("SO-07-08", "존재하지 않는 재고입니다");
+    STOCK_NOT_FOUND("SO-07-08", "존재하지 않는 재고입니다"),
+    INVALID_APPROVED_DATE("SO-05-11", "승인일은 요청일보다 이전일 수 없습니다"),
+    DUPLICATE_INVOICE_NUMBER("SO-05-12", "이미 사용된 송장 번호입니다");
 
     private final String code;
     private final String defaultMessage;
