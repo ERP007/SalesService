@@ -1,6 +1,5 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.adapter.outbound.client.dto.UserInfoResponse;
 import com.fallguys.salesservice.domain.model.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 
@@ -20,13 +19,13 @@ public record HqSalesOrderSummaryResponse(
         String unitSnapshot,
         SalesOrderStatus status
 ) {
-    public static HqSalesOrderSummaryResponse from(HqSalesOrderSummary summary, UserInfoResponse userInfo) {
+    public static HqSalesOrderSummaryResponse from(HqSalesOrderSummary summary) {
         return new HqSalesOrderSummaryResponse(
                 summary.code(),
                 summary.fromWarehouseCode(),
                 summary.requestedBy(),
-                userInfo != null ? userInfo.name() : null,
-                userInfo != null ? userInfo.position() : null,
+                summary.requesterName(),
+                summary.requesterPosition(),
                 summary.requestedAt(),
                 summary.desiredArrivalDate(),
                 summary.itemCount(),

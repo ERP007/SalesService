@@ -217,6 +217,8 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
                 entity.getCode(),
                 entity.getFromWarehouseCode(),
                 entity.getRequest() != null ? entity.getRequest().requestedBy() : null,
+                null,
+                null,
                 entity.getStatus(),
                 entity.getRequest() != null ? entity.getRequest().requestedAt() : null,
                 entity.getDesiredArrivalDate(),

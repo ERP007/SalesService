@@ -2,12 +2,15 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersQuery;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersUseCase;
+import com.fallguys.salesservice.adapter.outbound.client.dto.UserInfoResponse;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrdersPort;
+import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +21,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +36,7 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
     );
 
     private final LoadHqSalesOrdersPort loadHqSalesOrdersPort;
+    private final LoadUserInfoPort loadUserInfoPort;
 
     /**
      * 본사 기준 전체 발주 목록을 페이지네이션으로 조회한다.
@@ -70,7 +78,46 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
                 query.size()
         );
 
-        return loadHqSalesOrdersPort.loadOrders(filter);
+        HqSalesOrderSummaryPage rawPage = loadHqSalesOrdersPort.loadOrders(filter);
+
+        List<String> userCodes = rawPage.content().stream()
+                .map(HqSalesOrderSummary::requestedBy)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<String, UserInfoResponse> userInfoMap = userCodes.isEmpty()
+                ? Map.of()
+                : loadUserInfoPort.loadByUserCodes(userCodes);
+
+        List<HqSalesOrderSummary> enriched = rawPage.content().stream()
+                .map(summary -> {
+                    UserInfoResponse info = userInfoMap.get(summary.requestedBy());
+                    return new HqSalesOrderSummary(
+                            summary.code(),
+                            summary.fromWarehouseCode(),
+                            summary.requestedBy(),
+                            info != null ? info.name() : null,
+                            info != null ? info.position() : null,
+                            summary.status(),
+                            summary.requestedAt(),
+                            summary.desiredArrivalDate(),
+                            summary.itemCount(),
+                            summary.totalQuantity(),
+                            summary.unitSnapshot()
+                    );
+                })
+                .toList();
+
+        return new HqSalesOrderSummaryPage(
+                enriched,
+                rawPage.page(),
+                rawPage.size(),
+                rawPage.totalElements(),
+                rawPage.totalPages(),
+                rawPage.hasPrevious(),
+                rawPage.hasNext()
+        );
     }
 
     private void validateDateRange(LocalDate startDate, LocalDate endDate) {

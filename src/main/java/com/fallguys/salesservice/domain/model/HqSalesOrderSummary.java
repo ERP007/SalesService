@@ -7,6 +7,8 @@ public record HqSalesOrderSummary(
         String code,
         String fromWarehouseCode,
         String requestedBy,
+        String requesterName,
+        String requesterPosition,
         SalesOrderStatus status,
         Instant requestedAt,
         LocalDate desiredArrivalDate,
