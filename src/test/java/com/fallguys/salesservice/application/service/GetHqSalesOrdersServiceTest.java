@@ -23,6 +23,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +33,9 @@ import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 class GetHqSalesOrdersServiceTest {
+
+    private static final LocalDate TEST_TODAY = LocalDate.now();
+    private static final Instant TEST_INSTANT = Instant.parse("2026-06-08T09:30:00Z");
 
     @Mock
     private LoadHqSalesOrdersPort loadHqSalesOrdersPort;
@@ -44,7 +49,7 @@ class GetHqSalesOrdersServiceTest {
     @Test
     void 정상_조회_성공() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(30), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(emptyPage());
 
         // when
@@ -58,7 +63,7 @@ class GetHqSalesOrdersServiceTest {
     @Test
     void ADMIN_조회_성공() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.ADMIN, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.ADMIN, TEST_TODAY.minusDays(30), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(emptyPage());
 
         // when / then
@@ -68,7 +73,7 @@ class GetHqSalesOrdersServiceTest {
     @Test
     void HQ_STAFF_조회_성공() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_STAFF, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_STAFF, TEST_TODAY.minusDays(30), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(emptyPage());
 
         // when / then
@@ -78,31 +83,33 @@ class GetHqSalesOrdersServiceTest {
     @Test
     void BRANCH_MANAGER는_ForbiddenException() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.BRANCH_MANAGER, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.BRANCH_MANAGER, TEST_TODAY.minusDays(30), TEST_TODAY);
 
         // when / then
         assertThatThrownBy(() -> sut.getOrders(query))
                 .isInstanceOf(ForbiddenException.class);
 
         then(loadHqSalesOrdersPort).shouldHaveNoInteractions();
+        then(loadUserInfoPort).shouldHaveNoInteractions();
     }
 
     @Test
     void BRANCH_STAFF는_ForbiddenException() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.BRANCH_STAFF, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.BRANCH_STAFF, TEST_TODAY.minusDays(30), TEST_TODAY);
 
         // when / then
         assertThatThrownBy(() -> sut.getOrders(query))
                 .isInstanceOf(ForbiddenException.class);
 
         then(loadHqSalesOrdersPort).shouldHaveNoInteractions();
+        then(loadUserInfoPort).shouldHaveNoInteractions();
     }
 
     @Test
     void endDate가_오늘_이후면_SalesOrderException() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(30), LocalDate.now().plusDays(1));
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(30), TEST_TODAY.plusDays(1));
 
         // when / then
         assertThatThrownBy(() -> sut.getOrders(query))
@@ -110,12 +117,13 @@ class GetHqSalesOrdersServiceTest {
                 .hasMessageContaining("endDate");
 
         then(loadHqSalesOrdersPort).shouldHaveNoInteractions();
+        then(loadUserInfoPort).shouldHaveNoInteractions();
     }
 
     @Test
     void startDate가_endDate보다_늦으면_SalesOrderException() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(10), LocalDate.now().minusDays(20));
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(10), TEST_TODAY.minusDays(20));
 
         // when / then
         assertThatThrownBy(() -> sut.getOrders(query))
@@ -123,12 +131,13 @@ class GetHqSalesOrdersServiceTest {
                 .hasMessageContaining("startDate");
 
         then(loadHqSalesOrdersPort).shouldHaveNoInteractions();
+        then(loadUserInfoPort).shouldHaveNoInteractions();
     }
 
     @Test
     void 조회기간이_365일_초과면_SalesOrderException() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(366), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(366), TEST_TODAY);
 
         // when / then
         assertThatThrownBy(() -> sut.getOrders(query))
@@ -136,12 +145,13 @@ class GetHqSalesOrdersServiceTest {
                 .hasMessageContaining("365일");
 
         then(loadHqSalesOrdersPort).shouldHaveNoInteractions();
+        then(loadUserInfoPort).shouldHaveNoInteractions();
     }
 
     @Test
     void 조회기간이_정확히_365일이면_성공() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(365), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(365), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(emptyPage());
 
         // when / then
@@ -153,7 +163,7 @@ class GetHqSalesOrdersServiceTest {
         // given
         GetHqSalesOrdersQuery query = new GetHqSalesOrdersQuery(
                 UserRole.HQ_MANAGER, "BR-04", null, defaultStatuses(),
-                LocalDate.now().minusDays(30), LocalDate.now(),
+                TEST_TODAY.minusDays(30), TEST_TODAY,
                 "requestedAt", "desc", 1, 20
         );
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(emptyPage());
@@ -171,7 +181,7 @@ class GetHqSalesOrdersServiceTest {
     @Test
     void page_1이_포트에_0으로_전달됨() {
         // given
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(30), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(emptyPage());
 
         ArgumentCaptor<HqSalesOrderFilter> captor = ArgumentCaptor.forClass(HqSalesOrderFilter.class);
@@ -190,7 +200,7 @@ class GetHqSalesOrdersServiceTest {
         HqSalesOrderSummary rawSummary = rawSummary("EMP-001");
         HqSalesOrderSummaryPage rawPage = pageOf(List.of(rawSummary));
 
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(30), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(rawPage);
         given(loadUserInfoPort.loadByUserCodes(List.of("EMP-001")))
                 .willReturn(Map.of("EMP-001", new UserInfo("EMP-001", "정유진", "서비스 매니저")));
@@ -210,7 +220,7 @@ class GetHqSalesOrdersServiceTest {
         HqSalesOrderSummary rawSummary = rawSummary("EMP-999");
         HqSalesOrderSummaryPage rawPage = pageOf(List.of(rawSummary));
 
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(30), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(rawPage);
         given(loadUserInfoPort.loadByUserCodes(List.of("EMP-999"))).willReturn(Map.of());
 
@@ -228,7 +238,7 @@ class GetHqSalesOrdersServiceTest {
         HqSalesOrderSummary rawSummary = rawSummary(null);
         HqSalesOrderSummaryPage rawPage = pageOf(List.of(rawSummary));
 
-        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, LocalDate.now().minusDays(30), LocalDate.now());
+        GetHqSalesOrdersQuery query = defaultQuery(UserRole.HQ_MANAGER, TEST_TODAY.minusDays(30), TEST_TODAY);
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(rawPage);
 
         // when
@@ -263,7 +273,7 @@ class GetHqSalesOrdersServiceTest {
                 "SO-2026-06-0001", "BR-04", requestedBy,
                 null, null,
                 SalesOrderStatus.REQUESTED,
-                Instant.now(), LocalDate.now().plusDays(3),
+                TEST_INSTANT, TEST_TODAY.plusDays(3),
                 2, 100, "EA"
         );
     }
