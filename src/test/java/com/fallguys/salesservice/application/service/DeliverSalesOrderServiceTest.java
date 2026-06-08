@@ -142,7 +142,7 @@ class DeliverSalesOrderServiceTest {
         assertThatThrownBy(() -> service.deliver(command))
                 .isInstanceOf(SalesOrderException.class)
                 .extracting(e -> ((SalesOrderException) e).getCode())
-                .isEqualTo(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE.getCode());
+                .isEqualTo(SalesErrorCode.INVALID_DELIVERED_DATE.getCode());
 
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
@@ -190,7 +190,7 @@ class DeliverSalesOrderServiceTest {
                 SalesOrderStatus.APPROVED, LocalDate.of(2026, 6, 5), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                new SalesOrderApproval("hq001", APPROVED_AT, "WH-HQ-01", "TRUCK", "INV-2026-001"),
+                new SalesOrderApproval("hq001", APPROVED_AT, "TRUCK", "INV-2026-001"),
                 null, null, null, lines
         );
     }
