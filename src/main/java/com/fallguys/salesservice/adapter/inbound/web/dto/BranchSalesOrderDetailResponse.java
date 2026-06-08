@@ -11,10 +11,8 @@ import java.util.List;
 public record BranchSalesOrderDetailResponse(
         String code,
         String status,
-        String fromWarehouseCode,
-        String fromWarehouseName,
-        String toWarehouseCode,
-        String toWarehouseName,
+        WarehouseInfo fromWarehouse,
+        WarehouseInfo toWarehouse,
         Instant approvedAt,
         String invoiceNumber,
         String carrierType,
@@ -23,6 +21,7 @@ public record BranchSalesOrderDetailResponse(
     public record LineResponse(
             Long id,
             String itemCode,
+            String itemName,
             String unit,
             int requestQuantity
     ) {
@@ -30,6 +29,7 @@ public record BranchSalesOrderDetailResponse(
             return new LineResponse(
                     line.getId(),
                     line.getItemCode(),
+                    line.getItemNameSnapshot(),
                     line.getUnitSnapshot(),
                     line.getRequestedQuantity()
             );
@@ -50,10 +50,8 @@ public record BranchSalesOrderDetailResponse(
         return new BranchSalesOrderDetailResponse(
                 order.getCode(),
                 order.getStatus().name(),
-                order.getFromWarehouseCode(),
-                detail.fromWarehouseName(),
-                order.getToWarehouseCode(),
-                detail.toWarehouseName(),
+                new WarehouseInfo(order.getFromWarehouseCode(), detail.fromWarehouseName()),
+                new WarehouseInfo(order.getToWarehouseCode(), detail.toWarehouseName()),
                 approvedAt,
                 invoiceNumber,
                 carrierType,

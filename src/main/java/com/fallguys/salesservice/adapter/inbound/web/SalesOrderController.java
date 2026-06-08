@@ -16,6 +16,7 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderKpiResponse
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderSummaryResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderHistoryResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
@@ -24,14 +25,19 @@ import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderComma
 import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderHistoryQuery;
+import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderHistoryUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailUseCase;
+import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderHistoryQuery;
+import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderHistoryUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.inbound.HqSalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
+import com.fallguys.salesservice.application.port.inbound.SalesOrderHistoryEntry;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
@@ -63,6 +69,8 @@ public class SalesOrderController {
     private final GetBranchSalesOrdersUseCase getBranchSalesOrdersUseCase;
     private final GetHqSalesOrdersUseCase getHqSalesOrdersUseCase;
     private final GetHqSalesOrderDetailUseCase getHqSalesOrderDetailUseCase;
+    private final GetBranchSalesOrderHistoryUseCase getBranchSalesOrderHistoryUseCase;
+    private final GetHqSalesOrderHistoryUseCase getHqSalesOrderHistoryUseCase;
 
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
@@ -185,6 +193,23 @@ public class SalesOrderController {
                 .map(HqSalesOrderSummaryResponse::from)
                 .toList();
         return ResponseEntity.ok(HqSalesOrderPageResponse.from(summaryPage, content));
+    }
+
+    @GetMapping("/{code}/histories")
+    public ResponseEntity<List<SalesOrderHistoryResponse>> getHistories(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String code
+    ) {
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        List<SalesOrderHistoryEntry> entries = switch (role) {
+            case BRANCH_MANAGER, BRANCH_STAFF -> {
+                String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+                yield getBranchSalesOrderHistoryUseCase.get(new GetBranchSalesOrderHistoryQuery(code, role, warehouseCode));
+            }
+            case ADMIN, HQ_MANAGER, HQ_STAFF ->
+                    getHqSalesOrderHistoryUseCase.get(new GetHqSalesOrderHistoryQuery(code, role));
+        };
+        return ResponseEntity.ok(SalesOrderHistoryResponse.listFrom(entries));
     }
 
     @GetMapping("/branch")
