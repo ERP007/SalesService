@@ -4,14 +4,18 @@ import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilte
 import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
 import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
 import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrderKpiPort;
+import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrdersPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.HqSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.model.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.SalesOrderSummary;
@@ -32,7 +36,7 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
-public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadBranchSalesOrderKpiPort, LoadHqSalesOrderKpiPort, GenerateSoCodePort, LoadBranchSalesOrdersPort {
+public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadBranchSalesOrderKpiPort, LoadHqSalesOrderKpiPort, GenerateSoCodePort, LoadBranchSalesOrdersPort, LoadHqSalesOrdersPort {
 
     private static final Map<String, String> SORT_FIELD_TO_JPA = Map.of(
             "requestedAt", "request.requestedAt",
@@ -158,6 +162,67 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
                 filter.size(),
                 page.getTotalElements(),
                 page.getTotalPages()
+        );
+    }
+
+    @Override
+    public HqSalesOrderSummaryPage loadOrders(HqSalesOrderFilter filter) {
+        Sort.Direction direction = "asc".equals(filter.sortDirection()) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
+        Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
+
+        String searchPattern = filter.search() != null ? "%" + filter.search() + "%" : null;
+
+        Page<SalesOrderEntity> page = salesOrderJpaDao.findHqOrders(
+                filter.warehouseCode(),
+                searchPattern,
+                filter.statuses(),
+                filter.startInstant(),
+                filter.endInstant(),
+                pageable
+        );
+
+        List<HqSalesOrderSummary> summaries = page.getContent().stream()
+                .map(this::toHqSummary)
+                .toList();
+
+        int currentPage = filter.page() + 1;
+        int totalPages = page.getTotalPages();
+
+        return new HqSalesOrderSummaryPage(
+                summaries,
+                currentPage,
+                filter.size(),
+                page.getTotalElements(),
+                totalPages,
+                currentPage > 1,
+                currentPage < totalPages
+        );
+    }
+
+    private HqSalesOrderSummary toHqSummary(SalesOrderEntity entity) {
+        List<SalesOrderLineEntity> lines = entity.getLines();
+        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getRequestedQuantity).sum();
+
+        String unitSnapshot = null;
+        if (!lines.isEmpty()) {
+            long distinctUnits = lines.stream()
+                    .map(SalesOrderLineEntity::getUnitSnapshot)
+                    .distinct()
+                    .count();
+            unitSnapshot = distinctUnits == 1 ? lines.getFirst().getUnitSnapshot() : null;
+        }
+
+        return new HqSalesOrderSummary(
+                entity.getCode(),
+                entity.getFromWarehouseCode(),
+                entity.getRequest() != null ? entity.getRequest().requestedBy() : null,
+                entity.getStatus(),
+                entity.getRequest() != null ? entity.getRequest().requestedAt() : null,
+                entity.getDesiredArrivalDate(),
+                lines.size(),
+                totalQuantity,
+                unitSnapshot
         );
     }
 

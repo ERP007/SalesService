@@ -76,4 +76,42 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
             @Param("endInstant") Instant endInstant,
             Pageable pageable
     );
+
+    // HQ 전체 발주 목록 — warehouseCode null이면 전체 지점, 날짜는 requestedAt 기준
+    @Query(value = """
+            SELECT s FROM SalesOrderEntity s
+            WHERE (:warehouseCode IS NULL OR s.fromWarehouseCode = :warehouseCode)
+              AND (:searchPattern IS NULL
+                   OR s.code LIKE :searchPattern
+                   OR EXISTS (
+                     SELECT 1 FROM SalesOrderLineEntity l
+                     WHERE l MEMBER OF s.lines
+                       AND (l.itemCode LIKE :searchPattern OR l.itemNameSnapshot LIKE :searchPattern)
+                   ))
+              AND s.status IN :statuses
+              AND s.request.requestedAt >= :startInstant
+              AND s.request.requestedAt <= :endInstant
+            """,
+            countQuery = """
+            SELECT COUNT(s) FROM SalesOrderEntity s
+            WHERE (:warehouseCode IS NULL OR s.fromWarehouseCode = :warehouseCode)
+              AND (:searchPattern IS NULL
+                   OR s.code LIKE :searchPattern
+                   OR EXISTS (
+                     SELECT 1 FROM SalesOrderLineEntity l
+                     WHERE l MEMBER OF s.lines
+                       AND (l.itemCode LIKE :searchPattern OR l.itemNameSnapshot LIKE :searchPattern)
+                   ))
+              AND s.status IN :statuses
+              AND s.request.requestedAt >= :startInstant
+              AND s.request.requestedAt <= :endInstant
+            """)
+    Page<SalesOrderEntity> findHqOrders(
+            @Param("warehouseCode") String warehouseCode,
+            @Param("searchPattern") String searchPattern,
+            @Param("statuses") List<SalesOrderStatus> statuses,
+            @Param("startInstant") Instant startInstant,
+            @Param("endInstant") Instant endInstant,
+            Pageable pageable
+    );
 }
