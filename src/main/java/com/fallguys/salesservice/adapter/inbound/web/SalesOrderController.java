@@ -51,6 +51,9 @@ import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPa
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.UserRole;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +63,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "SalesOrder", description = "발주 API")
 @RestController
 @RequestMapping("/api/sales-orders")
 @RequiredArgsConstructor
@@ -80,6 +84,7 @@ public class SalesOrderController {
     private final RejectSalesOrderUseCase rejectSalesOrderUseCase;
     private final ApproveSalesOrderUseCase approveSalesOrderUseCase;
 
+    @Operation(summary = "발주 생성(즉시 제출)", description = "REQUESTED 상태로 발주를 생성한다. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
     @PostMapping
     public ResponseEntity<CreateSalesOrderResponse> create(
             @AuthenticationPrincipal Jwt jwt,
@@ -92,6 +97,7 @@ public class SalesOrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
     }
 
+    @Operation(summary = "발주 임시저장", description = "DRAFT 상태로 발주를 생성한다. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
     @PostMapping("/drafts")
     public ResponseEntity<CreateSalesOrderResponse> createDraft(
             @AuthenticationPrincipal Jwt jwt,
@@ -104,10 +110,11 @@ public class SalesOrderController {
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
     }
 
+    @Operation(summary = "발주 제출", description = "DRAFT 발주를 REQUESTED로 전환한다.")
     @PutMapping("/{code}")
     public ResponseEntity<CreateSalesOrderResponse> submit(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code,
+            @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody SubmitSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
@@ -117,10 +124,11 @@ public class SalesOrderController {
         return ResponseEntity.ok(CreateSalesOrderResponse.from(salesOrder));
     }
 
+    @Operation(summary = "발주 취소", description = "발주를 CANCELED로 전환한다.")
     @PatchMapping("/{code}/cancel")
     public ResponseEntity<CancelSalesOrderResponse> cancel(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code,
+            @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody CancelSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
@@ -132,10 +140,11 @@ public class SalesOrderController {
         return ResponseEntity.ok(CancelSalesOrderResponse.from(salesOrder));
     }
 
+    @Operation(summary = "입고 처리", description = "APPROVED 발주를 DELIVERED로 전환하고 재고 입고를 기록한다.")
     @PatchMapping("/{code}/deliver")
     public ResponseEntity<DeliverSalesOrderResponse> deliver(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code,
+            @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody DeliverSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
@@ -147,10 +156,11 @@ public class SalesOrderController {
         return ResponseEntity.ok(DeliverSalesOrderResponse.from(salesOrder));
     }
 
+    @Operation(summary = "지점 발주 상세 조회")
     @GetMapping("/branch/{code}")
     public ResponseEntity<BranchSalesOrderDetailResponse> getBranchOrderDetail(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code
+            @Parameter(description = "발주 코드") @PathVariable String code
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
@@ -161,6 +171,7 @@ public class SalesOrderController {
         return ResponseEntity.ok(BranchSalesOrderDetailResponse.from(detail));
     }
 
+    @Operation(summary = "지점 발주 KPI 조회")
     @GetMapping("/kpi/branch")
     public ResponseEntity<BranchSalesOrderKpiResponse> getBranchKpi(
             @AuthenticationPrincipal Jwt jwt
@@ -171,6 +182,7 @@ public class SalesOrderController {
         return ResponseEntity.ok(BranchSalesOrderKpiResponse.from(kpi));
     }
 
+    @Operation(summary = "본사 발주 KPI 조회")
     @GetMapping("/kpi/hq")
     public ResponseEntity<HqSalesOrderKpiResponse> getHqKpi(
             @AuthenticationPrincipal Jwt jwt
@@ -180,16 +192,18 @@ public class SalesOrderController {
         return ResponseEntity.ok(HqSalesOrderKpiResponse.from(kpi));
     }
 
+    @Operation(summary = "본사 발주 상세 조회")
     @GetMapping("/hq/{code}")
     public ResponseEntity<HqSalesOrderDetailResponse> getHqOrderDetail(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code
+            @Parameter(description = "발주 코드") @PathVariable String code
     ) {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         HqSalesOrderDetail detail = getHqSalesOrderDetailUseCase.get(new GetHqSalesOrderDetailQuery(code, role));
         return ResponseEntity.ok(HqSalesOrderDetailResponse.from(detail));
     }
 
+    @Operation(summary = "본사 발주 목록 조회", description = "날짜 범위·상태·창고 필터와 페이지네이션으로 발주 목록을 조회한다.")
     @GetMapping("/hq")
     public ResponseEntity<HqSalesOrderPageResponse> getHqOrders(
             @AuthenticationPrincipal Jwt jwt,
@@ -203,10 +217,11 @@ public class SalesOrderController {
         return ResponseEntity.ok(HqSalesOrderPageResponse.from(summaryPage, content));
     }
 
+    @Operation(summary = "발주 승인", description = "REQUESTED 발주를 APPROVED로 전환하고 재고 출고를 기록한다.")
     @PatchMapping("/{code}/approve")
     public ResponseEntity<ApproveSalesOrderResponse> approve(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code,
+            @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody ApproveSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
@@ -215,10 +230,11 @@ public class SalesOrderController {
         return ResponseEntity.ok(ApproveSalesOrderResponse.from(order));
     }
 
+    @Operation(summary = "발주 반려")
     @PatchMapping("/{code}/reject")
     public ResponseEntity<RejectSalesOrderResponse> reject(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code,
+            @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody RejectSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
@@ -227,10 +243,11 @@ public class SalesOrderController {
         return ResponseEntity.ok(RejectSalesOrderResponse.from(order));
     }
 
+    @Operation(summary = "발주 이력 조회", description = "발주 상태 변경 이력을 최신순으로 반환한다. 역할에 따라 지점·본사 이력을 조회한다.")
     @GetMapping("/{code}/histories")
     public ResponseEntity<List<SalesOrderHistoryResponse>> getHistories(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String code
+            @Parameter(description = "발주 코드") @PathVariable String code
     ) {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         List<SalesOrderHistoryEntry> entries = switch (role) {
@@ -244,6 +261,7 @@ public class SalesOrderController {
         return ResponseEntity.ok(SalesOrderHistoryResponse.listFrom(entries));
     }
 
+    @Operation(summary = "지점 발주 목록 조회", description = "지점 담당자 기준 발주 목록을 필터와 페이지네이션으로 조회한다.")
     @GetMapping("/branch")
     public ResponseEntity<BranchSalesOrderPageResponse> getBranchOrders(
             @AuthenticationPrincipal Jwt jwt,
