@@ -79,6 +79,9 @@ class SubmitSalesOrderServiceTest {
         assertThat(result.getLines().getFirst().getItemNameSnapshot()).isEqualTo("브레이크패드");
         assertThat(result.getToWarehouseCode()).isEqualTo(TO_WAREHOUSE).isNotEqualTo(DRAFT_TO_WAREHOUSE);
         assertThat(result.getDesiredArrivalDate()).isEqualTo(VALID_DATE).isNotEqualTo(DRAFT_DATE);
+
+        then(verifyWarehousePort).should().verify(FROM_WAREHOUSE);
+        then(verifyWarehousePort).should().verify(TO_WAREHOUSE);
     }
 
     @Test
@@ -150,13 +153,43 @@ class SubmitSalesOrderServiceTest {
     }
 
     @Test
-    void submit_warehouseNotFound_throwsResourceNotFoundException() {
+    void submit_fromWarehouseNotFound_throwsResourceNotFoundException() {
+        willThrow(new ResourceNotFoundException(SalesErrorCode.WAREHOUSE_NOT_FOUND))
+                .given(verifyWarehousePort).verify(FROM_WAREHOUSE);
+
+        assertThatThrownBy(() -> service.submit(command(List.of(
+                new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
+        )))).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void submit_fromWarehouseInactive_throwsSalesOrderException() {
+        willThrow(new SalesOrderException(SalesErrorCode.WAREHOUSE_INACTIVE))
+                .given(verifyWarehousePort).verify(FROM_WAREHOUSE);
+
+        assertThatThrownBy(() -> service.submit(command(List.of(
+                new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
+        )))).isInstanceOf(SalesOrderException.class);
+    }
+
+    @Test
+    void submit_toWarehouseNotFound_throwsResourceNotFoundException() {
         willThrow(new ResourceNotFoundException(SalesErrorCode.WAREHOUSE_NOT_FOUND))
                 .given(verifyWarehousePort).verify(TO_WAREHOUSE);
 
         assertThatThrownBy(() -> service.submit(command(List.of(
                 new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
         )))).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void submit_toWarehouseInactive_throwsSalesOrderException() {
+        willThrow(new SalesOrderException(SalesErrorCode.WAREHOUSE_INACTIVE))
+                .given(verifyWarehousePort).verify(TO_WAREHOUSE);
+
+        assertThatThrownBy(() -> service.submit(command(List.of(
+                new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
+        )))).isInstanceOf(SalesOrderException.class);
     }
 
     @Test

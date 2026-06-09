@@ -43,7 +43,8 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * 3) 중복 부품 코드 검증 (local)
      * 4) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 5) User 서비스 호출 → 사번으로 지점 창고 코드 확보 후 SO 소유 지점과 일치 검증
-     * 6) 창고 존재 검증 (Inventory 서비스)
+     * 6) 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
+     * 6-1) 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
      * 7) 부품 존재 확인 및 스냅샷 수집 (Item 서비스)
      * 8) 도메인 상태 전환 및 저장
      *
@@ -60,6 +61,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * - 사번 미존재: ResourceNotFoundException (SO-05-06, 404)
      * - SO 소유 지점 불일치: ForbiddenException (SO-06-02, 403)
      * - 창고 미존재: ResourceNotFoundException (SO-05-04, 404)
+     * - 창고 비활성: SalesOrderException (SO-05-13, 400)
      * - 부품 미존재: ResourceNotFoundException (SO-05-05, 404)
      */
     @Override
@@ -77,6 +79,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
+        verifyWarehousePort.verify(salesOrder.getFromWarehouseCode());
         verifyWarehousePort.verify(command.toWarehouseCode());
 
         List<String> itemCodes = command.lines().stream()
