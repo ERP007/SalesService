@@ -30,7 +30,8 @@ public enum SalesErrorCode {
     DUPLICATE_INVOICE_NUMBER("SO-05-12", "이미 사용된 송장 번호입니다"),
     WAREHOUSE_INACTIVE("SO-05-13", "비활성화된 창고입니다"),
     ITEM_INACTIVE("SO-05-14", "비활성화된 부품입니다"),
-    ITEM_SERVICE_ERROR("SO-07-09", "부품 서비스 호출에 실패했습니다");
+    ITEM_SERVICE_ERROR("SO-07-09", "부품 서비스 호출에 실패했습니다"),
+    USER_SERVICE_ERROR("SO-07-10", "사용자 서비스 호출에 실패했습니다");
 
     private final String code;
     private final String defaultMessage;
