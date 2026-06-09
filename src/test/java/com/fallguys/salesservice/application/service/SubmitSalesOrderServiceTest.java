@@ -202,6 +202,16 @@ class SubmitSalesOrderServiceTest {
         )))).isInstanceOf(ResourceNotFoundException.class);
     }
 
+    @Test
+    void submit_itemInactive_throwsSalesOrderException() {
+        given(loadItemPort.loadAll(any()))
+                .willThrow(new SalesOrderException(SalesErrorCode.ITEM_INACTIVE));
+
+        assertThatThrownBy(() -> service.submit(command(List.of(
+                new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL)
+        )))).isInstanceOf(SalesOrderException.class);
+    }
+
     private SubmitSalesOrderCommand command(List<CreateSalesOrderLineCommand> lines) {
         return new SubmitSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE, TO_WAREHOUSE, VALID_DATE, null, lines);
     }
