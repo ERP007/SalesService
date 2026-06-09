@@ -28,7 +28,9 @@ public enum SalesErrorCode {
     STOCK_NOT_FOUND("SO-07-08", "존재하지 않는 재고입니다"),
     INVALID_APPROVED_DATE("SO-05-11", "승인일은 요청일보다 이전일 수 없습니다"),
     DUPLICATE_INVOICE_NUMBER("SO-05-12", "이미 사용된 송장 번호입니다"),
-    WAREHOUSE_INACTIVE("SO-05-13", "비활성화된 창고입니다");
+    WAREHOUSE_INACTIVE("SO-05-13", "비활성화된 창고입니다"),
+    ITEM_INACTIVE("SO-05-14", "비활성화된 부품입니다"),
+    ITEM_SERVICE_ERROR("SO-07-09", "부품 서비스 호출에 실패했습니다");
 
     private final String code;
     private final String defaultMessage;

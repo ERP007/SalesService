@@ -172,14 +172,21 @@ class CreateSalesOrderServiceTest {
     @Test
     void create_itemNotFound_throwsResourceNotFoundException() {
         given(loadItemPort.loadAll(any()))
-                .willThrow(new ResourceNotFoundException(com.fallguys.salesservice.domain.exception.SalesErrorCode.ITEM_NOT_FOUND));
+                .willThrow(new ResourceNotFoundException(SalesErrorCode.ITEM_NOT_FOUND));
 
-        CreateSalesOrderCommand command = requestedCommand(
+        assertThatThrownBy(() -> service.create(requestedCommand(
                 List.of(new CreateSalesOrderLineCommand("ITEM-99", 1, Priority.NORMAL))
-        );
+        ))).isInstanceOf(ResourceNotFoundException.class);
+    }
 
-        assertThatThrownBy(() -> service.create(command))
-                .isInstanceOf(ResourceNotFoundException.class);
+    @Test
+    void create_itemInactive_throwsSalesOrderException() {
+        given(loadItemPort.loadAll(any()))
+                .willThrow(new SalesOrderException(SalesErrorCode.ITEM_INACTIVE));
+
+        assertThatThrownBy(() -> service.create(requestedCommand(
+                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
+        ))).isInstanceOf(SalesOrderException.class);
     }
 
     @Test

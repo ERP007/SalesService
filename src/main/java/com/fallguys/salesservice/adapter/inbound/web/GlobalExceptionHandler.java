@@ -48,7 +48,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ExternalServiceException.class)
     public ProblemDetail handleExternalService(ExternalServiceException ex) {
         log.error("External service error: code={}, message={}", ex.getCode(), ex.getMessage(), ex);
-        return build(HttpStatus.BAD_GATEWAY, ex.getCode(), ex.getMessage());
+        return build(HttpStatus.BAD_GATEWAY, ex.getCode(), "일시적으로 서비스를 이용할 수 없습니다");
     }
 
     @ExceptionHandler(Exception.class)
