@@ -7,8 +7,10 @@ import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryOutboundLi
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryOutboundRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.WarehouseResponse;
 import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.OutboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
+import com.fallguys.salesservice.application.port.outbound.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -29,7 +31,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InventoryClientAdapter implements InboundStockPort, OutboundStockPort, VerifyWarehousePort {
+public class InventoryClientAdapter implements InboundStockPort, OutboundStockPort, VerifyWarehousePort, LoadWarehousePort {
 
     private static final String INBOUND_SOURCE_TYPE = "SO_ARRIVAL";
     private static final String OUTBOUND_SOURCE_TYPE = "SO";
@@ -222,13 +224,45 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      */
     @Override
     public void verify(String warehouseCode) {
-        WarehouseResponse response;
+        WarehouseResponse response = fetchWarehouse(warehouseCode);
+        if (!response.active()) {
+            throw new SalesOrderException(SalesErrorCode.WAREHOUSE_INACTIVE);
+        }
+    }
+
+    /**
+     * 창고 코드로 창고 정보를 조회한다.
+     *
+     * 흐름:
+     * 1) GET /internal/inventory/warehouses/{code} 를 호출한다.
+     * 2) WarehouseInfo(code, name)로 변환해 반환한다.
+     *
+     * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖.
+     *
+     * 예외:
+     * - 창고 미존재 (404): ResourceNotFoundException (SO-05-04, 404)
+     * - 5xx·연결 실패: ExternalServiceException (SO-07-04, 502)
+     */
+    @Override
+    public WarehouseInfo load(String warehouseCode) {
+        WarehouseResponse response = fetchWarehouse(warehouseCode);
+        return new WarehouseInfo(response.code(), response.name());
+    }
+
+    private WarehouseResponse fetchWarehouse(String warehouseCode) {
         try {
-            response = inventoryRestClient.get()
+            WarehouseResponse response = inventoryRestClient.get()
                     .uri(WAREHOUSE_PATH, warehouseCode)
                     .header("Authorization", "Bearer " + ClientTokenExtractor.extractToken())
                     .retrieve()
                     .body(WarehouseResponse.class);
+            if (response == null) {
+                throw new ExternalServiceException(
+                        SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
+                        SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                        null);
+            }
+            return response;
         } catch (HttpStatusCodeException e) {
             HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
             if (status == HttpStatus.NOT_FOUND) {
@@ -243,10 +277,6 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
                     SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
                     SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
                     e);
-        }
-
-        if (response == null || !response.active()) {
-            throw new SalesOrderException(SalesErrorCode.WAREHOUSE_INACTIVE);
         }
     }
 
