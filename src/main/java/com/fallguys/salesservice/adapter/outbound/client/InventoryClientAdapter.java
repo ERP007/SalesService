@@ -5,8 +5,10 @@ import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryInboundLin
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryInboundRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryOutboundLineRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryOutboundRequest;
+import com.fallguys.salesservice.adapter.outbound.client.dto.WarehouseResponse;
 import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.OutboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -27,12 +29,13 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InventoryClientAdapter implements InboundStockPort, OutboundStockPort {
+public class InventoryClientAdapter implements InboundStockPort, OutboundStockPort, VerifyWarehousePort {
 
     private static final String INBOUND_SOURCE_TYPE = "SO_ARRIVAL";
     private static final String OUTBOUND_SOURCE_TYPE = "SO";
     private static final String INBOUND_PATH = "/internal/inventory/stocks/inbound";
     private static final String OUTBOUND_PATH = "/internal/inventory/stocks/outbound";
+    private static final String WAREHOUSE_PATH = "/internal/inventory/warehouses/{code}";
 
     // inventory 서비스 errorCode 상수 — 변경 시 이 블록만 수정
     private static final String INV_INVALID_PARAMETER = "INVALID_PARAMETER";
@@ -201,6 +204,50 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
                     e);
         }
         return new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED);
+    }
+
+    /**
+     * 창고 코드로 활성 여부를 확인한다.
+     *
+     * 흐름:
+     * 1) GET /internal/inventory/warehouses/{code} 를 호출한다.
+     * 2) 응답의 active 필드가 false면 SalesOrderException을 던진다.
+     *
+     * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
+     *
+     * 예외:
+     * - 창고 미존재 (404): ResourceNotFoundException (SO-05-04, 404)
+     * - active=false: SalesOrderException (SO-05-13, 400)
+     * - 5xx·연결 실패: ExternalServiceException (SO-07-04, 502)
+     */
+    @Override
+    public void verify(String warehouseCode) {
+        WarehouseResponse response;
+        try {
+            response = inventoryRestClient.get()
+                    .uri(WAREHOUSE_PATH, warehouseCode)
+                    .header("Authorization", "Bearer " + ClientTokenExtractor.extractToken())
+                    .retrieve()
+                    .body(WarehouseResponse.class);
+        } catch (HttpStatusCodeException e) {
+            HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
+            if (status == HttpStatus.NOT_FOUND) {
+                throw new ResourceNotFoundException(SalesErrorCode.WAREHOUSE_NOT_FOUND);
+            }
+            throw new ExternalServiceException(
+                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
+                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    e);
+        } catch (RestClientException e) {
+            throw new ExternalServiceException(
+                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
+                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    e);
+        }
+
+        if (response == null || !response.active()) {
+            throw new SalesOrderException(SalesErrorCode.WAREHOUSE_INACTIVE);
+        }
     }
 
     private InventoryInboundRequest buildInboundRequest(SalesOrder order) {
