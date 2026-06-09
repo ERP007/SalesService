@@ -44,7 +44,8 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * 1) 중복 부품 코드 검증 (local)
      * 2) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 3) User 서비스 호출 → 사번으로 지점 창고 코드(fromWarehouseCode) 확보
-     * 4) [REQUESTED만] 창고 존재 검증 (Inventory 서비스)
+     * 4) [REQUESTED만] 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
+     * 4-1) [REQUESTED만] 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
      * 5) [REQUESTED만] 부품 존재 확인 및 스냅샷 수집 (Item 서비스)
      * 6) SO 코드 채번 (월별 시퀀스, 비관적 락) — 원격 호출 완료 후 락 획득으로 락 범위 최소화
      * 7) 도메인 객체 생성 및 저장
@@ -59,6 +60,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * - 도착 희망일 범위 초과: SalesOrderException (SO-05-02, 400)
      * - 사번 미존재: ResourceNotFoundException (SO-05-06, 404)
      * - 창고 미존재: ResourceNotFoundException (SO-05-04, 404)
+     * - 창고 비활성: SalesOrderException (SO-05-13, 400)
      * - 부품 미존재: ResourceNotFoundException (SO-05-05, 404)
      */
     @Override
@@ -72,6 +74,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
         Map<String, ItemInfo> itemMap = null;
         if (command.status() == SalesOrderStatus.REQUESTED) {
+            verifyWarehousePort.verify(command.fromWarehouseCode());
             verifyWarehousePort.verify(command.toWarehouseCode());
             List<String> itemCodes = command.lines().stream()
                     .map(CreateSalesOrderLineCommand::itemCode)
