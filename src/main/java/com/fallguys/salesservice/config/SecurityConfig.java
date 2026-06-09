@@ -18,10 +18,14 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
             "/sales/health",
+            "/sales-orders/health",
             "/actuator/health",
             "/sales/swagger-ui/**",
+            "/sales-orders/swagger-ui/**",
             "/sales/swagger-ui.html",
-            "/sales/v3/api-docs/**"
+            "/sales-orders/swagger-ui.html",
+            "/sales/v3/api-docs/**",
+            "/sales-orders/v3/api-docs/**"
     };
 
     @Bean

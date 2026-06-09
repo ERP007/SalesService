@@ -29,6 +29,6 @@ spring:
 
 springdoc:
   api-docs:
-    path: /sales/v3/api-docs
+    path: /sales-orders/v3/api-docs
   swagger-ui:
-    path: /sales/swagger-ui.html
+    path: /sales-orders/swagger-ui.html
