@@ -51,7 +51,7 @@ public class SecurityConfig {
     @Bean
     @Profile("!local")
     public JwtDecoder jwtDecoder(
-            @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:http://localhost:8080/realms/erp/protocol/openid-connect/certs}")
+            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:http://localhost:8080/realms/erp/protocol/openid-connect/certs}")
             String jwkSetUri) {
         return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     }
