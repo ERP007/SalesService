@@ -4,6 +4,7 @@ import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderComman
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
 import com.fallguys.salesservice.application.port.outbound.*;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
+import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +72,9 @@ class CreateSalesOrderServiceTest {
         assertThat(saved.getLines()).hasSize(1);
         assertThat(saved.getLines().getFirst().getItemNameSnapshot()).isEqualTo("브레이크패드");
         assertThat(result).isSameAs(saved);
+
+        then(verifyWarehousePort).should().verify(FROM_WAREHOUSE);
+        then(verifyWarehousePort).should().verify(TO_WAREHOUSE);
     }
 
     @Test
@@ -126,18 +130,43 @@ class CreateSalesOrderServiceTest {
     }
 
     @Test
-    void create_warehouseNotFound_throwsResourceNotFoundException() {
-        given(loadItemPort.loadAll(any()))
-                .willReturn(Map.of("ITEM-01", new ItemInfo("ITEM-01", "브레이크패드", "EA")));
-        willThrow(new ResourceNotFoundException(com.fallguys.salesservice.domain.exception.SalesErrorCode.WAREHOUSE_NOT_FOUND))
+    void create_fromWarehouseNotFound_throwsResourceNotFoundException() {
+        willThrow(new ResourceNotFoundException(SalesErrorCode.WAREHOUSE_NOT_FOUND))
+                .given(verifyWarehousePort).verify(FROM_WAREHOUSE);
+
+        assertThatThrownBy(() -> service.create(requestedCommand(
+                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
+        ))).isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void create_fromWarehouseInactive_throwsSalesOrderException() {
+        willThrow(new SalesOrderException(SalesErrorCode.WAREHOUSE_INACTIVE))
+                .given(verifyWarehousePort).verify(FROM_WAREHOUSE);
+
+        assertThatThrownBy(() -> service.create(requestedCommand(
+                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
+        ))).isInstanceOf(SalesOrderException.class);
+    }
+
+    @Test
+    void create_toWarehouseNotFound_throwsResourceNotFoundException() {
+        willThrow(new ResourceNotFoundException(SalesErrorCode.WAREHOUSE_NOT_FOUND))
                 .given(verifyWarehousePort).verify(TO_WAREHOUSE);
 
-        CreateSalesOrderCommand command = requestedCommand(
+        assertThatThrownBy(() -> service.create(requestedCommand(
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
-        );
+        ))).isInstanceOf(ResourceNotFoundException.class);
+    }
 
-        assertThatThrownBy(() -> service.create(command))
-                .isInstanceOf(ResourceNotFoundException.class);
+    @Test
+    void create_toWarehouseInactive_throwsSalesOrderException() {
+        willThrow(new SalesOrderException(SalesErrorCode.WAREHOUSE_INACTIVE))
+                .given(verifyWarehousePort).verify(TO_WAREHOUSE);
+
+        assertThatThrownBy(() -> service.create(requestedCommand(
+                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
+        ))).isInstanceOf(SalesOrderException.class);
     }
 
     @Test
