@@ -4,17 +4,13 @@ import java.util.List;
 
 public record ItemBatchResponse(
         List<ItemData> items,
-        List<String> missingCodes
+        List<String> notFoundSkus
 ) {
     public record ItemData(
-            String itemCode,
+            String sku,
             String name,
-            UnitData unit
-    ) {
-    }
-
-    public record UnitData(
-            String name
+            String unit,
+            boolean active
     ) {
     }
 }
