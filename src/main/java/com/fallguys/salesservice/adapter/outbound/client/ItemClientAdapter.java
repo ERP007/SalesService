@@ -1,5 +1,6 @@
 package com.fallguys.salesservice.adapter.outbound.client;
 
+import com.fallguys.salesservice.adapter.outbound.client.dto.ItemBatchRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.ItemBatchResponse;
 import com.fallguys.salesservice.application.port.outbound.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
@@ -16,11 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+
 @Component
 @RequiredArgsConstructor
 public class ItemClientAdapter implements LoadItemPort {
 
-    private static final String ITEMS_PATH = "/internal/items";
+    private static final String ITEMS_PATH = "/internal/items/batch";
 
     private final RestClient itemRestClient;
 
@@ -28,7 +30,7 @@ public class ItemClientAdapter implements LoadItemPort {
      * SKU 목록으로 부품 정보를 일괄 조회한다.
      *
      * 흐름:
-     * 1) SKU 목록을 쉼표 구분 쿼리 파라미터로 GET /internal/items?skus=... 호출한다.
+     * 1) SKU 목록을 body에 담아 POST /internal/items/batch 호출한다.
      * 2) notFoundSkus가 존재하면 ResourceNotFoundException을 던진다.
      * 3) active=false 부품이 존재하면 SalesOrderException을 던진다.
      * 4) SKU를 키로 하는 ItemInfo 맵을 반환한다.
@@ -42,13 +44,14 @@ public class ItemClientAdapter implements LoadItemPort {
      */
     @Override
     public Map<String, ItemInfo> loadAll(List<String> itemCodes) {
-        String skus = String.join(",", itemCodes);
+        ItemBatchRequest request = new ItemBatchRequest(itemCodes);
 
         ItemBatchResponse response;
         try {
-            response = itemRestClient.get()
-                    .uri(uriBuilder -> uriBuilder.path(ITEMS_PATH).queryParam("skus", skus).build())
+            response = itemRestClient.post()
+                    .uri(ITEMS_PATH)
                     .header("Authorization", "Bearer " + ClientTokenExtractor.extractToken())
+                    .body(request)
                     .retrieve()
                     .body(ItemBatchResponse.class);
         } catch (RestClientException e) {
