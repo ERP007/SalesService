@@ -6,8 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -15,7 +13,7 @@ class JwtClaimExtractorTest {
 
     @Test
     void extractUserCode_success() {
-        Jwt jwt = jwt().claim("preferred_username", "branch001").build();
+        Jwt jwt = jwt().claim("employee_no", "branch001").build();
 
         assertThat(JwtClaimExtractor.extractUserCode(jwt)).isEqualTo("branch001");
     }
@@ -52,7 +50,7 @@ class JwtClaimExtractorTest {
     }
 
     @Test
-    void extractRole_missingResourceAccess_throwsForbiddenException() {
+    void extractRole_missingClaim_throwsForbiddenException() {
         Jwt jwt = jwt().build();
 
         assertThatThrownBy(() -> JwtClaimExtractor.extractRole(jwt))
@@ -60,29 +58,17 @@ class JwtClaimExtractorTest {
     }
 
     @Test
-    void extractRole_missingClientEntry_throwsForbiddenException() {
-        Jwt jwt = jwt()
-                .claim("resource_access", Map.of("other-client", Map.of("roles", List.of("BRANCH_MANAGER"))))
-                .build();
+    void extractWarehouseCode_success() {
+        Jwt jwt = jwt().claim("tenancy_code", "WH-BRANCH-01").build();
 
-        assertThatThrownBy(() -> JwtClaimExtractor.extractRole(jwt))
-                .isInstanceOf(ForbiddenException.class);
+        assertThat(JwtClaimExtractor.extractWarehouseCode(jwt)).isEqualTo("WH-BRANCH-01");
     }
 
     @Test
-    void requireAnyOf_allowedRole_noException() {
-        Jwt jwt = jwtWithRole("BRANCH_MANAGER");
+    void extractWarehouseCode_missingClaim_throwsForbiddenException() {
+        Jwt jwt = jwt().build();
 
-        assertThatNoException().isThrownBy(() ->
-                JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF));
-    }
-
-    @Test
-    void requireAnyOf_notAllowedRole_throwsForbiddenException() {
-        Jwt jwt = jwtWithRole("HQ_MANAGER");
-
-        assertThatThrownBy(() ->
-                JwtClaimExtractor.requireAnyOf(jwt, UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF))
+        assertThatThrownBy(() -> JwtClaimExtractor.extractWarehouseCode(jwt))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -94,8 +80,6 @@ class JwtClaimExtractorTest {
     }
 
     private Jwt jwtWithRole(String role) {
-        return jwt()
-                .claim("resource_access", Map.of("erp-client", Map.of("roles", List.of(role))))
-                .build();
+        return jwt().claim("user_role", role).build();
     }
 }
