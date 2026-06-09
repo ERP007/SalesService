@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/sales")
 class HealthController {
     @GetMapping("/health")
-    String health() {
+    public String health() {
         return "sales-service ok";
     }
 }

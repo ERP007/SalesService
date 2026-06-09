@@ -16,12 +16,10 @@ public class SalesOrderLineEntity {
     private Long id;
 
     @Column(nullable = false)
-    private String itemSku;
+    private String itemCode;
 
-    @Column(nullable = false)
     private String itemNameSnapshot;
 
-    @Column(nullable = false)
     private String unitSnapshot;
 
     @Column(nullable = false)
@@ -36,13 +34,13 @@ public class SalesOrderLineEntity {
     private Priority priority;
 
     public SalesOrderLine toDomain(String soCode) {
-        return new SalesOrderLine(id, soCode, itemSku, itemNameSnapshot, unitSnapshot,
+        return new SalesOrderLine(id, soCode, itemCode, itemNameSnapshot, unitSnapshot,
                 requestedQuantity, approvedQuantity, deliveredQuantity, priority);
     }
 
     public static SalesOrderLineEntity from(SalesOrderLine domain) {
         SalesOrderLineEntity entity = new SalesOrderLineEntity();
-        entity.itemSku = domain.getItemSku();
+        entity.itemCode = domain.getItemCode();
         entity.itemNameSnapshot = domain.getItemNameSnapshot();
         entity.unitSnapshot = domain.getUnitSnapshot();
         entity.requestedQuantity = domain.getRequestedQuantity();
