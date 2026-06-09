@@ -11,7 +11,7 @@ public class JwtClaimExtractor {
 
     public static String extractUserCode(Jwt jwt) {
         String userCode = jwt.getClaimAsString("employee_no");
-        if (userCode == null) {
+        if (userCode == null || userCode.isBlank()) {
             throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
         }
         return userCode;
@@ -28,7 +28,7 @@ public class JwtClaimExtractor {
 
     public static String extractWarehouseCode(Jwt jwt) {
         String warehouseCode = jwt.getClaimAsString("tenancy_code");
-        if (warehouseCode == null) {
+        if (warehouseCode == null || warehouseCode.isBlank()) {
             throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
         }
         return warehouseCode;
