@@ -20,17 +20,18 @@ import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.SalesOrderSummary;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -51,7 +52,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     );
 
     private final SalesOrderJpaDao salesOrderJpaDao;
-    private final SoNumberSequenceJpaDao soNumberSequenceJpaDao;
+    private final JdbcTemplate jdbcTemplate;
 
     // totalCount는 CANCELED·REJECTED 제외한 활성 발주만 집계
     @Override
@@ -124,20 +125,32 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
      * SO 코드를 채번한다.
      *
      * 흐름:
-     * 1) 당월 첫날 키로 시퀀스 행을 비관적 락으로 조회한다.
-     * 2) 행이 있으면 lastSeq를 증가, 없으면 1로 신규 생성한다.
-     * 3) 저장 후 SO-YYYY-MM-NNNN 형식으로 반환한다.
+     * 1) 당월 첫날 키로 upsert를 실행한다.
+     *    - 행 없음: last_seq = 1 로 INSERT
+     *    - 행 있음: last_seq = last_seq + 1 로 UPDATE
+     * 2) RETURNING last_seq 로 채번된 값을 단일 쿼리에서 반환한다.
+     * 3) SO-YYYY-MM-NNNN 형식으로 코드를 조합한다.
      *
      * 트랜잭션: 호출 측(서비스)의 쓰기 트랜잭션에 참여한다.
-     * 비관적 락으로 동시 채번 시 중복 코드를 방지한다.
+     * PostgreSQL 행 수준 원자성으로 별도 락 불필요.
      */
     @Override
     public String generate() {
         LocalDate today = LocalDate.now();
         LocalDate monthKey = today.withDayOfMonth(1);
 
-        SoNumberSequenceEntity seq = resolveSequence(monthKey);
-        return String.format("SO-%d-%02d-%04d", today.getYear(), today.getMonthValue(), seq.getLastSeq());
+        Integer lastSeq = jdbcTemplate.queryForObject("""
+                INSERT INTO so_number_sequences (seq_date, last_seq)
+                VALUES (?, 1)
+                ON CONFLICT (seq_date)
+                DO UPDATE SET last_seq = so_number_sequences.last_seq + 1
+                RETURNING last_seq
+                """,
+                Integer.class,
+                monthKey);
+
+        return String.format("SO-%d-%02d-%04d", today.getYear(), today.getMonthValue(),
+                Objects.requireNonNull(lastSeq, "SO 채번 실패: RETURNING last_seq가 null"));
     }
 
     @Override
@@ -259,18 +272,4 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         );
     }
 
-    // 월 첫 채번 시 동시 insert 충돌 방어: DataIntegrityViolationException 발생 시 재조회 후 증가
-    private SoNumberSequenceEntity resolveSequence(LocalDate monthKey) {
-        try {
-            SoNumberSequenceEntity seq = soNumberSequenceJpaDao.findByIdWithLock(monthKey)
-                    .map(SoNumberSequenceEntity::increment)
-                    .orElseGet(() -> SoNumberSequenceEntity.createFirst(monthKey));
-            return soNumberSequenceJpaDao.save(seq);
-        } catch (DataIntegrityViolationException e) {
-            SoNumberSequenceEntity seq = soNumberSequenceJpaDao.findByIdWithLock(monthKey)
-                    .orElseThrow(() -> new IllegalStateException("SO 채번 시퀀스 재조회 실패"));
-            seq.increment();
-            return soNumberSequenceJpaDao.save(seq);
-        }
-    }
 }

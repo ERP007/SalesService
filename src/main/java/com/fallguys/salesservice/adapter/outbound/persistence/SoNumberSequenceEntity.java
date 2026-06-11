@@ -16,16 +16,4 @@ public class SoNumberSequenceEntity {
 
     @Column(nullable = false)
     private int lastSeq;
-
-    public static SoNumberSequenceEntity createFirst(LocalDate seqDate) {
-        SoNumberSequenceEntity entity = new SoNumberSequenceEntity();
-        entity.seqDate = seqDate;
-        entity.lastSeq = 1;
-        return entity;
-    }
-
-    public SoNumberSequenceEntity increment() {
-        this.lastSeq++;
-        return this;
-    }
 }
