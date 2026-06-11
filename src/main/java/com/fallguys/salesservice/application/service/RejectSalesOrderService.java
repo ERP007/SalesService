@@ -5,6 +5,7 @@ import com.fallguys.salesservice.application.port.inbound.RejectSalesOrderUseCas
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.RejectReasonCategory;
@@ -39,16 +40,16 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
      * 트랜잭션: 쓰기. 조회·반려·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
      *
      * 예외:
-     * - 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - OTHER이면서 memo 없음: SalesOrderException (SO-05-10, 400)
-     * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
-     * - REQUESTED 아님: InvalidStatusTransitionException (SO-05-07, 409)
+     * - 미허용 역할: ForbiddenException (ER-403, 403)
+     * - OTHER이면서 memo 없음: SalesOrderException (SO-009, 400)
+     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - REQUESTED 아님: InvalidStatusTransitionException (SO-023, 409)
      */
     @Override
     @Transactional
     public SalesOrder reject(RejectSalesOrderCommand command) {
         if (!ALLOWED_ROLES.contains(command.role())) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         if (command.reasonCategory() == RejectReasonCategory.OTHER &&

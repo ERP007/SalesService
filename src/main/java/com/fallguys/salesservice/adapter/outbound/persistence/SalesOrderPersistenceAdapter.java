@@ -1,5 +1,7 @@
 package com.fallguys.salesservice.adapter.outbound.persistence;
 
+import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.SortDirection;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
 import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
@@ -20,17 +22,18 @@ import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.SalesOrderSummary;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -38,10 +41,23 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadBranchSalesOrderKpiPort, LoadHqSalesOrderKpiPort, GenerateSoCodePort, LoadBranchSalesOrdersPort, LoadHqSalesOrdersPort {
 
-    private static final Map<String, String> SORT_FIELD_TO_JPA = Map.of(
-            "requestedAt", "request.requestedAt",
-            "desiredArrivalDate", "desiredArrivalDate"
-    );
+    // LIKE 와일드카드 이스케이프: 사용자 입력의 %, _, \를 리터럴로 매칭하도록 처리.
+    // 페어 쿼리에서 ESCAPE '\\' 절과 함께 사용.
+    private static String escapeLike(String s) {
+        return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    private static Sort.Direction toJpaDirection(SortDirection direction) {
+        return direction == SortDirection.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
+    }
+
+    // 정렬 필드 enum → JPA 경로 매핑. switch exhaustive로 enum 값 추가 시 컴파일 강제 검출.
+    private static String toJpaSortField(SalesOrderSortField field) {
+        return switch (field) {
+            case REQUESTED_AT -> "request.requestedAt";
+            case DESIRED_ARRIVAL_DATE -> "desiredArrivalDate";
+        };
+    }
 
     private static final Set<SalesOrderStatus> ACTIVE_STATUSES = Set.of(
             SalesOrderStatus.DRAFT,
@@ -51,7 +67,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     );
 
     private final SalesOrderJpaDao salesOrderJpaDao;
-    private final SoNumberSequenceJpaDao soNumberSequenceJpaDao;
+    private final JdbcTemplate jdbcTemplate;
 
     // totalCount는 CANCELED·REJECTED 제외한 활성 발주만 집계
     @Override
@@ -124,29 +140,41 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
      * SO 코드를 채번한다.
      *
      * 흐름:
-     * 1) 당월 첫날 키로 시퀀스 행을 비관적 락으로 조회한다.
-     * 2) 행이 있으면 lastSeq를 증가, 없으면 1로 신규 생성한다.
-     * 3) 저장 후 SO-YYYY-MM-NNNN 형식으로 반환한다.
+     * 1) 당월 첫날 키로 upsert를 실행한다.
+     *    - 행 없음: last_seq = 1 로 INSERT
+     *    - 행 있음: last_seq = last_seq + 1 로 UPDATE
+     * 2) RETURNING last_seq 로 채번된 값을 단일 쿼리에서 반환한다.
+     * 3) SO-YYYY-MM-NNNN 형식으로 코드를 조합한다.
      *
      * 트랜잭션: 호출 측(서비스)의 쓰기 트랜잭션에 참여한다.
-     * 비관적 락으로 동시 채번 시 중복 코드를 방지한다.
+     * PostgreSQL 행 수준 원자성으로 별도 락 불필요.
      */
     @Override
     public String generate() {
         LocalDate today = LocalDate.now();
         LocalDate monthKey = today.withDayOfMonth(1);
 
-        SoNumberSequenceEntity seq = resolveSequence(monthKey);
-        return String.format("SO-%d-%02d-%04d", today.getYear(), today.getMonthValue(), seq.getLastSeq());
+        Integer lastSeq = jdbcTemplate.queryForObject("""
+                INSERT INTO so_number_sequences (seq_date, last_seq)
+                VALUES (?, 1)
+                ON CONFLICT (seq_date)
+                DO UPDATE SET last_seq = so_number_sequences.last_seq + 1
+                RETURNING last_seq
+                """,
+                Integer.class,
+                monthKey);
+
+        return String.format("SO-%d-%02d-%04d", today.getYear(), today.getMonthValue(),
+                Objects.requireNonNull(lastSeq, "SO 채번 실패: RETURNING last_seq가 null"));
     }
 
     @Override
     public SalesOrderSummaryPage load(BranchSalesOrderFilter filter) {
-        Sort.Direction direction = "asc".equals(filter.sortDirection()) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
+        Sort.Direction direction = toJpaDirection(filter.sortDirection());
+        String jpaSort = toJpaSortField(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
 
-        String searchPattern = filter.search() != null ? "%" + filter.search() + "%" : null;
+        String searchPattern = filter.search() != null ? "%" + escapeLike(filter.search()) + "%" : null;
 
         Page<SalesOrderEntity> page = salesOrderJpaDao.findBranchOrders(
                 filter.warehouseCode(),
@@ -172,11 +200,11 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
     @Override
     public HqSalesOrderSummaryPage loadOrders(HqSalesOrderFilter filter) {
-        Sort.Direction direction = "asc".equals(filter.sortDirection()) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
+        Sort.Direction direction = toJpaDirection(filter.sortDirection());
+        String jpaSort = toJpaSortField(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
 
-        String searchPattern = filter.search() != null ? "%" + filter.search() + "%" : null;
+        String searchPattern = filter.search() != null ? "%" + escapeLike(filter.search()) + "%" : null;
 
         Page<SalesOrderEntity> page = salesOrderJpaDao.findHqOrders(
                 filter.warehouseCode(),
@@ -259,18 +287,4 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         );
     }
 
-    // 월 첫 채번 시 동시 insert 충돌 방어: DataIntegrityViolationException 발생 시 재조회 후 증가
-    private SoNumberSequenceEntity resolveSequence(LocalDate monthKey) {
-        try {
-            SoNumberSequenceEntity seq = soNumberSequenceJpaDao.findByIdWithLock(monthKey)
-                    .map(SoNumberSequenceEntity::increment)
-                    .orElseGet(() -> SoNumberSequenceEntity.createFirst(monthKey));
-            return soNumberSequenceJpaDao.save(seq);
-        } catch (DataIntegrityViolationException e) {
-            SoNumberSequenceEntity seq = soNumberSequenceJpaDao.findByIdWithLock(monthKey)
-                    .orElseThrow(() -> new IllegalStateException("SO 채번 시퀀스 재조회 실패"));
-            seq.increment();
-            return soNumberSequenceJpaDao.save(seq);
-        }
-    }
 }

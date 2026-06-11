@@ -1,8 +1,7 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.inbound.RequestSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.RequestSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
@@ -28,7 +27,7 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
+public class RequestSalesOrderService implements RequestSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final VerifyWarehousePort verifyWarehousePort;
@@ -36,74 +35,74 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
     private final SaveSalesOrderPort saveSalesOrderPort;
 
     /**
-     * DRAFT 상태의 발주를 REQUESTED로 전환한다.
+     * DRAFT 발주를 REQUESTED로 전환한다 (기존 라인·창고·날짜 그대로 사용).
      *
      * 흐름:
      * 1) SO 존재 확인 (local DB)
-     * 2) DRAFT 상태 검증 (local)
-     * 3) 중복 부품 코드 검증 (local)
+     * 2) SO 소유 지점과 요청자 창고 일치 검증 (local)
+     * 3) 중복 부품 코드 검증 (local, 기존 라인 기준)
      * 4) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
-     * 5) User 서비스 호출 → 사번으로 지점 창고 코드 확보 후 SO 소유 지점과 일치 검증
-     * 6) 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
-     * 6-1) 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
-     * 7) 부품 존재 확인 및 스냅샷 수집 (Item 서비스)
-     * 8) 도메인 상태 전환 및 저장
+     * 5) 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
+     * 5-1) 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
+     * 6) 부품 존재 확인 및 스냅샷 수집 (Item 서비스)
+     * 7) 기존 라인을 스냅샷으로 재구성 후 도메인 상태 전환 및 저장
      *
      * 트랜잭션: 쓰기. 저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
-     * 외부 서비스 호출(5~7)이 트랜잭션 내에 포함되어 DB 커넥션 점유 시간이 늘어남.
+     * 외부 서비스 호출(5~6)이 트랜잭션 내에 포함되어 DB 커넥션 점유 시간이 늘어남.
      * 추후 외부 호출을 트랜잭션 진입 전으로 분리하는 리팩토링 고려.
      *
      * 예외:
      * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
      * - SO 미존재: ResourceNotFoundException (SO-018, 404)
-     * - DRAFT 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - SO 소유 지점 불일치: ForbiddenException (SO-017, 403)
+     * - DRAFT 아님: InvalidStatusTransitionException (SO-023, 400)
      * - 중복 부품: SalesOrderException (SO-002, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
-     * - 사번 미존재: ResourceNotFoundException (SO-021, 404)
-     * - SO 소유 지점 불일치: ForbiddenException (SO-017, 403)
      * - 창고 미존재: ResourceNotFoundException (SO-019, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)
      * - 부품 미존재: ResourceNotFoundException (SO-020, 404)
      */
     @Override
     @Transactional
-    public SalesOrder submit(SubmitSalesOrderCommand command) {
+    public SalesOrder request(RequestSalesOrderCommand command) {
         if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
-        SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
-        validateNoDuplicateItems(command.lines());
-        validateDesiredArrivalDate(command.desiredArrivalDate());
+        SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
         if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        verifyWarehousePort.verify(salesOrder.getFromWarehouseCode());
-        verifyWarehousePort.verify(command.toWarehouseCode());
+        validateNoDuplicateItems(salesOrder.getLines());
+        validateDesiredArrivalDate(salesOrder.getDesiredArrivalDate());
 
-        List<String> itemCodes = command.lines().stream()
-                .map(CreateSalesOrderLineCommand::itemCode)
+        verifyWarehousePort.verify(salesOrder.getFromWarehouseCode());
+        verifyWarehousePort.verify(salesOrder.getToWarehouseCode());
+
+        List<String> itemCodes = salesOrder.getLines().stream()
+                .map(SalesOrderLine::getItemCode)
                 .toList();
         Map<String, ItemInfo> itemMap = loadItemPort.loadAll(itemCodes);
 
-        List<SalesOrderLine> lines = buildLines(salesOrder.getCode(), command.lines(), itemMap);
+        List<SalesOrderLine> lines = buildLines(salesOrder.getCode(), salesOrder.getLines(), itemMap);
+
         salesOrder.submitRequest(
                 command.requestedBy(), Instant.now(),
-                command.toWarehouseCode(), command.desiredArrivalDate(),
-                command.requestMemo(), lines
+                salesOrder.getToWarehouseCode(), salesOrder.getDesiredArrivalDate(),
+                salesOrder.getRequestMemo(), lines
         );
 
         return saveSalesOrderPort.save(salesOrder);
     }
 
-    private void validateNoDuplicateItems(List<CreateSalesOrderLineCommand> lines) {
+    private void validateNoDuplicateItems(List<SalesOrderLine> lines) {
         Set<String> seen = new HashSet<>();
-        for (CreateSalesOrderLineCommand line : lines) {
-            if (!seen.add(line.itemCode())) {
+        for (SalesOrderLine line : lines) {
+            if (!seen.add(line.getItemCode())) {
                 throw new SalesOrderException(SalesErrorCode.DUPLICATE_ITEM,
-                        "부품 코드 " + line.itemCode() + "이(가) 중복되었습니다");
+                        "부품 코드 " + line.getItemCode() + "이(가) 중복되었습니다");
             }
         }
     }
@@ -120,15 +119,15 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
         }
     }
 
-    private List<SalesOrderLine> buildLines(String soCode, List<CreateSalesOrderLineCommand> lineCommands,
+    private List<SalesOrderLine> buildLines(String soCode, List<SalesOrderLine> existingLines,
                                             Map<String, ItemInfo> itemMap) {
-        return lineCommands.stream()
-                .map(cmd -> {
-                    ItemInfo item = itemMap.get(cmd.itemCode());
+        return existingLines.stream()
+                .map(line -> {
+                    ItemInfo item = itemMap.get(line.getItemCode());
                     return new SalesOrderLine(
-                            null, soCode, cmd.itemCode(),
+                            null, soCode, line.getItemCode(),
                             item.itemName(), item.unit(),
-                            cmd.quantity(), null, null, cmd.priority()
+                            line.getRequestedQuantity(), null, null, line.getPriority()
                     );
                 })
                 .toList();

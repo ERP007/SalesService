@@ -8,6 +8,7 @@ import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrdersPort
 import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.HqSalesOrderSummary;
@@ -50,16 +51,16 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
      * 트랜잭션: 읽기 전용.
      *
      * 예외:
-     * - 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - endDate가 오늘 이후: SalesOrderException (SO-05-08, 400)
-     * - startDate가 endDate보다 늦음: SalesOrderException (SO-05-08, 400)
-     * - 조회 기간 365일 초과: SalesOrderException (SO-05-08, 400)
+     * - 미허용 역할: ForbiddenException (ER-403, 403)
+     * - endDate가 오늘 이후: SalesOrderException (SO-010, 400)
+     * - startDate가 endDate보다 늦음: SalesOrderException (SO-010, 400)
+     * - 조회 기간 365일 초과: SalesOrderException (SO-010, 400)
      */
     @Override
     @Transactional(readOnly = true)
     public HqSalesOrderSummaryPage getOrders(GetHqSalesOrdersQuery query) {
         if (!ALLOWED_ROLES.contains(query.role())) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         validateDateRange(query.startDate(), query.endDate());
 

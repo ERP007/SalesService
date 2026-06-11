@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.OutboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.SalesOrder;
@@ -50,18 +51,18 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      * 반대 순서(출고 후 저장 실패)보다 정합성 측면에서 낫다.
      *
      * 예외:
-     * - 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - 송장 번호 중복: SalesOrderException (SO-05-12, 400)
-     * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
-     * - 승인일 < 요청일: SalesOrderException (SO-05-11, 400)
-     * - REQUESTED 아님: InvalidStatusTransitionException (SO-05-07, 409)
-     * - 재고 출고 실패: SO-07-05~08 또는 ExternalServiceException (SO-07-04, 502)
+     * - 미허용 역할: ForbiddenException (ER-403, 403)
+     * - 송장 번호 중복: SalesOrderException (SO-006, 400)
+     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - 승인일 < 요청일: SalesOrderException (SO-007, 400)
+     * - REQUESTED 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - 재고 출고 실패: SO-013~08 또는 ExternalServiceException (ER-502, 502)
      */
     @Override
     @Transactional
     public SalesOrder approve(ApproveSalesOrderCommand command) {
         if (!ALLOWED_ROLES.contains(command.role())) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         if (command.invoiceNumber() != null &&

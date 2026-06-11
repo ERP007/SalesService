@@ -15,6 +15,11 @@ public class SalesOrderLineEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // FK 컬럼 읽기 전용 매핑. 쓰기는 SalesOrderEntity의 @JoinColumn(name = "so_code")가 담당.
+    // JPQL에서 SalesOrderLineEntity.soCode 직접 참조용 (MEMBER OF 대신 JOIN 명시).
+    @Column(name = "so_code", nullable = false, insertable = false, updatable = false)
+    private String soCode;
+
     @Column(nullable = false)
     private String itemCode;
 

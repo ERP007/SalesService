@@ -5,6 +5,7 @@ import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCas
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
@@ -35,17 +36,17 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
      * 트랜잭션: 쓰기. 저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
      *
      * 예외:
-     * - HQ 계열 또는 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
-     * - 소속 창고 불일치: ForbiddenException (SO-06-02, 403)
-     * - BRANCH_STAFF가 타인 발주 취소 시도: ForbiddenException (SO-06-02, 403)
-     * - REQUESTED 아님: InvalidStatusTransitionException (SO-05-07, 409)
+     * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
+     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - 소속 창고 불일치: ForbiddenException (SO-017, 403)
+     * - BRANCH_STAFF가 타인 발주 취소 시도: ForbiddenException (SO-017, 403)
+     * - REQUESTED 아님: InvalidStatusTransitionException (SO-023, 409)
      */
     @Override
     @Transactional
     public SalesOrder cancel(CancelSalesOrderCommand command) {
         if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
