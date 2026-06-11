@@ -7,7 +7,6 @@ import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
-import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
@@ -64,7 +63,7 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
         SalesOrder order = loadSalesOrderPort.load(query.soCode());
 
         if (!Objects.equals(query.warehouseCode(), order.getFromWarehouseCode())) {
-            throw new ResourceNotFoundException(SalesErrorCode.SO_NOT_FOUND);
+            throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
         List<String> actorCodes = collectActorCodes(order);
