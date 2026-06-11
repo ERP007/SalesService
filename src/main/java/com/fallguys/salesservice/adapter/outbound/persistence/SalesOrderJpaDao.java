@@ -50,7 +50,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
                      SELECT 1 FROM SalesOrderLineEntity l
-                     WHERE l MEMBER OF s.lines
+                     WHERE l.soCode = s.code
                        AND (l.itemCode LIKE :searchPattern ESCAPE '\\'
                             OR l.itemNameSnapshot LIKE :searchPattern ESCAPE '\\')
                    ))
@@ -65,7 +65,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
                      SELECT 1 FROM SalesOrderLineEntity l
-                     WHERE l MEMBER OF s.lines
+                     WHERE l.soCode = s.code
                        AND (l.itemCode LIKE :searchPattern ESCAPE '\\'
                             OR l.itemNameSnapshot LIKE :searchPattern ESCAPE '\\')
                    ))
@@ -91,7 +91,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
                      SELECT 1 FROM SalesOrderLineEntity l
-                     WHERE l MEMBER OF s.lines
+                     WHERE l.soCode = s.code
                        AND (l.itemCode LIKE :searchPattern ESCAPE '\\'
                             OR l.itemNameSnapshot LIKE :searchPattern ESCAPE '\\')
                    ))
@@ -106,7 +106,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
                      SELECT 1 FROM SalesOrderLineEntity l
-                     WHERE l MEMBER OF s.lines
+                     WHERE l.soCode = s.code
                        AND (l.itemCode LIKE :searchPattern ESCAPE '\\'
                             OR l.itemNameSnapshot LIKE :searchPattern ESCAPE '\\')
                    ))
