@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.outbound.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import lombok.RequiredArgsConstructor;
@@ -38,9 +39,9 @@ public class ItemClientAdapter implements LoadItemPort {
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
      *
      * 예외:
-     * - 미존재 SKU 포함: ResourceNotFoundException (SO-05-05, 404)
-     * - 비활성 부품 포함: SalesOrderException (SO-05-14, 400)
-     * - HTTP 오류·연결 실패: ExternalServiceException (SO-07-09, 502) — 클라이언트에는 고정 메시지 노출
+     * - 미존재 SKU 포함: ResourceNotFoundException (SO-020, 404)
+     * - 비활성 부품 포함: SalesOrderException (SO-005, 400)
+     * - HTTP 오류·연결 실패: ExternalServiceException (ER-502, 502) — 클라이언트에는 고정 메시지 노출
      */
     @Override
     public Map<String, ItemInfo> loadAll(List<String> itemCodes) {
@@ -50,21 +51,20 @@ public class ItemClientAdapter implements LoadItemPort {
         try {
             response = itemRestClient.post()
                     .uri(ITEMS_PATH)
-                    .header("Authorization", "Bearer " + ClientTokenExtractor.extractToken())
                     .body(request)
                     .retrieve()
                     .body(ItemBatchResponse.class);
         } catch (RestClientException e) {
             throw new ExternalServiceException(
-                    SalesErrorCode.ITEM_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.ITEM_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         }
 
         if (response == null) {
             throw new ExternalServiceException(
-                    SalesErrorCode.ITEM_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.ITEM_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     null);
         }
 

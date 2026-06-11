@@ -9,6 +9,7 @@ import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.SalesOrder;
@@ -53,22 +54,22 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * 추후 외부 호출을 트랜잭션 진입 전으로 분리하는 리팩토링 고려.
      *
      * 예외:
-     * - HQ 계열 또는 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
-     * - DRAFT 아님: InvalidStatusTransitionException (SO-05-07, 409)
-     * - 중복 부품: SalesOrderException (SO-05-01, 400)
-     * - 도착 희망일 범위 초과: SalesOrderException (SO-05-02, 400)
-     * - 사번 미존재: ResourceNotFoundException (SO-05-06, 404)
-     * - SO 소유 지점 불일치: ForbiddenException (SO-06-02, 403)
-     * - 창고 미존재: ResourceNotFoundException (SO-05-04, 404)
-     * - 창고 비활성: SalesOrderException (SO-05-13, 400)
-     * - 부품 미존재: ResourceNotFoundException (SO-05-05, 404)
+     * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
+     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - DRAFT 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - 중복 부품: SalesOrderException (SO-002, 400)
+     * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
+     * - 사번 미존재: ResourceNotFoundException (SO-021, 404)
+     * - SO 소유 지점 불일치: ForbiddenException (SO-017, 403)
+     * - 창고 미존재: ResourceNotFoundException (SO-019, 404)
+     * - 창고 비활성: SalesOrderException (SO-004, 400)
+     * - 부품 미존재: ResourceNotFoundException (SO-020, 404)
      */
     @Override
     @Transactional
     public SalesOrder submit(SubmitSalesOrderCommand command) {
         if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 

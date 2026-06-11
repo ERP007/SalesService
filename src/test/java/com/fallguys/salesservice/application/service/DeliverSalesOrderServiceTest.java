@@ -4,6 +4,7 @@ import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderComma
 import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
@@ -167,7 +168,7 @@ class DeliverSalesOrderServiceTest {
     @Test
     void 재고_서비스_실패시_ExternalServiceException_저장_안됨() {
         willThrow(new ExternalServiceException(
-                SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(), "재고 서비스 호출 실패", new RuntimeException()))
+                CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(), "재고 서비스 호출 실패", new RuntimeException()))
                 .given(inboundStockPort).inbound(any());
 
         assertThatThrownBy(() -> service.deliver(command(UserRole.BRANCH_MANAGER)))

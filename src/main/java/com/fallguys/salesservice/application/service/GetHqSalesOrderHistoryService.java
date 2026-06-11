@@ -7,7 +7,7 @@ import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
-import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
@@ -47,14 +47,14 @@ public class GetHqSalesOrderHistoryService implements GetHqSalesOrderHistoryUseC
      * 트랜잭션: 읽기 전용.
      *
      * 예외:
-     * - 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
+     * - 미허용 역할: ForbiddenException (ER-403, 403)
+     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
      */
     @Override
     @Transactional(readOnly = true)
     public List<SalesOrderHistoryEntry> get(GetHqSalesOrderHistoryQuery query) {
         if (!ALLOWED_ROLES.contains(query.role())) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         SalesOrder order = loadSalesOrderPort.load(query.soCode());

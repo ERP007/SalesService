@@ -4,7 +4,7 @@ import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderKpiUseC
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrderKpiPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
-import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,13 +35,13 @@ public class GetHqSalesOrderKpiService implements GetHqSalesOrderKpiUseCase {
      * 트랜잭션: 읽기 전용.
      *
      * 예외:
-     * - 지점 계열 또는 미허용 역할: ForbiddenException (SO-05-03, 403)
+     * - 지점 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
      */
     @Override
     @Transactional(readOnly = true)
     public HqSalesOrderKpi getKpi(UserRole role) {
         if (!ALLOWED_ROLES.contains(role)) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         return loadHqSalesOrderKpiPort.loadHqKpi();
     }

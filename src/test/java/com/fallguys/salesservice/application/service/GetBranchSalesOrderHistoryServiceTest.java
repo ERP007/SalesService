@@ -87,12 +87,12 @@ class GetBranchSalesOrderHistoryServiceTest {
     }
 
     @Test
-    void 소속_창고_불일치시_ResourceNotFoundException() {
+    void 소속_창고_불일치시_ForbiddenException() {
         GetBranchSalesOrderHistoryQuery query =
                 new GetBranchSalesOrderHistoryQuery(SO_CODE, UserRole.BRANCH_MANAGER, "WH-BRANCH-99");
 
         assertThatThrownBy(() -> service.get(query))
-                .isInstanceOf(ResourceNotFoundException.class);
+                .isInstanceOf(ForbiddenException.class);
 
         then(loadUserInfoPort).shouldHaveNoInteractions();
     }
