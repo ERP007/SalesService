@@ -44,6 +44,12 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
             "desiredArrivalDate", "desiredArrivalDate"
     );
 
+    // LIKE 와일드카드 이스케이프: 사용자 입력의 %, _, \를 리터럴로 매칭하도록 처리.
+    // 페어 쿼리에서 ESCAPE '\\' 절과 함께 사용.
+    private static String escapeLike(String s) {
+        return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
     private static final Set<SalesOrderStatus> ACTIVE_STATUSES = Set.of(
             SalesOrderStatus.DRAFT,
             SalesOrderStatus.REQUESTED,
@@ -159,7 +165,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
 
-        String searchPattern = filter.search() != null ? "%" + filter.search() + "%" : null;
+        String searchPattern = filter.search() != null ? "%" + escapeLike(filter.search()) + "%" : null;
 
         Page<SalesOrderEntity> page = salesOrderJpaDao.findBranchOrders(
                 filter.warehouseCode(),
@@ -189,7 +195,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
 
-        String searchPattern = filter.search() != null ? "%" + filter.search() + "%" : null;
+        String searchPattern = filter.search() != null ? "%" + escapeLike(filter.search()) + "%" : null;
 
         Page<SalesOrderEntity> page = salesOrderJpaDao.findHqOrders(
                 filter.warehouseCode(),
