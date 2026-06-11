@@ -50,7 +50,6 @@ public class ItemClientAdapter implements LoadItemPort {
         try {
             response = itemRestClient.post()
                     .uri(ITEMS_PATH)
-                    .header("Authorization", "Bearer " + ClientTokenExtractor.extractToken())
                     .body(request)
                     .retrieve()
                     .body(ItemBatchResponse.class);
