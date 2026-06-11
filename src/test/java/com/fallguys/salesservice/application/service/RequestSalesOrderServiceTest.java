@@ -121,6 +121,25 @@ class RequestSalesOrderServiceTest {
     }
 
     @Test
+    void request_duplicateItems_throwsSalesOrderException() {
+        SalesOrder draftWithDuplicates = new SalesOrder(
+                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
+                SalesOrderStatus.DRAFT, VALID_DATE, null,
+                new SalesOrderCreation(USER_CODE, Instant.now()),
+                null, null, null, null, null,
+                List.of(
+                    new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL),
+                    new SalesOrderLine(2L, SO_CODE, "ITEM-01", null, null, 3, null, null, Priority.NORMAL)
+                )
+        );
+        given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftWithDuplicates);
+
+        assertThatThrownBy(() -> service.request(command()))
+                .isInstanceOf(SalesOrderException.class)
+                .hasFieldOrPropertyWithValue("code", SalesErrorCode.DUPLICATE_ITEM.getCode());
+    }
+
+    @Test
     void request_desiredArrivalDateToday_throwsSalesOrderException() {
         SalesOrder soWithTodayDate = new SalesOrder(
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
