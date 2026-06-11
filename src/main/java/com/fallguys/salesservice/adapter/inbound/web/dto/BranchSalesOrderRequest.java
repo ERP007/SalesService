@@ -26,7 +26,7 @@ public record BranchSalesOrderRequest(
         LocalDate endDate,
 
         @Pattern(regexp = "requestedAt|desiredArrivalDate",
-                message = "sortField는 requestedAt, desiredArrivalDate핑 중 하나여야 합니다")
+                message = "sortField는 requestedAt, desiredArrivalDate 중 하나여야 합니다")
         String sortField,
 
         @Pattern(regexp = "asc|desc",
