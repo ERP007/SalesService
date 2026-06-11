@@ -1,6 +1,8 @@
 package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersQuery;
+import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.SortDirection;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
@@ -70,7 +72,7 @@ class GetBranchSalesOrdersServiceTest {
         GetBranchSalesOrdersQuery query = new GetBranchSalesOrdersQuery(
                 "EMP-001", "WH-BRANCH-01", UserRole.BRANCH_STAFF, "엔진오일", defaultStatuses(),
                 LocalDate.now().minusDays(30), LocalDate.now(),
-                "requestedAt", "desc", 1, 20
+                SalesOrderSortField.REQUESTED_AT, SortDirection.DESC, 1, 20
         );
 
         given(loadBranchSalesOrdersPort.load(any(BranchSalesOrderFilter.class))).willReturn(emptyPage());
@@ -139,7 +141,7 @@ class GetBranchSalesOrdersServiceTest {
         return new GetBranchSalesOrdersQuery(
                 userCode, "WH-BRANCH-01", UserRole.BRANCH_STAFF, null, defaultStatuses(),
                 startDate, endDate,
-                "requestedAt", "desc", 1, 20
+                SalesOrderSortField.REQUESTED_AT, SortDirection.DESC, 1, 20
         );
     }
 

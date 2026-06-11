@@ -13,8 +13,8 @@ public record GetHqSalesOrdersQuery(
         List<SalesOrderStatus> statuses,
         LocalDate startDate,
         LocalDate endDate,
-        String sortField,
-        String sortDirection,
+        SalesOrderSortField sortField,
+        SortDirection sortDirection,
         int page,
         int size
 ) {}

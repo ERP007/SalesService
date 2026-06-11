@@ -1,6 +1,8 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
 import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersQuery;
+import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.SortDirection;
 import com.fallguys.salesservice.domain.model.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.constraints.AssertTrue;
@@ -23,10 +25,12 @@ public record BranchSalesOrderRequest(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         LocalDate endDate,
 
-        @Pattern(regexp = "requestedAt|desiredArrivalDate", message = "sortField는 requestedAt, desiredArrivalDate 중 하나여야 합니다")
+        @Pattern(regexp = "requestedAt|desiredArrivalDate",
+                message = "sortField는 requestedAt, desiredArrivalDate핑 중 하나여야 합니다")
         String sortField,
 
-        @Pattern(regexp = "asc|desc", message = "sortDirection은 asc, desc 중 하나여야 합니다")
+        @Pattern(regexp = "asc|desc",
+                message = "sortDirection은 asc 또는 desc여야 합니다")
         String sortDirection,
 
         @Min(value = 1, message = "page는 1 이상이어야 합니다")
@@ -71,10 +75,23 @@ public record BranchSalesOrderRequest(
                 statuses,
                 startDate != null ? startDate : LocalDate.now().minusDays(90),
                 endDate != null ? endDate : LocalDate.now(),
-                sortField != null ? sortField : "requestedAt",
-                sortDirection != null ? sortDirection : "desc",
+                resolveSortField(sortField),
+                resolveSortDirection(sortDirection),
                 page != null ? page : 1,
                 size != null ? size : 20
         );
+    }
+
+    private static SalesOrderSortField resolveSortField(String sortField) {
+        if (sortField == null) return SalesOrderSortField.REQUESTED_AT;
+        return switch (sortField) {
+            case "desiredArrivalDate" -> SalesOrderSortField.DESIRED_ARRIVAL_DATE;
+            default -> SalesOrderSortField.REQUESTED_AT;
+        };
+    }
+
+    private static SortDirection resolveSortDirection(String sortDirection) {
+        if (sortDirection == null) return SortDirection.DESC;
+        return SortDirection.valueOf(sortDirection.toUpperCase());
     }
 }

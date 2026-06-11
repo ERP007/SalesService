@@ -2,6 +2,8 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersQuery;
+import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.SortDirection;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrdersPort;
@@ -164,7 +166,7 @@ class GetHqSalesOrdersServiceTest {
         GetHqSalesOrdersQuery query = new GetHqSalesOrdersQuery(
                 UserRole.HQ_MANAGER, "BR-04", null, defaultStatuses(),
                 TEST_TODAY.minusDays(30), TEST_TODAY,
-                "requestedAt", "desc", 1, 20
+                SalesOrderSortField.REQUESTED_AT, SortDirection.DESC, 1, 20
         );
         given(loadHqSalesOrdersPort.loadOrders(any(HqSalesOrderFilter.class))).willReturn(emptyPage());
 
@@ -252,7 +254,7 @@ class GetHqSalesOrdersServiceTest {
         return new GetHqSalesOrdersQuery(
                 role, null, null, defaultStatuses(),
                 startDate, endDate,
-                "requestedAt", "desc", 1, 20
+                SalesOrderSortField.REQUESTED_AT, SortDirection.DESC, 1, 20
         );
     }
 
