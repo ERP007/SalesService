@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.SalesOrder;
@@ -42,18 +43,18 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      * 재고 호출 실패 시 트랜잭션이 롤백되어 DB 변경도 취소된다.
      *
      * 예외:
-     * - 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
-     * - 창고 불일치: ForbiddenException (SO-06-02, 403)
-     * - deliveredDate < 출고일: SalesOrderException (SO-05-02, 400)
-     * - APPROVED 아님: InvalidStatusTransitionException (SO-05-07, 409)
-     * - 재고 서비스 실패: ExternalServiceException (SO-07-04, 502)
+     * - 미허용 역할: ForbiddenException (ER-403, 403)
+     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - 창고 불일치: ForbiddenException (SO-017, 403)
+     * - deliveredDate < 출고일: SalesOrderException (SO-003, 400)
+     * - APPROVED 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - 재고 서비스 실패: ExternalServiceException (ER-502, 502)
      */
     @Override
     @Transactional
     public SalesOrder deliver(DeliverSalesOrderCommand command) {
         if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         SalesOrder order = loadSalesOrderPort.load(command.soCode());

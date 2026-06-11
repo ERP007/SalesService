@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilte
 import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
 import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.UserRole;
@@ -36,17 +37,17 @@ public class GetBranchSalesOrdersService implements GetBranchSalesOrdersUseCase 
      * 트랜잭션: 읽기 전용. 쿼리 파라미터 기본값은 호출 전 이미 적용된 상태.
      *
      * 예외:
-     * - HQ 계열 또는 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - 사번 미존재: ResourceNotFoundException (SO-05-06, 404)
-     * - endDate가 오늘 이후: SalesOrderException (SO-05-08, 400)
-     * - startDate가 endDate보다 늦음: SalesOrderException (SO-05-08, 400)
-     * - 조회 기간 365일 초과: SalesOrderException (SO-05-08, 400)
+     * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
+     * - 사번 미존재: ResourceNotFoundException (SO-021, 404)
+     * - endDate가 오늘 이후: SalesOrderException (SO-010, 400)
+     * - startDate가 endDate보다 늦음: SalesOrderException (SO-010, 400)
+     * - 조회 기간 365일 초과: SalesOrderException (SO-010, 400)
      */
     @Override
     @Transactional(readOnly = true)
     public SalesOrderSummaryPage getBranchOrders(GetBranchSalesOrdersQuery query) {
         if (query.role() != UserRole.BRANCH_MANAGER && query.role() != UserRole.BRANCH_STAFF) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         validateDateRange(query.startDate(), query.endDate());
 

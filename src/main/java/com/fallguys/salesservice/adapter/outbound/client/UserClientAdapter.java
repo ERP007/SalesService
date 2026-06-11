@@ -5,7 +5,7 @@ import com.fallguys.salesservice.adapter.outbound.client.dto.UserBatchResponse;
 import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.UserInfo;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
-import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -35,7 +35,7 @@ public class UserClientAdapter implements LoadUserInfoPort {
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
      *
      * 예외:
-     * - HTTP 오류·연결 실패: ExternalServiceException (SO-07-10, 502) — 클라이언트에는 고정 메시지 노출
+     * - HTTP 오류·연결 실패: ExternalServiceException (ER-502, 502) — 클라이언트에는 고정 메시지 노출
      */
     @Override
     public Map<String, UserInfo> loadByUserCodes(List<String> userCodes) {
@@ -51,8 +51,8 @@ public class UserClientAdapter implements LoadUserInfoPort {
                     .body(UserBatchResponse.class);
         } catch (RestClientException e) {
             throw new ExternalServiceException(
-                    SalesErrorCode.USER_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.USER_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         }
 

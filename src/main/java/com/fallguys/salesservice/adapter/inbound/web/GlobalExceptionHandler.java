@@ -1,10 +1,12 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
 import com.fallguys.salesservice.domain.exception.BusinessException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
+import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpStatus;
@@ -54,7 +56,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
         log.error("Unexpected error", ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "SO-00-00", "서버 오류가 발생했습니다");
+        return build(HttpStatus.INTERNAL_SERVER_ERROR,
+                CommonErrorCode.SERVER_ERROR.getCode(),
+                CommonErrorCode.SERVER_ERROR.getDefaultMessage());
     }
 
     @Override
@@ -66,7 +70,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         String detail = ex.getBindingResult().getFieldErrors().stream()
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .collect(Collectors.joining(", "));
-        ProblemDetail pd = build(HttpStatus.BAD_REQUEST, "SO-00-01", detail);
+        ProblemDetail pd = build(HttpStatus.BAD_REQUEST, SalesErrorCode.INVALID_REQUEST.getCode(), detail);
         return org.springframework.http.ResponseEntity.badRequest().body(pd);
     }
 

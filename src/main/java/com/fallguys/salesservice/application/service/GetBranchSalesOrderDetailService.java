@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.LoadWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.SalesOrder;
 import com.fallguys.salesservice.domain.model.UserRole;
@@ -41,15 +42,15 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
      * 트랜잭션: 읽기 전용.
      *
      * 예외:
-     * - HQ 계열 또는 미허용 역할: ForbiddenException (SO-05-03, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-06-01, 404)
-     * - 소속 창고 불일치: ForbiddenException (SO-06-02, 403)
+     * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
+     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - 소속 창고 불일치: ForbiddenException (SO-017, 403)
      */
     @Override
     @Transactional(readOnly = true)
     public SalesOrderDetail get(GetBranchSalesOrderDetailQuery query) {
         if (!ALLOWED_ROLES.contains(query.role())) {
-            throw new ForbiddenException(SalesErrorCode.UNAUTHORIZED);
+            throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         SalesOrder salesOrder = loadSalesOrderPort.load(query.soCode());

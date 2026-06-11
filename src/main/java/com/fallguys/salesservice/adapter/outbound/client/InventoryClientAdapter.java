@@ -14,6 +14,7 @@ import com.fallguys.salesservice.application.port.outbound.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
+import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.SalesOrder;
@@ -64,12 +65,12 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
      *
      * 예외:
-     * - INVALID_PARAMETER(400): SalesOrderException (SO-07-01, 400)
-     * - WAREHOUSE_NOT_FOUND(404): ResourceNotFoundException (SO-05-04, 404)
-     * - ITEM_NOT_FOUND(404): ResourceNotFoundException (SO-05-05, 404)
-     * - ALREADY_PROCESSED(409): InvalidStatusTransitionException (SO-07-02, 409)
-     * - WAREHOUSE_INACTIVE(422): SalesOrderException (SO-07-03, 400)
-     * - 5xx·연결 실패: ExternalServiceException (SO-07-04, 502)
+     * - INVALID_PARAMETER(400): SalesOrderException (SO-011, 400)
+     * - WAREHOUSE_NOT_FOUND(404): ResourceNotFoundException (SO-019, 404)
+     * - ITEM_NOT_FOUND(404): ResourceNotFoundException (SO-020, 404)
+     * - ALREADY_PROCESSED(409): InvalidStatusTransitionException (SO-012, 409)
+     * - WAREHOUSE_INACTIVE(422): SalesOrderException (SO-014, 400)
+     * - 5xx·연결 실패: ExternalServiceException (ER-502, 502)
      */
     @Override
     public void inbound(SalesOrder order) {
@@ -85,8 +86,8 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
             throw translateHttpError(e);
         } catch (RestClientException e) {
             throw new ExternalServiceException(
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         }
     }
@@ -116,8 +117,8 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
         HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
         if (status == null || status.is5xxServerError()) {
             return new ExternalServiceException(
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         }
         return new SalesOrderException(SalesErrorCode.INVENTORY_INBOUND_FAILED);
@@ -145,14 +146,14 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
      *
      * 예외:
-     * - INVALID_PARAMETER(400): SalesOrderException (SO-07-05, 400)
-     * - WAREHOUSE_NOT_FOUND(404): ResourceNotFoundException (SO-05-04, 404)
-     * - STOCK_NOT_FOUND(404): ResourceNotFoundException (SO-07-08, 404)
-     * - INSUFFICIENT_STOCK(409): SalesOrderException (SO-07-06, 400)
-     * - LOCK_TIMEOUT(409): SalesOrderException (SO-07-07, 400)
-     * - ALREADY_PROCESSED(409): InvalidStatusTransitionException (SO-07-02, 409)
-     * - WAREHOUSE_INACTIVE(422): SalesOrderException (SO-07-03, 400)
-     * - 5xx·연결 실패: ExternalServiceException (SO-07-04, 502)
+     * - INVALID_PARAMETER(400): SalesOrderException (SO-013, 400)
+     * - WAREHOUSE_NOT_FOUND(404): ResourceNotFoundException (SO-019, 404)
+     * - STOCK_NOT_FOUND(404): ResourceNotFoundException (SO-022, 404)
+     * - INSUFFICIENT_STOCK(409): SalesOrderException (SO-015, 400)
+     * - LOCK_TIMEOUT(409): SalesOrderException (SO-016, 400)
+     * - ALREADY_PROCESSED(409): InvalidStatusTransitionException (SO-012, 409)
+     * - WAREHOUSE_INACTIVE(422): SalesOrderException (SO-014, 400)
+     * - 5xx·연결 실패: ExternalServiceException (ER-502, 502)
      */
     @Override
     public void outbound(SalesOrder order) {
@@ -168,8 +169,8 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
             throw translateOutboundHttpError(e);
         } catch (RestClientException e) {
             throw new ExternalServiceException(
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         }
     }
@@ -201,8 +202,8 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
         HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
         if (status == null || status.is5xxServerError()) {
             return new ExternalServiceException(
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         }
         return new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED);
@@ -218,9 +219,9 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
      *
      * 예외:
-     * - 창고 미존재 (404): ResourceNotFoundException (SO-05-04, 404)
-     * - active=false: SalesOrderException (SO-05-13, 400)
-     * - 5xx·연결 실패: ExternalServiceException (SO-07-04, 502)
+     * - 창고 미존재 (404): ResourceNotFoundException (SO-019, 404)
+     * - active=false: SalesOrderException (SO-004, 400)
+     * - 5xx·연결 실패: ExternalServiceException (ER-502, 502)
      */
     @Override
     public void verify(String warehouseCode) {
@@ -240,8 +241,8 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖.
      *
      * 예외:
-     * - 창고 미존재 (404): ResourceNotFoundException (SO-05-04, 404)
-     * - 5xx·연결 실패: ExternalServiceException (SO-07-04, 502)
+     * - 창고 미존재 (404): ResourceNotFoundException (SO-019, 404)
+     * - 5xx·연결 실패: ExternalServiceException (ER-502, 502)
      */
     @Override
     public WarehouseInfo load(String warehouseCode) {
@@ -258,8 +259,8 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
                     .body(WarehouseResponse.class);
             if (response == null) {
                 throw new ExternalServiceException(
-                        SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
-                        SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                        CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                        CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                         null);
             }
             return response;
@@ -269,13 +270,13 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
                 throw new ResourceNotFoundException(SalesErrorCode.WAREHOUSE_NOT_FOUND);
             }
             throw new ExternalServiceException(
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         } catch (RestClientException e) {
             throw new ExternalServiceException(
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getCode(),
-                    SalesErrorCode.INVENTORY_SERVICE_ERROR.getDefaultMessage(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
+                    CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                     e);
         }
     }
