@@ -41,11 +41,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSalesOrderPort, LoadBranchSalesOrderKpiPort, LoadHqSalesOrderKpiPort, GenerateSoCodePort, LoadBranchSalesOrdersPort, LoadHqSalesOrdersPort {
 
-    private static final Map<SalesOrderSortField, String> SORT_FIELD_TO_JPA = Map.of(
-            SalesOrderSortField.REQUESTED_AT, "request.requestedAt",
-            SalesOrderSortField.DESIRED_ARRIVAL_DATE, "desiredArrivalDate"
-    );
-
     // LIKE 와일드카드 이스케이프: 사용자 입력의 %, _, \를 리터럴로 매칭하도록 처리.
     // 페어 쿼리에서 ESCAPE '\\' 절과 함께 사용.
     private static String escapeLike(String s) {
@@ -54,6 +49,14 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
     private static Sort.Direction toJpaDirection(SortDirection direction) {
         return direction == SortDirection.ASC ? Sort.Direction.ASC : Sort.Direction.DESC;
+    }
+
+    // 정렬 필드 enum → JPA 경로 매핑. switch exhaustive로 enum 값 추가 시 컴파일 강제 검출.
+    private static String toJpaSortField(SalesOrderSortField field) {
+        return switch (field) {
+            case REQUESTED_AT -> "request.requestedAt";
+            case DESIRED_ARRIVAL_DATE -> "desiredArrivalDate";
+        };
     }
 
     private static final Set<SalesOrderStatus> ACTIVE_STATUSES = Set.of(
@@ -168,7 +171,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     @Override
     public SalesOrderSummaryPage load(BranchSalesOrderFilter filter) {
         Sort.Direction direction = toJpaDirection(filter.sortDirection());
-        String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
+        String jpaSort = toJpaSortField(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
 
         String searchPattern = filter.search() != null ? "%" + escapeLike(filter.search()) + "%" : null;
@@ -198,7 +201,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     @Override
     public HqSalesOrderSummaryPage loadOrders(HqSalesOrderFilter filter) {
         Sort.Direction direction = toJpaDirection(filter.sortDirection());
-        String jpaSort = SORT_FIELD_TO_JPA.get(filter.sortField());
+        String jpaSort = toJpaSortField(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
 
         String searchPattern = filter.search() != null ? "%" + escapeLike(filter.search()) + "%" : null;
