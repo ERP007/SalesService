@@ -59,7 +59,7 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
         } catch (HttpStatusCodeException e) {
             HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
             if (status != null && status.is4xxClientError()) {
-                throw new SalesOrderException(SalesErrorCode.INVENTORY_INBOUND_FAILED);
+                throw new SalesOrderException(SalesErrorCode.INVENTORY_INBOUND_FAILED, e);
             }
             throw externalServiceException(e);
         } catch (RestClientException e) {
@@ -93,7 +93,7 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
         } catch (HttpStatusCodeException e) {
             HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
             if (status != null && status.is4xxClientError()) {
-                throw new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED);
+                throw new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED, e);
             }
             throw externalServiceException(e);
         } catch (RestClientException e) {
