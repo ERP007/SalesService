@@ -1,8 +1,6 @@
 package com.fallguys.salesservice.adapter.outbound.client;
 
-import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryInboundLineRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryInboundRequest;
-import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryOutboundLineRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryOutboundRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.WarehouseResponse;
 import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
@@ -24,15 +22,11 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.util.List;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class InventoryClientAdapter implements InboundStockPort, OutboundStockPort, VerifyWarehousePort, LoadWarehousePort {
 
-    private static final String INBOUND_SOURCE_TYPE = "SO_ARRIVAL";
-    private static final String OUTBOUND_SOURCE_TYPE = "SO";
     private static final String INBOUND_PATH = "/internal/inventory/stocks/inbound";
     private static final String OUTBOUND_PATH = "/internal/inventory/stocks/outbound";
     private static final String WAREHOUSE_PATH = "/internal/inventory/warehouses/{code}";
@@ -54,7 +48,7 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      */
     @Override
     public void inbound(SalesOrder order) {
-        InventoryInboundRequest request = buildInboundRequest(order);
+        InventoryInboundRequest request = InventoryInboundRequest.from(order);
         try {
             inventoryRestClient.post()
                     .uri(INBOUND_PATH)
@@ -88,7 +82,7 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      */
     @Override
     public void outbound(SalesOrder order) {
-        InventoryOutboundRequest request = buildOutboundRequest(order);
+        InventoryOutboundRequest request = InventoryOutboundRequest.from(order);
         try {
             inventoryRestClient.post()
                     .uri(OUTBOUND_PATH)
@@ -175,25 +169,5 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
                 CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(),
                 CommonErrorCode.EXTERNAL_SERVICE_ERROR.getDefaultMessage(),
                 cause);
-    }
-
-    private InventoryInboundRequest buildInboundRequest(SalesOrder order) {
-        List<InventoryInboundLineRequest> lines = order.getLines().stream()
-                .map(line -> new InventoryInboundLineRequest(
-                        line.getItemCode(),
-                        line.getApprovedQuantity(),
-                        line.getId()))
-                .toList();
-        return new InventoryInboundRequest(INBOUND_SOURCE_TYPE, order.getCode(), order.getToWarehouseCode(), lines);
-    }
-
-    private InventoryOutboundRequest buildOutboundRequest(SalesOrder order) {
-        List<InventoryOutboundLineRequest> lines = order.getLines().stream()
-                .map(line -> new InventoryOutboundLineRequest(
-                        line.getItemCode(),
-                        line.getRequestedQuantity(),
-                        line.getId()))
-                .toList();
-        return new InventoryOutboundRequest(OUTBOUND_SOURCE_TYPE, order.getCode(), order.getFromWarehouseCode(), lines);
     }
 }
