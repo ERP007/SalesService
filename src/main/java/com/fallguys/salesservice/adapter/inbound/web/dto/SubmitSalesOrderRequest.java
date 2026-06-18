@@ -24,7 +24,7 @@ public record SubmitSalesOrderRequest(
         @NotNull
         @Size(min = 1, max = 50, message = "발주 품목은 1개 이상 50개 이하여야 합니다")
         @Valid
-        List<SubmitSalesOrderLineRequest> lines
+        List<@NotNull(message = "발주 품목에 빈 항목이 포함될 수 없습니다") SubmitSalesOrderLineRequest> lines
 ) {
     public SubmitSalesOrderCommand toCommand(String soCode, String requestedBy, UserRole role, String requesterWarehouseCode) {
         List<CreateSalesOrderLineCommand> lineCommands = lines.stream()

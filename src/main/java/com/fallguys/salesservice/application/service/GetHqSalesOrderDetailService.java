@@ -47,7 +47,7 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
      *
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - SO 미존재: ResourceNotFoundException (SO-014, 404)
      */
     @Override
     @Transactional(readOnly = true)

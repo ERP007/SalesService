@@ -53,10 +53,10 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
      * - 송장 번호 중복: SalesOrderException (SO-006, 400)
-     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
+     * - SO 미존재: ResourceNotFoundException (SO-014, 404)
      * - 승인일 < 요청일: SalesOrderException (SO-007, 400)
-     * - REQUESTED 아님: InvalidStatusTransitionException (SO-023, 409)
-     * - 재고 출고 실패: SO-013~08 또는 ExternalServiceException (ER-502, 502)
+     * - REQUESTED 아님: InvalidStatusTransitionException (SO-018, 409)
+     * - 재고 출고 실패: SalesOrderException (SO-012, 400) 또는 ExternalServiceException (ER-502, 502)
      */
     @Override
     @Transactional

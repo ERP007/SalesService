@@ -44,10 +44,10 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      *
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
-     * - 창고 불일치: ForbiddenException (SO-017, 403)
+     * - SO 미존재: ResourceNotFoundException (SO-014, 404)
+     * - 창고 불일치: ForbiddenException (SO-013, 403)
      * - deliveredDate < 출고일: SalesOrderException (SO-003, 400)
-     * - APPROVED 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - APPROVED 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 재고 서비스 실패: ExternalServiceException (ER-502, 502)
      */
     @Override
