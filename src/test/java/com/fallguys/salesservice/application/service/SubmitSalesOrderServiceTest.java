@@ -111,6 +111,12 @@ class SubmitSalesOrderServiceTest {
     }
 
     @Test
+    void submit_emptyLines_throwsSalesOrderException() {
+        assertThatThrownBy(() -> service.submit(command(List.of())))
+                .isInstanceOf(SalesOrderException.class);
+    }
+
+    @Test
     void submit_duplicateItem_throwsSalesOrderException() {
         assertThatThrownBy(() -> service.submit(command(List.of(
                 new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL),
