@@ -42,7 +42,7 @@ class DeliverSalesOrderServiceTest {
 
     private static final String SO_CODE = "SO-2026-06-0001";
     private static final String USER_CODE = "branch001";
-    private static final String TO_WAREHOUSE = "WH-BRANCH-01";
+    private static final String FROM_WAREHOUSE = "WH-BRANCH-01";
     private static final String OTHER_WAREHOUSE = "WH-BRANCH-99";
     private static final Instant APPROVED_AT = Instant.parse("2026-06-01T00:00:00Z");
     private static final LocalDate VALID_DELIVERED_DATE = LocalDate.of(2026, 6, 3);
@@ -138,7 +138,7 @@ class DeliverSalesOrderServiceTest {
     @Test
     void deliveredDate가_출고일_이전이면_SalesOrderException() {
         DeliverSalesOrderCommand command = new DeliverSalesOrderCommand(
-                SO_CODE, TO_WAREHOUSE, USER_CODE, UserRole.BRANCH_MANAGER, BEFORE_APPROVED_DATE);
+                SO_CODE, FROM_WAREHOUSE, USER_CODE, UserRole.BRANCH_MANAGER, BEFORE_APPROVED_DATE);
 
         assertThatThrownBy(() -> service.deliver(command))
                 .isInstanceOf(SalesOrderException.class)
@@ -151,7 +151,7 @@ class DeliverSalesOrderServiceTest {
     @Test
     void APPROVED_아닌_상태_시도시_InvalidStatusTransitionException() {
         SalesOrder requestedOrder = new SalesOrder(
-                SO_CODE, "WH-HQ-01", TO_WAREHOUSE,
+                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
                 SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
@@ -166,7 +166,8 @@ class DeliverSalesOrderServiceTest {
     }
 
     @Test
-    void 재고_서비스_실패시_ExternalServiceException_저장_안됨() {
+    void 재고_서비스_실패시_예외_전파되고_저장은_실행됨() {
+        // save → inbound 순서이므로 save는 호출된다. 실제 DB 롤백은 @Transactional이 보장(단위테스트 범위 밖).
         willThrow(new ExternalServiceException(
                 CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(), "재고 서비스 호출 실패", new RuntimeException()))
                 .given(inboundStockPort).inbound(any());
@@ -174,11 +175,11 @@ class DeliverSalesOrderServiceTest {
         assertThatThrownBy(() -> service.deliver(command(UserRole.BRANCH_MANAGER)))
                 .isInstanceOf(ExternalServiceException.class);
 
-        then(saveSalesOrderPort).shouldHaveNoInteractions();
+        then(saveSalesOrderPort).should().save(any());
     }
 
     private DeliverSalesOrderCommand command(UserRole role) {
-        return new DeliverSalesOrderCommand(SO_CODE, TO_WAREHOUSE, USER_CODE, role, VALID_DELIVERED_DATE);
+        return new DeliverSalesOrderCommand(SO_CODE, FROM_WAREHOUSE, USER_CODE, role, VALID_DELIVERED_DATE);
     }
 
     private SalesOrder approvedOrder() {
@@ -187,7 +188,7 @@ class DeliverSalesOrderServiceTest {
                 new SalesOrderLine(2L, SO_CODE, "HMC-BR-01102", "브레이크패드", "EA", 40, 40, null, Priority.NORMAL)
         );
         return new SalesOrder(
-                SO_CODE, "WH-HQ-01", TO_WAREHOUSE,
+                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
                 SalesOrderStatus.APPROVED, LocalDate.of(2026, 6, 5), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
