@@ -23,6 +23,7 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.RejectSalesOrderRespons
 import com.fallguys.salesservice.adapter.inbound.web.dto.RequestSalesOrderResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderHistoryResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SubmitSalesOrderRequest;
+import com.fallguys.salesservice.adapter.inbound.web.dto.UpdateDraftSalesOrderRequest;
 import com.fallguys.salesservice.application.port.inbound.ApproveSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
@@ -48,6 +49,7 @@ import com.fallguys.salesservice.application.port.inbound.RequestSalesOrderUseCa
 import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.SalesOrderHistoryEntry;
 import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.inbound.UpdateDraftSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
@@ -73,6 +75,7 @@ import org.springframework.web.bind.annotation.*;
 public class SalesOrderController {
 
     private final CreateSalesOrderUseCase createSalesOrderUseCase;
+    private final UpdateDraftSalesOrderUseCase updateDraftSalesOrderUseCase;
     private final SubmitSalesOrderUseCase submitSalesOrderUseCase;
     private final RequestSalesOrderUseCase requestSalesOrderUseCase;
     private final ApproveSalesOrderUseCase approveSalesOrderUseCase;
@@ -114,6 +117,20 @@ public class SalesOrderController {
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role, warehouseCode));
         return ResponseEntity.status(HttpStatus.CREATED).body(CreateSalesOrderResponse.from(salesOrder));
+    }
+
+    @Operation(summary = "발주 임시저장 수정", description = "DRAFT 발주를 DRAFT 상태 그대로 수정한다. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
+    @PutMapping("/drafts/{code}")
+    public ResponseEntity<CreateSalesOrderResponse> updateDraft(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "발주 코드") @PathVariable String code,
+            @Valid @RequestBody UpdateDraftSalesOrderRequest request
+    ) {
+        String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+        SalesOrder salesOrder = updateDraftSalesOrderUseCase.updateDraft(request.toCommand(code, userCode, role, warehouseCode));
+        return ResponseEntity.ok(CreateSalesOrderResponse.from(salesOrder));
     }
 
     // ── DRAFT → REQUESTED ─────────────────────────────────────────────────────

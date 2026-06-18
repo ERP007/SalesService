@@ -6,6 +6,7 @@ import com.fallguys.salesservice.domain.model.SalesOrderApproval;
 import com.fallguys.salesservice.domain.model.SalesOrderLine;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 public record BranchSalesOrderDetailResponse(
@@ -13,6 +14,8 @@ public record BranchSalesOrderDetailResponse(
         String status,
         WarehouseInfo fromWarehouse,
         WarehouseInfo toWarehouse,
+        LocalDate desiredArrivalDate,
+        String memo,
         Instant approvedAt,
         String invoiceNumber,
         String carrierType,
@@ -23,7 +26,8 @@ public record BranchSalesOrderDetailResponse(
             String itemCode,
             String itemName,
             String unit,
-            int requestQuantity
+            int requestQuantity,
+            String priority
     ) {
         public static LineResponse from(SalesOrderLine line) {
             return new LineResponse(
@@ -31,7 +35,8 @@ public record BranchSalesOrderDetailResponse(
                     line.getItemCode(),
                     line.getItemNameSnapshot(),
                     line.getUnitSnapshot(),
-                    line.getRequestedQuantity()
+                    line.getRequestedQuantity(),
+                    line.getPriority().name()
             );
         }
     }
@@ -52,6 +57,8 @@ public record BranchSalesOrderDetailResponse(
                 order.getStatus().name(),
                 new WarehouseInfo(order.getFromWarehouseCode(), detail.fromWarehouseName()),
                 new WarehouseInfo(order.getToWarehouseCode(), detail.toWarehouseName()),
+                order.getDesiredArrivalDate(),
+                order.getRequestMemo(),
                 approvedAt,
                 invoiceNumber,
                 carrierType,

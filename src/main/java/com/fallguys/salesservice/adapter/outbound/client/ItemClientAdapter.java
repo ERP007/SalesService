@@ -39,7 +39,7 @@ public class ItemClientAdapter implements LoadItemPort {
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
      *
      * 예외:
-     * - 미존재 SKU 포함: ResourceNotFoundException (SO-020, 404)
+     * - 미존재 SKU 포함: ResourceNotFoundException (SO-016, 404)
      * - 비활성 부품 포함: SalesOrderException (SO-005, 400)
      * - HTTP 오류·연결 실패: ExternalServiceException (ER-502, 502) — 클라이언트에는 고정 메시지 노출
      */

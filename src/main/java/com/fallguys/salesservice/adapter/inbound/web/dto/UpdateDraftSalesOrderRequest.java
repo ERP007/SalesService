@@ -1,8 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.application.port.inbound.UpdateDraftSalesOrderCommand;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -12,7 +11,7 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
-public record CreateDraftSalesOrderRequest(
+public record UpdateDraftSalesOrderRequest(
         @NotBlank(message = "창고 지정은 필수입니다")
         String warehouseCode,
 
@@ -26,12 +25,13 @@ public record CreateDraftSalesOrderRequest(
         @Valid
         List<@NotNull(message = "발주 품목에 빈 항목이 포함될 수 없습니다") CreateSalesOrderLineRequest> lines
 ) {
-    public CreateSalesOrderCommand toCommand(String requestedBy, UserRole role, String fromWarehouseCode) {
+    public UpdateDraftSalesOrderCommand toCommand(String soCode, String requestedBy, UserRole role, String requesterWarehouseCode) {
         List<CreateSalesOrderLineCommand> lineCommands = lines == null
                 ? List.of()
                 : lines.stream()
                     .map(CreateSalesOrderLineRequest::toCommand)
                     .toList();
-        return new CreateSalesOrderCommand(fromWarehouseCode, warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.DRAFT, lineCommands, requestedBy, role);
+        return new UpdateDraftSalesOrderCommand(soCode, requestedBy, role, requesterWarehouseCode,
+                warehouseCode, desiredArrivalDate, memo, lineCommands);
     }
 }

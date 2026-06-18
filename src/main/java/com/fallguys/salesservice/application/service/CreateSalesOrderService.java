@@ -59,10 +59,10 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
      * - 중복 부품: SalesOrderException (SO-002, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
-     * - 사번 미존재: ResourceNotFoundException (SO-021, 404)
-     * - 창고 미존재: ResourceNotFoundException (SO-019, 404)
+     * - 사번 미존재: ResourceNotFoundException (SO-017, 404)
+     * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)
-     * - 부품 미존재: ResourceNotFoundException (SO-020, 404)
+     * - 부품 미존재: ResourceNotFoundException (SO-016, 404)
      */
     @Override
     @Transactional
