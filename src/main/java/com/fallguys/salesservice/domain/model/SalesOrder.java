@@ -60,7 +60,7 @@ public class SalesOrder {
      * 3) 상태를 REQUESTED로, request 이력을 기록한다.
      *
      * 예외:
-     * - DRAFT가 아닌 경우: SalesOrderException (SO-018, 400)
+     * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void submitRequest(String requestedBy, Instant now, String toWarehouseCode,
                               LocalDate desiredArrivalDate, String requestMemo,
@@ -110,7 +110,7 @@ public class SalesOrder {
      * 3) 배송 이력(deliveredBy, deliveredAt)을 기록하고 상태를 DELIVERED로 전환한다.
      *
      * 예외:
-     * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018, 400)
+     * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void deliver(String deliveredBy, LocalDate deliveredDate, Instant now) {
         if (this.status != SalesOrderStatus.APPROVED) {
@@ -154,7 +154,7 @@ public class SalesOrder {
      * 트랜잭션: 쓰기. 조회·취소·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
      *
      * 예외:
-     * - REQUESTED가 아닌 경우: SalesOrderException (SO-018, 400)
+     * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void cancel(String canceledBy, Instant now, String reason) {
         if (this.status != SalesOrderStatus.REQUESTED) {

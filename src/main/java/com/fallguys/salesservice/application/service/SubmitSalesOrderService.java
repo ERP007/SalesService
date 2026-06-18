@@ -43,7 +43,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * 2) DRAFT 상태 검증 (local)
      * 3) 중복 부품 코드 검증 (local)
      * 4) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
-     * 5) User 서비스 호출 → 사번으로 지점 창고 코드 확보 후 SO 소유 지점과 일치 검증
+     * 5) 요청자 창고 코드(JWT)와 SO 소유 지점 일치 검증 (local)
      * 6) 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
      * 6-1) 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
      * 7) 부품 존재 확인 및 스냅샷 수집 (Item 서비스)
@@ -59,7 +59,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 중복 부품: SalesOrderException (SO-002, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
-     * - 사번 미존재: ResourceNotFoundException (SO-017, 404)
      * - SO 소유 지점 불일치: ForbiddenException (SO-013, 403)
      * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)

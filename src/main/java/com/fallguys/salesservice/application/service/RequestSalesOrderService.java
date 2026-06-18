@@ -55,7 +55,7 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
      * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
      * - SO 미존재: ResourceNotFoundException (SO-014, 404)
      * - SO 소유 지점 불일치: ForbiddenException (SO-013, 403)
-     * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 400)
+     * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 중복 부품: SalesOrderException (SO-002, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
      * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
