@@ -24,7 +24,7 @@ public record CreateDraftSalesOrderRequest(
 
         @Size(max = 50, message = "발주 품목은 50개 이하여야 합니다")
         @Valid
-        List<CreateSalesOrderLineRequest> lines
+        List<@NotNull(message = "발주 품목에 빈 항목이 포함될 수 없습니다") CreateSalesOrderLineRequest> lines
 ) {
     public CreateSalesOrderCommand toCommand(String requestedBy, UserRole role, String fromWarehouseCode) {
         List<CreateSalesOrderLineCommand> lineCommands = lines == null
