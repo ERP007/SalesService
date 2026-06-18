@@ -72,6 +72,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
         }
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
+        validateLinesNotEmpty(command.lines());
         validateNoDuplicateItems(command.lines());
         validateDesiredArrivalDate(command.desiredArrivalDate());
 
@@ -95,6 +96,13 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
         );
 
         return saveSalesOrderPort.save(salesOrder);
+    }
+
+    private void validateLinesNotEmpty(List<CreateSalesOrderLineCommand> lines) {
+        if (lines == null || lines.isEmpty()) {
+            throw new SalesOrderException(SalesErrorCode.INVALID_REQUEST,
+                    "발주 품목은 1개 이상이어야 합니다");
+        }
     }
 
     private void validateNoDuplicateItems(List<CreateSalesOrderLineCommand> lines) {

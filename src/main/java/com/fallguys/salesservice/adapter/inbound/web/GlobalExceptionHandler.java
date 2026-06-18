@@ -25,7 +25,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ProblemDetail handleBusiness(BusinessException ex) {
-        log.warn("Business exception: code={}, message={}", ex.getCode(), ex.getMessage());
+        if (ex.getCause() != null) {
+            // 외부 서비스 에러를 번역한 경우 원본 원인(상태·응답 본문)을 함께 남긴다.
+            log.warn("Business exception: code={}, message={}, cause={}",
+                    ex.getCode(), ex.getMessage(), ex.getCause().toString(), ex.getCause());
+        } else {
+            log.warn("Business exception: code={}, message={}", ex.getCode(), ex.getMessage());
+        }
         return build(HttpStatus.BAD_REQUEST, ex.getCode(), ex.getMessage());
     }
 

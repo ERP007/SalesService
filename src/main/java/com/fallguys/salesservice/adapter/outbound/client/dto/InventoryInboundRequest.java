@@ -24,6 +24,6 @@ public record InventoryInboundRequest(
         List<LineRequest> lines = order.getLines().stream()
                 .map(LineRequest::from)
                 .toList();
-        return new InventoryInboundRequest(order.getCode(), order.getToWarehouseCode(), lines);
+        return new InventoryInboundRequest(order.getCode(), order.getFromWarehouseCode(), lines);
     }
 }
