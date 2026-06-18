@@ -38,7 +38,7 @@ public class GetBranchSalesOrdersService implements GetBranchSalesOrdersUseCase 
      *
      * 예외:
      * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
-     * - 사번 미존재: ResourceNotFoundException (SO-021, 404)
+     * - 사번 미존재: ResourceNotFoundException (SO-017, 404)
      * - endDate가 오늘 이후: SalesOrderException (SO-010, 400)
      * - startDate가 endDate보다 늦음: SalesOrderException (SO-010, 400)
      * - 조회 기간 365일 초과: SalesOrderException (SO-010, 400)

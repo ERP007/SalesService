@@ -42,8 +42,8 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
      * - OTHER이면서 memo 없음: SalesOrderException (SO-009, 400)
-     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
-     * - REQUESTED 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - SO 미존재: ResourceNotFoundException (SO-014, 404)
+     * - REQUESTED 아님: InvalidStatusTransitionException (SO-018, 409)
      */
     @Override
     @Transactional

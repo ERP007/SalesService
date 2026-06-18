@@ -50,8 +50,8 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
      *
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
-     * - 소속 창고 불일치: ForbiddenException (SO-017, 403)
+     * - SO 미존재: ResourceNotFoundException (SO-014, 404)
+     * - 소속 창고 불일치: ForbiddenException (SO-013, 403)
      */
     @Override
     @Transactional(readOnly = true)

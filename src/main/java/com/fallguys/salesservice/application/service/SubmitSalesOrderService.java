@@ -55,15 +55,15 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      *
      * 예외:
      * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
-     * - DRAFT 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - SO 미존재: ResourceNotFoundException (SO-014, 404)
+     * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 중복 부품: SalesOrderException (SO-002, 400)
      * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
-     * - 사번 미존재: ResourceNotFoundException (SO-021, 404)
-     * - SO 소유 지점 불일치: ForbiddenException (SO-017, 403)
-     * - 창고 미존재: ResourceNotFoundException (SO-019, 404)
+     * - 사번 미존재: ResourceNotFoundException (SO-017, 404)
+     * - SO 소유 지점 불일치: ForbiddenException (SO-013, 403)
+     * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)
-     * - 부품 미존재: ResourceNotFoundException (SO-020, 404)
+     * - 부품 미존재: ResourceNotFoundException (SO-016, 404)
      */
     @Override
     @Transactional

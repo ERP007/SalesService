@@ -37,10 +37,10 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
      *
      * 예외:
      * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
-     * - SO 미존재: ResourceNotFoundException (SO-018, 404)
-     * - 소속 창고 불일치: ForbiddenException (SO-017, 403)
-     * - BRANCH_STAFF가 타인 발주 취소 시도: ForbiddenException (SO-017, 403)
-     * - REQUESTED 아님: InvalidStatusTransitionException (SO-023, 409)
+     * - SO 미존재: ResourceNotFoundException (SO-014, 404)
+     * - 소속 창고 불일치: ForbiddenException (SO-013, 403)
+     * - BRANCH_STAFF가 타인 발주 취소 시도: ForbiddenException (SO-013, 403)
+     * - REQUESTED 아님: InvalidStatusTransitionException (SO-018, 409)
      */
     @Override
     @Transactional
