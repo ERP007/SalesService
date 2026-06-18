@@ -33,11 +33,11 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      * 흐름:
      * 1) 역할 검증 — BRANCH_MANAGER, BRANCH_STAFF만 허용
      * 2) SO 존재 확인 (local DB)
-     * 3) JWT warehouseCode가 SO의 toWarehouseCode와 일치하는지 검증
+     * 3) JWT warehouseCode가 SO의 fromWarehouseCode(발주 지점=입고 창고)와 일치하는지 검증
      * 4) deliveredDate가 출고일(approvedAt) 이전인지 검증
      * 5) 도메인 상태 전환 — 각 라인 deliveredQuantity 확정 및 DELIVERED 전환
-     * 6) 재고 서비스 입고 호출
-     * 7) 저장
+     * 6) 저장
+     * 7) 재고 서비스 입고 호출
      *
      * 트랜잭션: 쓰기. 재고 서비스 호출은 트랜잭션 경계 밖(외부 호출).
      * 재고 호출 실패 시 트랜잭션이 롤백되어 DB 변경도 취소된다.
@@ -59,7 +59,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
 
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
 
-        if (!command.requesterWarehouseCode().equals(order.getToWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(order.getFromWarehouseCode())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
@@ -69,9 +69,11 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
 
         order.deliver(command.deliveredBy(), command.deliveredDate(), Instant.now());
 
-        inboundStockPort.inbound(order);
+        SalesOrder saved = saveSalesOrderPort.save(order);
 
-        return saveSalesOrderPort.save(order);
+        inboundStockPort.inbound(saved);
+
+        return saved;
     }
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
