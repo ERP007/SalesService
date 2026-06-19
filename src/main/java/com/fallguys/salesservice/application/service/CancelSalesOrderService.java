@@ -68,7 +68,7 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
         }
 
         Instant now = Instant.now();
-        salesOrder.cancel(command.canceledBy(), now, command.reason());
+        salesOrder.cancel();
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
                 saved.getCode(), SalesOrderStatus.CANCELED, command.canceledBy(),

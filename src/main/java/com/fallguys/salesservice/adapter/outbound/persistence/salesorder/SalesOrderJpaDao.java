@@ -13,7 +13,6 @@ import java.util.List;
 
 public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String> {
 
-    boolean existsByApprovalInvoiceNumber(String invoiceNumber);
 
     // 지점 창고 코드별 상태 집계 — KPI 조회용
     @Query("""

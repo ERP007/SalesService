@@ -44,12 +44,11 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      *
      * 흐름:
      * 1) 역할 검증 — ADMIN·HQ_MANAGER·HQ_STAFF만 허용
-     * 2) 송장 번호 중복 검증 — invoiceNumber가 null이 아닐 때만 확인
-     * 3) SO 조회
-     * 4) 승인일 검증 — approvedDate가 requestedAt 날짜보다 이전이면 거부
-     * 5) 도메인 상태 전환 — 라인 approvedQuantity 확정 및 APPROVED 전환
-     * 6) 재고 서비스 출고 호출
-     * 7) 저장
+     * 2) SO 조회
+     * 3) 승인일 검증 — approvedDate가 requestedAt 날짜보다 이전이면 거부
+     * 4) 도메인 상태 전환 — 라인 approvedQuantity 확정 및 APPROVED 전환
+     * 5) 재고 서비스 출고 호출
+     * 6) 저장
      *
      * 트랜잭션: 쓰기. DB 저장 후 재고 서비스 출고를 호출한다.
      * 재고 호출 실패 시 SO는 APPROVED 상태로 남고 출고만 미처리된다(재시도 가능).
@@ -57,7 +56,6 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      *
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
-     * - 송장 번호 중복: SalesOrderException (SO-006, 400)
      * - SO 미존재: ResourceNotFoundException (SO-014, 404)
      * - 승인일 < 요청일: SalesOrderException (SO-007, 400)
      * - REQUESTED 아님: InvalidStatusTransitionException (SO-018, 409)
@@ -70,18 +68,12 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
-        if (command.invoiceNumber() != null &&
-                loadSalesOrderPort.existsByInvoiceNumber(command.invoiceNumber())) {
-            throw new SalesOrderException(SalesErrorCode.DUPLICATE_INVOICE_NUMBER);
-        }
-
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
 
         validateApprovedDate(command.approvedDate(), order);
 
         Instant now = Instant.now();
-        order.approve(command.approvedBy(), now, command.approvedDate(),
-                command.carrierType(), command.invoiceNumber());
+        order.approve();
 
         SalesOrder saved = saveSalesOrderPort.save(order);
         appendHistoryPort.append(SalesOrderStatusHistory.of(

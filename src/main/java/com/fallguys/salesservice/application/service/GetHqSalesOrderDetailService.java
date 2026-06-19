@@ -4,12 +4,15 @@ import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderD
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
     );
 
     private final LoadSalesOrderPort loadSalesOrderPort;
+    private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
     private final LoadWarehousePort loadWarehousePort;
     private final LoadUserInfoPort loadUserInfoPort;
 
@@ -64,7 +68,7 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
                 : null;
 
         String requestedBy = order.getRequest() != null ? order.getRequest().requestedBy() : null;
-        String approvedBy = order.getApproval() != null ? order.getApproval().approvedBy() : null;
+        String approvedBy = findApprovedBy(query.soCode());
 
         List<String> userCodes = new ArrayList<>();
         if (requestedBy != null) userCodes.add(requestedBy);
@@ -81,5 +85,14 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
                 requestedBy != null ? userInfoMap.get(requestedBy) : null,
                 approvedBy != null ? userInfoMap.get(approvedBy) : null
         );
+    }
+
+    // 승인자(approvedBy)는 상태 변경 이력의 APPROVED 행 actorCode에서 가져온다(미승인이면 null).
+    private String findApprovedBy(String soCode) {
+        return loadHistoryPort.loadBySoCode(soCode).stream()
+                .filter(h -> h.status() == SalesOrderStatus.APPROVED)
+                .map(SalesOrderStatusHistory::actorCode)
+                .findFirst()
+                .orElse(null);
     }
 }

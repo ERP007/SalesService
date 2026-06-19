@@ -4,17 +4,24 @@ import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOr
 import com.fallguys.salesservice.application.port.inbound.usecase.GetBranchSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -22,6 +29,7 @@ import java.util.Set;
 public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDetailUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
+    private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
     private final LoadWarehousePort loadWarehousePort;
 
     private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
@@ -64,6 +72,26 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
                 ? loadWarehousePort.load(salesOrder.getToWarehouseCode()).warehouseName()
                 : null;
 
-        return new SalesOrderDetail(salesOrder, fromWarehouseName, toWarehouseName);
+        SalesOrderStatusHistory approved = findApprovedRow(query.soCode());
+        Instant approvedAt = approved != null ? approved.createdAt() : null;
+        ApprovalPayload payload = approved != null && approved.payload() instanceof ApprovalPayload p ? p : null;
+        String invoiceNumber = payload != null ? payload.invoiceNumber() : null;
+        CarrierType carrierType = payload != null ? payload.carrierType() : null;
+
+        return new SalesOrderDetail(salesOrder,
+                fromWarehouseName,
+                toWarehouseName,
+                approvedAt,
+                invoiceNumber,
+                carrierType);
+    }
+
+    // 승인 부가 데이터는 상태 변경 이력의 APPROVED 행에서 가져온다(없으면 null).
+    private SalesOrderStatusHistory findApprovedRow(String soCode) {
+        List<SalesOrderStatusHistory> histories = loadHistoryPort.loadBySoCode(soCode);
+        return histories.stream()
+                .filter(h -> h.status() == SalesOrderStatus.APPROVED)
+                .findFirst()
+                .orElse(null);
     }
 }

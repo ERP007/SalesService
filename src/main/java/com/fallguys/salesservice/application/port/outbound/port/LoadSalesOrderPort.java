@@ -6,5 +6,4 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 // 미존재 시 ResourceNotFoundException(SO-014) 발생
 public interface LoadSalesOrderPort {
     SalesOrder load(String soCode);
-    boolean existsByInvoiceNumber(String invoiceNumber);
 }

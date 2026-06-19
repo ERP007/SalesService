@@ -64,7 +64,7 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
 
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
         Instant now = Instant.now();
-        order.reject(command.rejectedBy(), now, command.reasonCategory(), command.memo());
+        order.reject();
         SalesOrder saved = saveSalesOrderPort.save(order);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
                 saved.getCode(), SalesOrderStatus.REJECTED, command.rejectedBy(),
