@@ -62,10 +62,11 @@ class CancelSalesOrderServiceTest {
         SalesOrder result = service.cancel(command);
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.CANCELED);
-        assertThat(result.getCancellation()).isNotNull();
-        assertThat(result.getCancellation().canceledBy()).isEqualTo(USER_CODE);
-        assertThat(result.getCancellation().cancelReason()).isEqualTo(REASON);
-        assertThat(result.getCancellation().canceledAt()).isNotNull();
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.CANCELED &&
+                h.actorCode().equals(USER_CODE) &&
+                h.payload() instanceof CancellationPayload p &&
+                p.cancelReason().equals(REASON)));
     }
 
     @Test
@@ -142,7 +143,7 @@ class CancelSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
                 SalesOrderStatus.DRAFT, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null, List.of()
+                null, List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
 
@@ -158,7 +159,7 @@ class CancelSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
                 SalesOrderStatus.DRAFT, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null, List.of()
+                null, List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
 
@@ -175,8 +176,7 @@ class CancelSalesOrderServiceTest {
         service.cancel(command);
 
         then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.CANCELED &&
-                o.getCancellation() != null
+                o.getStatus() == SalesOrderStatus.CANCELED
         ));
         then(appendHistoryPort).should().append(argThat(h ->
                 h.status() == SalesOrderStatus.CANCELED &&
@@ -195,7 +195,7 @@ class CancelSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(requestedBy, Instant.now()),
                 new SalesOrderRequest(requestedBy, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
     }
 }

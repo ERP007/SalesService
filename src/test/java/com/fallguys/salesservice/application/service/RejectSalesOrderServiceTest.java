@@ -11,7 +11,6 @@ import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
 import com.fallguys.salesservice.domain.model.salesorder.*;
-import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.salesorderhistory.RejectReasonCategory;
 import com.fallguys.salesservice.domain.model.salesorderhistory.RejectionPayload;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,10 +56,11 @@ class RejectSalesOrderServiceTest {
         SalesOrder result = service.reject(command(UserRole.ADMIN, RejectReasonCategory.OUT_OF_STOCK, null));
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.REJECTED);
-        assertThat(result.getRejection()).isNotNull();
-        assertThat(result.getRejection().rejectedBy()).isEqualTo(HQ_USER_CODE);
-        assertThat(result.getRejection().rejectReasonCategory()).isEqualTo(RejectReasonCategory.OUT_OF_STOCK);
-        assertThat(result.getRejection().rejectedAt()).isNotNull();
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.REJECTED &&
+                h.actorCode().equals(HQ_USER_CODE) &&
+                h.payload() instanceof RejectionPayload p &&
+                p.rejectReasonCategory() == RejectReasonCategory.OUT_OF_STOCK));
     }
 
     @Test
@@ -109,7 +109,9 @@ class RejectSalesOrderServiceTest {
         SalesOrder result = service.reject(command(UserRole.ADMIN, RejectReasonCategory.OTHER, "기타 사유 상세 설명"));
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.REJECTED);
-        assertThat(result.getRejection().rejectReasonMemo()).isEqualTo("기타 사유 상세 설명");
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.payload() instanceof RejectionPayload p &&
+                "기타 사유 상세 설명".equals(p.rejectReasonMemo())));
     }
 
     @Test
@@ -136,9 +138,7 @@ class RejectSalesOrderServiceTest {
         service.reject(command(UserRole.HQ_MANAGER, RejectReasonCategory.DUPLICATE, "중복 발주 확인"));
 
         then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.REJECTED &&
-                o.getRejection() != null &&
-                o.getRejection().rejectReasonCategory() == RejectReasonCategory.DUPLICATE
+                o.getStatus() == SalesOrderStatus.REJECTED
         ));
         then(appendHistoryPort).should().append(argThat(h ->
                 h.status() == SalesOrderStatus.REJECTED &&
@@ -157,7 +157,7 @@ class RejectSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(HQ_USER_CODE, Instant.now()),
                 new SalesOrderRequest(HQ_USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
     }
 
@@ -167,8 +167,7 @@ class RejectSalesOrderServiceTest {
                 SalesOrderStatus.APPROVED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(HQ_USER_CODE, Instant.now()),
                 new SalesOrderRequest(HQ_USER_CODE, Instant.now()),
-                new SalesOrderApproval(HQ_USER_CODE, Instant.now(), LocalDate.now(), CarrierType.VEHICLE, "INV-001"),
-                null, null, null, List.of()
+                List.of()
         );
     }
 }
