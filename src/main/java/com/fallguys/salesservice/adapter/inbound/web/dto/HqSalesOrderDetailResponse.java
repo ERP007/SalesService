@@ -2,7 +2,6 @@ package com.fallguys.salesservice.adapter.inbound.web.dto;
 
 import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
-import com.fallguys.salesservice.domain.model.salesorder.SalesOrderApproval;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
 
@@ -43,7 +42,6 @@ public record HqSalesOrderDetailResponse(
     public static HqSalesOrderDetailResponse from(HqSalesOrderDetail detail) {
         SalesOrder order = detail.salesOrder();
         SalesOrderRequest request = order.getRequest();
-        SalesOrderApproval approval = order.getApproval();
 
         List<LineResponse> lines = order.getLines() != null
                 ? order.getLines().stream().map(LineResponse::from).toList()
@@ -58,7 +56,7 @@ public record HqSalesOrderDetailResponse(
                 request != null ? request.requestedAt() : null,
                 order.getRequestMemo(),
                 order.getDesiredArrivalDate(),
-                approval != null ? PersonInfo.from(detail.approverInfo()) : null,
+                detail.approverInfo() != null ? PersonInfo.from(detail.approverInfo()) : null,
                 lines
         );
     }
