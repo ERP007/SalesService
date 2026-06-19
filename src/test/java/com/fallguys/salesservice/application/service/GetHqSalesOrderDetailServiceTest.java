@@ -57,7 +57,8 @@ class GetHqSalesOrderDetailServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder());
-        given(loadHistoryPort.loadBySoCode(SO_CODE)).willReturn(List.of());
+        given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
+                .willReturn(java.util.Optional.empty());
         given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME));
         given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, TO_WAREHOUSE_NAME));
         given(loadUserInfoPort.loadByUserCodes(List.of(REQUESTER_CODE)))
@@ -140,8 +141,8 @@ class GetHqSalesOrderDetailServiceTest {
     @Test
     void 승인된_발주_requester와_approver_batch_조회됨() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
-        given(loadHistoryPort.loadBySoCode(SO_CODE))
-                .willReturn(List.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
+        given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
+                .willReturn(java.util.Optional.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
                         APPROVER_CODE, FIXED_INSTANT)));
         given(loadUserInfoPort.loadByUserCodes(argThat(codes ->
                 codes.contains(REQUESTER_CODE) && codes.contains(APPROVER_CODE) && codes.size() == 2
@@ -159,8 +160,8 @@ class GetHqSalesOrderDetailServiceTest {
     @Test
     void requester와_approver_동일인이면_user_서비스_1회만_호출됨() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(selfApprovedOrder());
-        given(loadHistoryPort.loadBySoCode(SO_CODE))
-                .willReturn(List.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
+        given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
+                .willReturn(java.util.Optional.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
                         REQUESTER_CODE, FIXED_INSTANT)));
         given(loadUserInfoPort.loadByUserCodes(List.of(REQUESTER_CODE)))
                 .willReturn(Map.of(REQUESTER_CODE, new UserInfo(REQUESTER_CODE, "정유진", "서비스 매니저")));

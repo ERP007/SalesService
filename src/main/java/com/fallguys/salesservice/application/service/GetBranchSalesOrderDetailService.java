@@ -21,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Set;
 
 @Service
@@ -88,10 +87,7 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
 
     // 승인 부가 데이터는 상태 변경 이력의 APPROVED 행에서 가져온다(없으면 null).
     private SalesOrderStatusHistory findApprovedRow(String soCode) {
-        List<SalesOrderStatusHistory> histories = loadHistoryPort.loadBySoCode(soCode);
-        return histories.stream()
-                .filter(h -> h.status() == SalesOrderStatus.APPROVED)
-                .findFirst()
+        return loadHistoryPort.findLatestBySoCodeAndStatus(soCode, SalesOrderStatus.APPROVED)
                 .orElse(null);
     }
 }

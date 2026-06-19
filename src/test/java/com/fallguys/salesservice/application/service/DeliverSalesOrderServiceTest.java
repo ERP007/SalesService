@@ -62,9 +62,10 @@ class DeliverSalesOrderServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
-        // 출고일(approvedAt) 검증 소스: 상태 변경 이력의 APPROVED 행
-        given(loadHistoryPort.loadBySoCode(SO_CODE)).willReturn(List.of(
-                SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED, "hq001",
+        // 출고일(approvedAt) 검증 소스: 최신 APPROVED 상태 변경 이력
+        given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
+                .willReturn(java.util.Optional.of(SalesOrderStatusHistory.of(
+                        SO_CODE, SalesOrderStatus.APPROVED, "hq001",
                         new ApprovalPayload(LocalDate.of(2026, 6, 1), CarrierType.VEHICLE, "INV-2026-001"), APPROVED_AT)));
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
         willDoNothing().given(inboundStockPort).inbound(any());

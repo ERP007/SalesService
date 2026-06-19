@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -31,13 +32,18 @@ public class StatusHistoryPersistenceAdapter
     @Override
     public List<SalesOrderStatusHistory> loadBySoCode(String soCode) {
         return jpaDao.findBySoCodeOrderByCreatedAtDesc(soCode).stream()
-                .map(e -> new SalesOrderStatusHistory(
-                        e.getSoCode(),
-                        e.getStatus(),
-                        e.getActorCode(),
-                        deserialize(e.getStatus(), e.getPayload()),
-                        e.getCreatedAt()))
+                .map(this::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Optional<SalesOrderStatusHistory> findLatestBySoCodeAndStatus(String soCode, SalesOrderStatus status) {
+        return jpaDao.findFirstBySoCodeAndStatusOrderByCreatedAtDesc(soCode, status)
+                .map(this::toDomain);
+    }
+
+    private SalesOrderStatusHistory toDomain(SalesOrderStatusHistoryEntity entity) {
+        return entity.toDomain(deserialize(entity.getStatus(), entity.getPayload()));
     }
 
     private String serialize(StatusChangePayload payload) {

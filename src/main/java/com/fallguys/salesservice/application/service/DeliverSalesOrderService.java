@@ -92,10 +92,8 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
 
     // 출고일(approvedAt)은 상태 변경 이력의 APPROVED 행 created_at에서 가져온다(없으면 검증 생략).
     private Instant findApprovedAt(String soCode) {
-        return loadHistoryPort.loadBySoCode(soCode).stream()
-                .filter(h -> h.status() == SalesOrderStatus.APPROVED)
+        return loadHistoryPort.findLatestBySoCodeAndStatus(soCode, SalesOrderStatus.APPROVED)
                 .map(SalesOrderStatusHistory::createdAt)
-                .findFirst()
                 .orElse(null);
     }
 

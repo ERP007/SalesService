@@ -51,7 +51,8 @@ class GetBranchSalesOrderDetailServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(FROM_WAREHOUSE, TO_WAREHOUSE));
-        given(loadHistoryPort.loadBySoCode(SO_CODE)).willReturn(List.of());
+        given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
+                .willReturn(java.util.Optional.empty());
         given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME));
         given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, TO_WAREHOUSE_NAME));
     }

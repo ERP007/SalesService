@@ -12,8 +12,8 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
-import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,10 +89,8 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
 
     // 승인자(approvedBy)는 상태 변경 이력의 APPROVED 행 actorCode에서 가져온다(미승인이면 null).
     private String findApprovedBy(String soCode) {
-        return loadHistoryPort.loadBySoCode(soCode).stream()
-                .filter(h -> h.status() == SalesOrderStatus.APPROVED)
+        return loadHistoryPort.findLatestBySoCodeAndStatus(soCode, SalesOrderStatus.APPROVED)
                 .map(SalesOrderStatusHistory::actorCode)
-                .findFirst()
                 .orElse(null);
     }
 }

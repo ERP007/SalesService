@@ -2,6 +2,7 @@ package com.fallguys.salesservice.adapter.outbound.persistence.salesorderhistory
 
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
+import com.fallguys.salesservice.domain.model.salesorderhistory.StatusChangePayload;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,5 +48,9 @@ public class SalesOrderStatusHistoryEntity {
         entity.payload = payloadJson;
         entity.createdAt = domain.createdAt();
         return entity;
+    }
+
+    public SalesOrderStatusHistory toDomain(StatusChangePayload payload) {
+        return new SalesOrderStatusHistory(soCode, status, actorCode, payload, createdAt);
     }
 }

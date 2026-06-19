@@ -20,6 +20,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
@@ -84,5 +85,22 @@ class StatusHistoryPersistenceAdapterTest {
     @Test
     void draft_has_no_payload() {
         assertRoundTrip(SalesOrderStatus.DRAFT, null);
+    }
+
+    @Test
+    void 최신_상태_이력을_상태별로_단건_조회한다() {
+        SalesOrderStatusHistory original = new SalesOrderStatusHistory(
+                "SO-2026-06-0001", SalesOrderStatus.APPROVED, "EMP-1",
+                new ApprovalPayload(LocalDate.of(2026, 6, 20), CarrierType.VEHICLE, "INV-1"),
+                Instant.parse("2026-06-19T00:00:00Z"));
+        SalesOrderStatusHistoryEntity entity = SalesOrderStatusHistoryEntity.from(
+                original, objectMapper.writeValueAsString(original.payload()));
+        given(jpaDao.findFirstBySoCodeAndStatusOrderByCreatedAtDesc(original.soCode(), original.status()))
+                .willReturn(Optional.of(entity));
+
+        Optional<SalesOrderStatusHistory> result = adapter()
+                .findLatestBySoCodeAndStatus(original.soCode(), original.status());
+
+        assertThat(result).contains(original);
     }
 }
