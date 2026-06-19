@@ -12,7 +12,6 @@ public enum SalesErrorCode implements ErrorCode {
     INVALID_DESIRED_ARRIVAL_DATE("SO-003", "도착 희망일이 유효하지 않습니다"),
     WAREHOUSE_INACTIVE("SO-004", "비활성화된 창고입니다"),
     ITEM_INACTIVE("SO-005", "비활성화된 부품입니다"),
-    DUPLICATE_INVOICE_NUMBER("SO-006", "이미 사용된 송장 번호입니다"),
     INVALID_APPROVED_DATE("SO-007", "승인일은 요청일보다 이전일 수 없습니다"),
     INVALID_DELIVERED_DATE("SO-008", "입고일은 출고 승인일 이전일 수 없습니다"),
     REJECT_MEMO_REQUIRED("SO-009", "기타 사유 선택 시 메모는 필수입니다"),
