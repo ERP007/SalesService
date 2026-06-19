@@ -115,14 +115,12 @@ class ApproveSalesOrderServiceTest {
     }
 
     @Test
-    void 라인_approvedQuantity_requestedQuantity로_확정됨() {
+    void 승인_후에도_라인_quantity_유지됨() {
         ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
 
         SalesOrder result = service.approve(command);
 
-        assertThat(result.getLines()).allSatisfy(line ->
-                assertThat(line.getApprovedQuantity()).isEqualTo(line.getRequestedQuantity())
-        );
+        assertThat(result.getLines()).allSatisfy(line -> assertThat(line.getQuantity()).isEqualTo(10));
     }
 
     @Test
@@ -257,7 +255,7 @@ class ApproveSalesOrderServiceTest {
     }
 
     private SalesOrder requestedOrder() {
-        SalesOrderLine line = new SalesOrderLine(1L, SO_CODE, "ITEM-001", "브레이크 패드", "EA", 10, null, null, Priority.NORMAL);
+        SalesOrderLine line = new SalesOrderLine(1L, SO_CODE, "ITEM-001", "브레이크 패드", "EA", 10, Priority.NORMAL);
         return new SalesOrder(
                 SO_CODE, "WH-BRANCH-01", "WH-HQ-01",
                 SalesOrderStatus.REQUESTED, TODAY.plusDays(3), null,

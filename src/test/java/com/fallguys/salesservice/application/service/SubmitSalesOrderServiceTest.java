@@ -71,7 +71,7 @@ class SubmitSalesOrderServiceTest {
                 SalesOrderStatus.DRAFT, DRAFT_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);

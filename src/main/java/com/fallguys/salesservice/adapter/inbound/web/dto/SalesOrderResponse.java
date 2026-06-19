@@ -22,7 +22,7 @@ public record SalesOrderResponse(
 ) {
     public static SalesOrderResponse from(SalesOrder order) {
         int totalQuantity = order.getLines() != null
-                ? order.getLines().stream().mapToInt(SalesOrderLine::getRequestedQuantity).sum()
+                ? order.getLines().stream().mapToInt(SalesOrderLine::getQuantity).sum()
                 : 0;
         return new SalesOrderResponse(
                 order.getCode(),

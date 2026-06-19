@@ -143,7 +143,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
                     return new SalesOrderLine(
                             null, soCode, cmd.itemCode(),
                             item.itemName(), item.unit(),
-                            cmd.quantity(), null, null, cmd.priority()
+                            cmd.quantity(), cmd.priority()
                     );
                 })
                 .toList();

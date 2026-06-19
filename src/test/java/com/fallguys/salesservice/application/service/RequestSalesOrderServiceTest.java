@@ -61,16 +61,14 @@ class RequestSalesOrderServiceTest {
     private static final String TO_WAREHOUSE = "WH-HQ-01";
     private static final LocalDate VALID_DATE = LocalDate.now().plusDays(3);
 
-    private SalesOrder draftSalesOrder;
-
     @BeforeEach
     void setUp() {
-        draftSalesOrder = new SalesOrder(
+        SalesOrder draftSalesOrder = new SalesOrder(
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
@@ -150,8 +148,8 @@ class RequestSalesOrderServiceTest {
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 null,
                 List.of(
-                    new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL),
-                    new SalesOrderLine(2L, SO_CODE, "ITEM-01", null, null, 3, null, null, Priority.NORMAL)
+                    new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL),
+                    new SalesOrderLine(2L, SO_CODE, "ITEM-01", null, null, 3, Priority.NORMAL)
                 )
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftWithDuplicates);
@@ -168,7 +166,7 @@ class RequestSalesOrderServiceTest {
                 SalesOrderStatus.DRAFT, LocalDate.now(), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithTodayDate);
 
@@ -183,7 +181,7 @@ class RequestSalesOrderServiceTest {
                 SalesOrderStatus.DRAFT, LocalDate.now().plusDays(61), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithLateDate);
 

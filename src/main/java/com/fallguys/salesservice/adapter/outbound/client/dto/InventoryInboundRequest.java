@@ -16,7 +16,7 @@ public record InventoryInboundRequest(
             Long sourceLineNo
     ) {
         public static LineRequest from(SalesOrderLine line) {
-            return new LineRequest(line.getItemCode(), line.getApprovedQuantity(), line.getId());
+            return new LineRequest(line.getItemCode(), line.getQuantity(), line.getId());
         }
     }
 

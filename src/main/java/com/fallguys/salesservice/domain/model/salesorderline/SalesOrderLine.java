@@ -11,16 +11,6 @@ public class SalesOrderLine {
     private final String itemCode;
     private final String itemNameSnapshot;
     private final String unitSnapshot;
-    private int requestedQuantity;
-    private Integer approvedQuantity;
-    private Integer deliveredQuantity;
+    private int quantity;
     private Priority priority;
-
-    public void approve() {
-        this.approvedQuantity = this.requestedQuantity;
-    }
-
-    public void confirmDelivery() {
-        this.deliveredQuantity = this.approvedQuantity;
-    }
 }

@@ -233,7 +233,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
     private HqSalesOrderSummary toHqSummary(SalesOrderEntity entity) {
         List<SalesOrderLineEntity> lines = entity.getLines();
-        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getRequestedQuantity).sum();
+        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getQuantity).sum();
 
         String unitSnapshot = null;
         if (!lines.isEmpty()) {
@@ -261,7 +261,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
     private SalesOrderSummary toSummary(SalesOrderEntity entity) {
         List<SalesOrderLineEntity> lines = entity.getLines();
-        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getRequestedQuantity).sum();
+        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getQuantity).sum();
 
         String unitSnapshot = null;
         if (!lines.isEmpty()) {

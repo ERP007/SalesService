@@ -46,7 +46,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      * 1) 역할 검증 — ADMIN·HQ_MANAGER·HQ_STAFF만 허용
      * 2) SO 조회
      * 3) 승인일 검증 — approvedDate가 requestedAt 날짜보다 이전이면 거부
-     * 4) 도메인 상태 전환 — 라인 approvedQuantity 확정 및 APPROVED 전환
+     * 4) 도메인 상태 전환 — APPROVED 전환
      * 5) 재고 서비스 출고 호출
      * 6) 저장
      *

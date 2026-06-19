@@ -101,7 +101,7 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
                 .map(cmd -> new SalesOrderLine(
                         null, soCode, cmd.itemCode(),
                         null, null,
-                        cmd.quantity(), null, null, cmd.priority()
+                        cmd.quantity(), cmd.priority()
                 ))
                 .toList();
     }

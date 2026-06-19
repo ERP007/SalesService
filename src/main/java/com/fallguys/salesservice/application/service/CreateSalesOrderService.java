@@ -145,7 +145,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
                     return new SalesOrderLine(
                             null, soCode, cmd.itemCode(),
                             item.itemName(), item.unit(),
-                            cmd.quantity(), null, null, cmd.priority()
+                            cmd.quantity(), cmd.priority()
                     );
                 })
                 .toList();
@@ -156,7 +156,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
                 .map(cmd -> new SalesOrderLine(
                         null, soCode, cmd.itemCode(),
                         null, null,
-                        cmd.quantity(), null, null, cmd.priority()
+                        cmd.quantity(), cmd.priority()
                 ))
                 .toList();
     }

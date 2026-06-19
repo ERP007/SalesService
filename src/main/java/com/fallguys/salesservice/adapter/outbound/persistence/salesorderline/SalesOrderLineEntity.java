@@ -28,11 +28,7 @@ public class SalesOrderLineEntity {
     private String unitSnapshot;
 
     @Column(nullable = false)
-    private int requestedQuantity;
-
-    private Integer approvedQuantity;
-
-    private Integer deliveredQuantity;
+    private int quantity;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -40,7 +36,7 @@ public class SalesOrderLineEntity {
 
     public SalesOrderLine toDomain(String soCode) {
         return new SalesOrderLine(id, soCode, itemCode, itemNameSnapshot, unitSnapshot,
-                requestedQuantity, approvedQuantity, deliveredQuantity, priority);
+                quantity, priority);
     }
 
     public static SalesOrderLineEntity from(SalesOrderLine domain) {
@@ -48,18 +44,13 @@ public class SalesOrderLineEntity {
         entity.itemCode = domain.getItemCode();
         entity.itemNameSnapshot = domain.getItemNameSnapshot();
         entity.unitSnapshot = domain.getUnitSnapshot();
-        entity.requestedQuantity = domain.getRequestedQuantity();
-        entity.approvedQuantity = domain.getApprovedQuantity();
-        entity.deliveredQuantity = domain.getDeliveredQuantity();
+        entity.quantity = domain.getQuantity();
         entity.priority = domain.getPriority();
         return entity;
     }
 
-    public SalesOrderLineEntity update(SalesOrderLine domain) {
-        this.requestedQuantity = domain.getRequestedQuantity();
-        this.approvedQuantity = domain.getApprovedQuantity();
-        this.deliveredQuantity = domain.getDeliveredQuantity();
+    public void update(SalesOrderLine domain) {
+        this.quantity = domain.getQuantity();
         this.priority = domain.getPriority();
-        return this;
     }
 }

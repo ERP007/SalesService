@@ -90,12 +90,11 @@ class DeliverSalesOrderServiceTest {
     }
 
     @Test
-    void 성공시_라인_deliveredQuantity가_approvedQuantity로_확정됨() {
+    void 성공시_라인_quantity_유지됨() {
         SalesOrder result = service.deliver(command(UserRole.BRANCH_MANAGER));
 
-        result.getLines().forEach(line ->
-                assertThat(line.getDeliveredQuantity()).isEqualTo(line.getApprovedQuantity())
-        );
+        assertThat(result.getLines()).extracting(SalesOrderLine::getQuantity)
+                .containsExactly(100, 40);
     }
 
     @Test
@@ -203,8 +202,8 @@ class DeliverSalesOrderServiceTest {
 
     private SalesOrder approvedOrder() {
         List<SalesOrderLine> lines = List.of(
-                new SalesOrderLine(1L, SO_CODE, "HMC-EN-00214", "엔진오일", "EA", 100, 100, null, Priority.NORMAL),
-                new SalesOrderLine(2L, SO_CODE, "HMC-BR-01102", "브레이크패드", "EA", 40, 40, null, Priority.NORMAL)
+                new SalesOrderLine(1L, SO_CODE, "HMC-EN-00214", "엔진오일", "EA", 100, Priority.NORMAL),
+                new SalesOrderLine(2L, SO_CODE, "HMC-BR-01102", "브레이크패드", "EA", 40, Priority.NORMAL)
         );
         return new SalesOrder(
                 SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",

@@ -135,7 +135,7 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
                     return new SalesOrderLine(
                             null, soCode, line.getItemCode(),
                             item.itemName(), item.unit(),
-                            line.getRequestedQuantity(), null, null, line.getPriority()
+                            line.getQuantity(), line.getPriority()
                     );
                 })
                 .toList();

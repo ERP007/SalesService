@@ -42,7 +42,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      * 2) SO 존재 확인 (local DB)
      * 3) JWT warehouseCode가 SO의 fromWarehouseCode(발주 지점=입고 창고)와 일치하는지 검증
      * 4) deliveredDate가 출고일(approvedAt) 이전인지 검증
-     * 5) 도메인 상태 전환 — 각 라인 deliveredQuantity 확정 및 DELIVERED 전환
+     * 5) 도메인 상태 전환 — DELIVERED 전환
      * 6) 저장
      * 7) 재고 서비스 입고 호출
      *
@@ -81,7 +81,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
         SalesOrder saved = saveSalesOrderPort.save(order);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
                 saved.getCode(), SalesOrderStatus.DELIVERED, command.deliveredBy(),
-                new DeliveryPayload(command.deliveredDate(), null, null), now));
+                new DeliveryPayload(command.deliveredDate()), now));
 
         inboundStockPort.inbound(saved);
 

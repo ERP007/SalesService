@@ -58,7 +58,7 @@ class UpdateDraftSalesOrderServiceTest {
                 SalesOrderStatus.DRAFT, OLD_DATE, "old memo",
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
@@ -81,7 +81,7 @@ class UpdateDraftSalesOrderServiceTest {
         assertThat(result.getLines()).hasSize(1);
         SalesOrderLine line = result.getLines().getFirst();
         assertThat(line.getItemCode()).isEqualTo("ITEM-02");
-        assertThat(line.getRequestedQuantity()).isEqualTo(7);
+        assertThat(line.getQuantity()).isEqualTo(7);
         assertThat(line.getItemNameSnapshot()).isNull();
         assertThat(line.getUnitSnapshot()).isNull();
         then(saveSalesOrderPort).should().save(any());

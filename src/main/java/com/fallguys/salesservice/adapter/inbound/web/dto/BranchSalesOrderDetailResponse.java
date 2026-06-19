@@ -34,7 +34,7 @@ public record BranchSalesOrderDetailResponse(
                     line.getItemCode(),
                     line.getItemNameSnapshot(),
                     line.getUnitSnapshot(),
-                    line.getRequestedQuantity(),
+                    line.getQuantity(),
                     line.getPriority().name()
             );
         }

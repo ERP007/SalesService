@@ -5,7 +5,6 @@ import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CancellationPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
-import com.fallguys.salesservice.domain.model.salesorderhistory.DiffReasonCategory;
 import com.fallguys.salesservice.domain.model.salesorderhistory.RejectReasonCategory;
 import com.fallguys.salesservice.domain.model.salesorderhistory.RejectionPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
@@ -69,7 +68,7 @@ class StatusHistoryPersistenceAdapterTest {
     @Test
     void delivered_payload_roundtrip() {
         assertRoundTrip(SalesOrderStatus.DELIVERED,
-                new DeliveryPayload(LocalDate.of(2026, 6, 21), DiffReasonCategory.MISSING, "일부 누락"));
+                new DeliveryPayload(LocalDate.of(2026, 6, 21)));
     }
 
     @Test

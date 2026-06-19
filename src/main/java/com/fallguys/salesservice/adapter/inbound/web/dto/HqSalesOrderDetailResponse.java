@@ -34,7 +34,7 @@ public record HqSalesOrderDetailResponse(
                     line.getItemCode(),
                     line.getItemNameSnapshot(),
                     line.getUnitSnapshot(),
-                    line.getRequestedQuantity()
+                    line.getQuantity()
             );
         }
     }
