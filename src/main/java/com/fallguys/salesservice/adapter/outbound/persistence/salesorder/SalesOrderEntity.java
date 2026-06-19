@@ -45,18 +45,6 @@ public class SalesOrderEntity {
     @Embedded
     private RequestEmbeddable request;
 
-    @Embedded
-    private ApprovalEmbeddable approval;
-
-    @Embedded
-    private RejectionEmbeddable rejection;
-
-    @Embedded
-    private DeliveryEmbeddable delivery;
-
-    @Embedded
-    private CancellationEmbeddable cancellation;
-
     @BatchSize(size = 50)
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "so_code", nullable = false)
@@ -71,10 +59,6 @@ public class SalesOrderEntity {
                 code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
-                approval != null ? approval.toDomain() : null,
-                rejection != null ? rejection.toDomain() : null,
-                delivery != null ? delivery.toDomain() : null,
-                cancellation != null ? cancellation.toDomain() : null,
                 domainLines
         );
     }
@@ -118,9 +102,5 @@ public class SalesOrderEntity {
         this.requestMemo = domain.getRequestMemo();
         this.creation = CreationEmbeddable.from(domain.getCreation());
         this.request = RequestEmbeddable.from(domain.getRequest());
-        this.approval = ApprovalEmbeddable.from(domain.getApproval());
-        this.rejection = RejectionEmbeddable.from(domain.getRejection());
-        this.delivery = DeliveryEmbeddable.from(domain.getDelivery());
-        this.cancellation = CancellationEmbeddable.from(domain.getCancellation());
     }
 }

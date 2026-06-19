@@ -2,8 +2,6 @@ package com.fallguys.salesservice.domain.model.salesorder;
 
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
-import com.fallguys.salesservice.domain.model.salesorderhistory.RejectReasonCategory;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,10 +23,6 @@ public class SalesOrder {
 
     private final SalesOrderCreation creation;
     private SalesOrderRequest request;
-    private SalesOrderApproval approval;
-    private SalesOrderRejection rejection;
-    private SalesOrderDelivery delivery;
-    private SalesOrderCancellation cancellation;
 
     private List<SalesOrderLine> lines;
 
@@ -51,7 +45,6 @@ public class SalesOrder {
                 code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
                 new SalesOrderCreation(createdBy, now),
                 request,
-                null, null, null, null,
                 lines
         );
     }
@@ -61,7 +54,7 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) DRAFT 상태인지 검증한다.
-     * 2) 창고·날짜·메모·라인을 덮어쓴다. 상태·이력은 변경하지 않는다.
+     * 2) 창고·날짜·메모·라인을 덮어쓴다. 상태는 변경하지 않는다.
      *
      * 예외:
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
@@ -84,7 +77,7 @@ public class SalesOrder {
      * 흐름:
      * 1) DRAFT 상태인지 검증한다.
      * 2) 요청 데이터(창고, 날짜, 메모, 라인)를 덮어쓴다.
-     * 3) 상태를 REQUESTED로, request 이력을 기록한다.
+     * 3) 상태를 REQUESTED로, request(요청자·요청시각) 운영 정보를 기록한다.
      *
      * 예외:
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
@@ -110,21 +103,17 @@ public class SalesOrder {
      * 흐름:
      * 1) REQUESTED 상태인지 검증한다.
      * 2) 각 라인의 approvedQuantity를 requestedQuantity로 확정한다.
-     * 3) 승인 이력(approvedBy, approvedAt, approvedDate, carrierType, invoiceNumber)을 기록하고 상태를 APPROVED로 전환한다.
-     *
-     * 트랜잭션: 쓰기. 조회·승인·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
+     * 3) 상태를 APPROVED로 전환한다. 승인 부가 데이터는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void approve(String approvedBy, Instant now, LocalDate approvedDate,
-                        CarrierType carrierType, String invoiceNumber) {
+    public void approve() {
         if (this.status != SalesOrderStatus.REQUESTED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "REQUESTED 상태에서만 승인 가능합니다. 현재 상태: " + this.status);
         }
         this.lines.forEach(SalesOrderLine::approve);
-        this.approval = new SalesOrderApproval(approvedBy, now, approvedDate, carrierType, invoiceNumber);
         this.status = SalesOrderStatus.APPROVED;
     }
 
@@ -134,18 +123,17 @@ public class SalesOrder {
      * 흐름:
      * 1) APPROVED 상태인지 검증한다.
      * 2) 각 라인의 deliveredQuantity를 approvedQuantity로 확정한다(이번 단계: 차이 없음).
-     * 3) 배송 이력(deliveredBy, deliveredAt)을 기록하고 상태를 DELIVERED로 전환한다.
+     * 3) 상태를 DELIVERED로 전환한다. 배송 부가 데이터는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void deliver(String deliveredBy, LocalDate deliveredDate, Instant now) {
+    public void deliver() {
         if (this.status != SalesOrderStatus.APPROVED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "APPROVED 상태에서만 배송 처리 가능합니다. 현재 상태: " + this.status);
         }
         this.lines.forEach(SalesOrderLine::confirmDelivery);
-        this.delivery = new SalesOrderDelivery(deliveredBy, deliveredDate, now, null, null);
         this.status = SalesOrderStatus.DELIVERED;
     }
 
@@ -154,19 +142,16 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) REQUESTED 상태인지 검증한다.
-     * 2) 반려 이력(rejectedBy, rejectedAt, category, memo)을 기록하고 상태를 REJECTED로 전환한다.
-     *
-     * 트랜잭션: 쓰기. 조회·반려·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
+     * 2) 상태를 REJECTED로 전환한다. 반려 사유는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void reject(String rejectedBy, Instant now, RejectReasonCategory reasonCategory, String memo) {
+    public void reject() {
         if (this.status != SalesOrderStatus.REQUESTED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "REQUESTED 상태에서만 반려 가능합니다. 현재 상태: " + this.status);
         }
-        this.rejection = new SalesOrderRejection(rejectedBy, now, reasonCategory, memo);
         this.status = SalesOrderStatus.REJECTED;
     }
 
@@ -175,20 +160,16 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) REQUESTED 상태인지 검증한다.
-     * 2) 취소 이력(canceledBy, canceledAt, reason)을 기록한다.
-     * 3) 상태를 CANCELED로 전환한다.
-     *
-     * 트랜잭션: 쓰기. 조회·취소·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
+     * 2) 상태를 CANCELED로 전환한다. 취소 사유는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void cancel(String canceledBy, Instant now, String reason) {
+    public void cancel() {
         if (this.status != SalesOrderStatus.REQUESTED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "REQUESTED 상태에서만 취소 가능합니다. 현재 상태: " + this.status);
         }
-        this.cancellation = new SalesOrderCancellation(canceledBy, now, reason);
         this.status = SalesOrderStatus.CANCELED;
     }
 }
