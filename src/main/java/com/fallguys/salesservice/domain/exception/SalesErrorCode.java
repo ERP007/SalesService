@@ -30,7 +30,8 @@ public enum SalesErrorCode implements ErrorCode {
     USER_NOT_FOUND("SO-017", "존재하지 않는 사용자입니다"),
 
     // 409 CONFLICT
-    INVALID_STATUS_TRANSITION("SO-018", "현재 상태에서 허용되지 않는 작업입니다");
+    INVALID_STATUS_TRANSITION("SO-018", "현재 상태에서 허용되지 않는 작업입니다"),
+    CONCURRENT_MODIFICATION("SO-019", "다른 사용자가 먼저 처리했습니다. 다시 시도해 주세요");
 
     private final String code;
     private final String defaultMessage;
