@@ -57,7 +57,7 @@ class UpdateDraftSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, OLD_TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, OLD_DATE, "old memo",
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
+                null,
                 List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
         );
 
@@ -136,7 +136,7 @@ class UpdateDraftSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, OLD_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 

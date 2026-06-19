@@ -181,7 +181,7 @@ class GetHqSalesOrderHistoryServiceTest {
                 status, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(BRANCH_USER_CODE, T1),
                 new SalesOrderRequest(BRANCH_USER_CODE, T2),
-                null, null, null, null, List.of()
+                List.of()
         );
     }
 

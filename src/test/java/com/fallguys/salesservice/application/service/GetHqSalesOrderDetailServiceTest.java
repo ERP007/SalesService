@@ -3,6 +3,7 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
@@ -12,7 +13,7 @@ import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.*;
 import com.fallguys.salesservice.domain.model.salesorder.*;
-import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +37,7 @@ import static org.mockito.BDDMockito.*;
 class GetHqSalesOrderDetailServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
+    @Mock LoadSalesOrderStatusHistoryPort loadHistoryPort;
     @Mock LoadWarehousePort loadWarehousePort;
     @Mock LoadUserInfoPort loadUserInfoPort;
 
@@ -55,6 +57,7 @@ class GetHqSalesOrderDetailServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder());
+        given(loadHistoryPort.loadBySoCode(SO_CODE)).willReturn(List.of());
         given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME));
         given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, TO_WAREHOUSE_NAME));
         given(loadUserInfoPort.loadByUserCodes(List.of(REQUESTER_CODE)))
@@ -90,6 +93,7 @@ class GetHqSalesOrderDetailServiceTest {
                 .isInstanceOf(ForbiddenException.class);
 
         then(loadSalesOrderPort).shouldHaveNoInteractions();
+        then(loadHistoryPort).shouldHaveNoInteractions();
         then(loadWarehousePort).shouldHaveNoInteractions();
         then(loadUserInfoPort).shouldHaveNoInteractions();
     }
@@ -100,6 +104,7 @@ class GetHqSalesOrderDetailServiceTest {
                 .isInstanceOf(ForbiddenException.class);
 
         then(loadSalesOrderPort).shouldHaveNoInteractions();
+        then(loadHistoryPort).shouldHaveNoInteractions();
         then(loadWarehousePort).shouldHaveNoInteractions();
         then(loadUserInfoPort).shouldHaveNoInteractions();
     }
@@ -135,6 +140,9 @@ class GetHqSalesOrderDetailServiceTest {
     @Test
     void 승인된_발주_requester와_approver_batch_조회됨() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
+        given(loadHistoryPort.loadBySoCode(SO_CODE))
+                .willReturn(List.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
+                        APPROVER_CODE, FIXED_INSTANT)));
         given(loadUserInfoPort.loadByUserCodes(argThat(codes ->
                 codes.contains(REQUESTER_CODE) && codes.contains(APPROVER_CODE) && codes.size() == 2
         ))).willReturn(Map.of(
@@ -151,6 +159,9 @@ class GetHqSalesOrderDetailServiceTest {
     @Test
     void requester와_approver_동일인이면_user_서비스_1회만_호출됨() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(selfApprovedOrder());
+        given(loadHistoryPort.loadBySoCode(SO_CODE))
+                .willReturn(List.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
+                        REQUESTER_CODE, FIXED_INSTANT)));
         given(loadUserInfoPort.loadByUserCodes(List.of(REQUESTER_CODE)))
                 .willReturn(Map.of(REQUESTER_CODE, new UserInfo(REQUESTER_CODE, "정유진", "서비스 매니저")));
 
@@ -184,7 +195,7 @@ class GetHqSalesOrderDetailServiceTest {
                 SalesOrderStatus.REQUESTED, FIXED_DATE.plusDays(3), null,
                 new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
                 new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
-                null, null, null, null, List.of()
+                List.of()
         );
     }
 
@@ -193,7 +204,7 @@ class GetHqSalesOrderDetailServiceTest {
                 SO_CODE, FROM_WAREHOUSE, null,
                 SalesOrderStatus.DRAFT, FIXED_DATE.plusDays(3), null,
                 new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
-                null, null, null, null, null, List.of()
+                null, List.of()
         );
     }
 
@@ -203,8 +214,7 @@ class GetHqSalesOrderDetailServiceTest {
                 SalesOrderStatus.APPROVED, FIXED_DATE.plusDays(3), null,
                 new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
                 new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
-                new SalesOrderApproval(APPROVER_CODE, FIXED_INSTANT, FIXED_DATE, CarrierType.VEHICLE, "INV-001"),
-                null, null, null, List.of()
+                List.of()
         );
     }
 
@@ -214,8 +224,7 @@ class GetHqSalesOrderDetailServiceTest {
                 SalesOrderStatus.APPROVED, FIXED_DATE.plusDays(3), null,
                 new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
                 new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
-                new SalesOrderApproval(REQUESTER_CODE, FIXED_INSTANT, FIXED_DATE, CarrierType.VEHICLE, "INV-001"),
-                null, null, null, List.of()
+                List.of()
         );
     }
 }

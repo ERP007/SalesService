@@ -70,7 +70,7 @@ class SubmitSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, DRAFT_TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, DRAFT_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
+                null,
                 List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
         );
 
@@ -123,7 +123,7 @@ class SubmitSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 

@@ -3,6 +3,7 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.model.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -34,6 +35,7 @@ import static org.mockito.BDDMockito.*;
 class GetBranchSalesOrderDetailServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
+    @Mock LoadSalesOrderStatusHistoryPort loadHistoryPort;
     @Mock LoadWarehousePort loadWarehousePort;
 
     @InjectMocks
@@ -49,6 +51,7 @@ class GetBranchSalesOrderDetailServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(FROM_WAREHOUSE, TO_WAREHOUSE));
+        given(loadHistoryPort.loadBySoCode(SO_CODE)).willReturn(List.of());
         given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME));
         given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, TO_WAREHOUSE_NAME));
     }
@@ -87,6 +90,7 @@ class GetBranchSalesOrderDetailServiceTest {
                 .isInstanceOf(ForbiddenException.class);
 
         then(loadSalesOrderPort).shouldHaveNoInteractions();
+        then(loadHistoryPort).shouldHaveNoInteractions();
     }
 
     @Test
@@ -126,7 +130,7 @@ class GetBranchSalesOrderDetailServiceTest {
                 SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
     }
 }

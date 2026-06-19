@@ -69,7 +69,7 @@ class RequestSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
+                null,
                 List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
         );
 
@@ -134,7 +134,7 @@ class RequestSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 
@@ -148,7 +148,7 @@ class RequestSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
+                null,
                 List.of(
                     new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL),
                     new SalesOrderLine(2L, SO_CODE, "ITEM-01", null, null, 3, null, null, Priority.NORMAL)
@@ -167,7 +167,7 @@ class RequestSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, LocalDate.now(), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
+                null,
                 List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithTodayDate);
@@ -182,7 +182,7 @@ class RequestSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, LocalDate.now().plusDays(61), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
+                null,
                 List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithLateDate);
