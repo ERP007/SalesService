@@ -23,6 +23,10 @@ public class SalesOrderEntity {
     @Id
     private String code;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @Column(name = "from_warehouse_code", nullable = false)
     private String fromWarehouseCode;
 
