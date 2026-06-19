@@ -4,6 +4,7 @@ import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOr
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -11,6 +12,7 @@ import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
 import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.salesorderline.Priority;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
@@ -37,6 +39,7 @@ class ApproveSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
     @Mock OutboundStockPort outboundStockPort;
 
     @InjectMocks
@@ -140,6 +143,11 @@ class ApproveSalesOrderServiceTest {
         then(saveSalesOrderPort).should().save(argThat(o ->
                 o.getStatus() == SalesOrderStatus.APPROVED &&
                 o.getApproval() != null
+        ));
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.APPROVED &&
+                h.payload() instanceof ApprovalPayload p &&
+                p.invoiceNumber().equals(INVOICE_NUMBER)
         ));
     }
 

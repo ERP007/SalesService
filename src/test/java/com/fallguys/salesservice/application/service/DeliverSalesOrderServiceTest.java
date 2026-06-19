@@ -4,6 +4,7 @@ import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOr
 import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -14,6 +15,7 @@ import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
 import com.fallguys.salesservice.domain.model.salesorder.*;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
+import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
 import com.fallguys.salesservice.domain.model.salesorderline.Priority;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +41,7 @@ class DeliverSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
     @Mock InboundStockPort inboundStockPort;
 
     @InjectMocks
@@ -100,6 +103,10 @@ class DeliverSalesOrderServiceTest {
         then(saveSalesOrderPort).should().save(argThat(o ->
                 o.getStatus() == SalesOrderStatus.DELIVERED &&
                 o.getDelivery() != null
+        ));
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.DELIVERED &&
+                h.payload() instanceof DeliveryPayload
         ));
     }
 

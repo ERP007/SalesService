@@ -6,6 +6,7 @@ import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.port.GenerateSoCodePort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
@@ -44,6 +45,8 @@ class CreateSalesOrderServiceTest {
     GenerateSoCodePort generateSoCodePort;
     @Mock
     SaveSalesOrderPort saveSalesOrderPort;
+    @Mock
+    AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     CreateSalesOrderService service;
@@ -86,6 +89,9 @@ class CreateSalesOrderServiceTest {
 
         then(verifyWarehousePort).should().verify(FROM_WAREHOUSE);
         then(verifyWarehousePort).should().verify(TO_WAREHOUSE);
+
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.REQUESTED && h.payload() == null));
     }
 
     @Test
@@ -102,6 +108,9 @@ class CreateSalesOrderServiceTest {
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.DRAFT);
         assertThat(result.getRequest()).isNull();
         assertThat(result.getLines().getFirst().getItemNameSnapshot()).isNull();
+
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.DRAFT && h.payload() == null));
     }
 
     @Test

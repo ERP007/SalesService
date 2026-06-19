@@ -5,6 +5,7 @@ import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
@@ -48,6 +49,8 @@ class RequestSalesOrderServiceTest {
     LoadItemPort loadItemPort;
     @Mock
     SaveSalesOrderPort saveSalesOrderPort;
+    @Mock
+    AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     RequestSalesOrderService service;
@@ -92,6 +95,11 @@ class RequestSalesOrderServiceTest {
 
         then(verifyWarehousePort).should().verify(FROM_WAREHOUSE);
         then(verifyWarehousePort).should().verify(TO_WAREHOUSE);
+
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.REQUESTED &&
+                h.actorCode().equals(USER_CODE) &&
+                h.payload() == null));
     }
 
     @Test

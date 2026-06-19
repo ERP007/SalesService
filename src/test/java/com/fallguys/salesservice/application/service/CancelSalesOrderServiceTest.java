@@ -3,6 +3,7 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.command.CancelSalesOrderCommand;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CancellationPayload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +37,7 @@ class CancelSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     CancelSalesOrderService service;
@@ -174,6 +177,11 @@ class CancelSalesOrderServiceTest {
         then(saveSalesOrderPort).should().save(argThat(o ->
                 o.getStatus() == SalesOrderStatus.CANCELED &&
                 o.getCancellation() != null
+        ));
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.CANCELED &&
+                h.payload() instanceof CancellationPayload p &&
+                p.cancelReason().equals(REASON)
         ));
     }
 

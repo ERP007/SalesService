@@ -3,6 +3,7 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.command.RejectSalesOrderCommand;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import com.fallguys.salesservice.domain.model.*;
 import com.fallguys.salesservice.domain.model.salesorder.*;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.salesorderhistory.RejectReasonCategory;
+import com.fallguys.salesservice.domain.model.salesorderhistory.RejectionPayload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +37,7 @@ class RejectSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     RejectSalesOrderService service;
@@ -136,6 +139,11 @@ class RejectSalesOrderServiceTest {
                 o.getStatus() == SalesOrderStatus.REJECTED &&
                 o.getRejection() != null &&
                 o.getRejection().rejectReasonCategory() == RejectReasonCategory.DUPLICATE
+        ));
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.REJECTED &&
+                h.payload() instanceof RejectionPayload p &&
+                p.rejectReasonCategory() == RejectReasonCategory.DUPLICATE
         ));
     }
 
