@@ -2,6 +2,7 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.DeliverSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
@@ -10,6 +11,9 @@ import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +30,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final InboundStockPort inboundStockPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * APPROVED 상태의 발주를 DELIVERED로 전환하고 재고 입고를 기록한다.
@@ -67,9 +72,13 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
             validateDeliveredDate(command.deliveredDate(), order);
         }
 
-        order.deliver(command.deliveredBy(), command.deliveredDate(), Instant.now());
+        Instant now = Instant.now();
+        order.deliver(command.deliveredBy(), command.deliveredDate(), now);
 
         SalesOrder saved = saveSalesOrderPort.save(order);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), SalesOrderStatus.DELIVERED, command.deliveredBy(),
+                new DeliveryPayload(command.deliveredDate(), null, null), now));
 
         inboundStockPort.inbound(saved);
 

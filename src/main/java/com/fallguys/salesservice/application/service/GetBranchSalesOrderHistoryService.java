@@ -4,26 +4,24 @@ import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOr
 import com.fallguys.salesservice.application.port.inbound.usecase.GetBranchSalesOrderHistoryUseCase;
 import com.fallguys.salesservice.application.port.inbound.model.SalesOrderHistoryEntry;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
 import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
-import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Objects;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +32,7 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
     );
 
     private final LoadSalesOrderPort loadSalesOrderPort;
+    private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
     private final LoadUserInfoPort loadUserInfoPort;
 
     /**
@@ -41,9 +40,9 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
      *
      * 흐름:
      * 1) 역할 검증 — BRANCH_MANAGER·BRANCH_STAFF만 허용
-     * 2) SO 조회
+     * 2) SO 조회 (존재 검증 + 소속 창고 확인용)
      * 3) 소속 창고 검증 — fromWarehouseCode가 요청자 창고와 일치해야 함
-     * 4) DRAFT 포함 전 상태 이력 구성
+     * 4) 이력 테이블 조회(created_at DESC) — DRAFT(생성) 행 포함
      * 5) User 서비스 batch 호출 → 담당자 이름·직급 조회
      *
      * 트랜잭션: 읽기 전용.
@@ -66,72 +65,26 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        List<String> actorCodes = collectActorCodes(order);
+        List<SalesOrderStatusHistory> histories = loadHistoryPort.loadBySoCode(query.soCode());
+
+        return toEntries(histories);
+    }
+
+    private List<SalesOrderHistoryEntry> toEntries(List<SalesOrderStatusHistory> histories) {
+        List<String> actorCodes = histories.stream()
+                .map(SalesOrderStatusHistory::actorCode)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
         Map<String, UserInfo> userInfoMap = actorCodes.isEmpty()
                 ? Map.of()
                 : loadUserInfoPort.loadByUserCodes(actorCodes);
 
-        return buildEntries(order, userInfoMap);
-    }
-
-    private List<String> collectActorCodes(SalesOrder order) {
-        Stream.Builder<String> builder = Stream.builder();
-        if (order.getCreation() != null) builder.accept(order.getCreation().createdBy());
-        if (order.getRequest() != null) builder.accept(order.getRequest().requestedBy());
-        if (order.getApproval() != null) builder.accept(order.getApproval().approvedBy());
-        if (order.getRejection() != null) builder.accept(order.getRejection().rejectedBy());
-        if (order.getDelivery() != null) builder.accept(order.getDelivery().deliveredBy());
-        if (order.getCancellation() != null) builder.accept(order.getCancellation().canceledBy());
-        return builder.build().filter(Objects::nonNull).distinct().toList();
-    }
-
-    private List<SalesOrderHistoryEntry> buildEntries(SalesOrder order, Map<String, UserInfo> userInfoMap) {
-        List<SalesOrderHistoryEntry> entries = new ArrayList<>();
-
-        if (order.getCreation() != null) {
-            entries.add(new SalesOrderHistoryEntry(
-                    SalesOrderStatus.DRAFT,
-                    userInfoMap.get(order.getCreation().createdBy()),
-                    order.getCreation().createdAt()
-            ));
-        }
-        if (order.getRequest() != null) {
-            entries.add(new SalesOrderHistoryEntry(
-                    SalesOrderStatus.REQUESTED,
-                    userInfoMap.get(order.getRequest().requestedBy()),
-                    order.getRequest().requestedAt()
-            ));
-        }
-        if (order.getApproval() != null) {
-            entries.add(new SalesOrderHistoryEntry(
-                    SalesOrderStatus.APPROVED,
-                    userInfoMap.get(order.getApproval().approvedBy()),
-                    order.getApproval().approvedAt()
-            ));
-        }
-        if (order.getRejection() != null) {
-            entries.add(new SalesOrderHistoryEntry(
-                    SalesOrderStatus.REJECTED,
-                    userInfoMap.get(order.getRejection().rejectedBy()),
-                    order.getRejection().rejectedAt()
-            ));
-        }
-        if (order.getDelivery() != null) {
-            entries.add(new SalesOrderHistoryEntry(
-                    SalesOrderStatus.DELIVERED,
-                    userInfoMap.get(order.getDelivery().deliveredBy()),
-                    order.getDelivery().deliveredAt()
-            ));
-        }
-        if (order.getCancellation() != null) {
-            entries.add(new SalesOrderHistoryEntry(
-                    SalesOrderStatus.CANCELED,
-                    userInfoMap.get(order.getCancellation().canceledBy()),
-                    order.getCancellation().canceledAt()
-            ));
-        }
-
-        entries.sort(Comparator.comparing(SalesOrderHistoryEntry::changedAt).reversed());
-        return entries;
+        return histories.stream()
+                .map(h -> new SalesOrderHistoryEntry(
+                        h.status(),
+                        userInfoMap.get(h.actorCode()),
+                        h.createdAt()))
+                .toList();
     }
 }

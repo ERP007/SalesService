@@ -2,6 +2,7 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.ApproveSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
@@ -10,6 +11,9 @@ import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final OutboundStockPort outboundStockPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * REQUESTED 상태의 발주를 APPROVED로 전환하고 재고 출고를 기록한다.
@@ -74,10 +79,15 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
 
         validateApprovedDate(command.approvedDate(), order);
 
-        order.approve(command.approvedBy(), Instant.now(), command.approvedDate(),
+        Instant now = Instant.now();
+        order.approve(command.approvedBy(), now, command.approvedDate(),
                 command.carrierType(), command.invoiceNumber());
 
         SalesOrder saved = saveSalesOrderPort.save(order);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), SalesOrderStatus.APPROVED, command.approvedBy(),
+                new ApprovalPayload(command.approvedDate(), command.carrierType(), command.invoiceNumber()),
+                now));
 
         outboundStockPort.outbound(saved);
 

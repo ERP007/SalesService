@@ -3,6 +3,7 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.command.RequestSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.RequestSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
@@ -12,6 +13,8 @@ import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +36,7 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
     private final VerifyWarehousePort verifyWarehousePort;
     private final LoadItemPort loadItemPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * DRAFT 발주를 REQUESTED로 전환한다 (기존 라인·창고·날짜 그대로 사용).
@@ -88,13 +92,17 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
 
         List<SalesOrderLine> lines = buildLines(salesOrder.getCode(), salesOrder.getLines(), itemMap);
 
+        Instant now = Instant.now();
         salesOrder.submitRequest(
-                command.requestedBy(), Instant.now(),
+                command.requestedBy(), now,
                 salesOrder.getToWarehouseCode(), salesOrder.getDesiredArrivalDate(),
                 salesOrder.getRequestMemo(), lines
         );
 
-        return saveSalesOrderPort.save(salesOrder);
+        SalesOrder saved = saveSalesOrderPort.save(salesOrder);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), SalesOrderStatus.REQUESTED, command.requestedBy(), now));
+        return saved;
     }
 
     private void validateNoDuplicateItems(List<SalesOrderLine> lines) {

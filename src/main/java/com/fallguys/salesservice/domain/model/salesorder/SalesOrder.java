@@ -33,6 +33,30 @@ public class SalesOrder {
     private List<SalesOrderLine> lines;
 
     /**
+     * 발주를 신규 생성한다.
+     *
+     * 흐름:
+     * 1) 생성 이력(createdBy, now)을 항상 기록한다.
+     * 2) 즉시 요청(REQUESTED)이면 요청 이력(requestedBy=createdBy, now)도 기록하고, DRAFT면 남기지 않는다.
+     *
+     * 상태별 분기(REQUESTED → request 기록)는 도메인 규칙이므로 여기서 결정한다.
+     */
+    public static SalesOrder create(String code, String fromWarehouseCode, String toWarehouseCode,
+                                    SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
+                                    String createdBy, Instant now, List<SalesOrderLine> lines) {
+        SalesOrderRequest request = status == SalesOrderStatus.REQUESTED
+                ? new SalesOrderRequest(createdBy, now)
+                : null;
+        return new SalesOrder(
+                code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
+                new SalesOrderCreation(createdBy, now),
+                request,
+                null, null, null, null,
+                lines
+        );
+    }
+
+    /**
      * DRAFT 상태의 발주를 DRAFT 그대로 수정한다.
      *
      * 흐름:

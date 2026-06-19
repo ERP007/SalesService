@@ -3,19 +3,19 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.CreateSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.GenerateSoCodePort;
 import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
-import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
-import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +37,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
     private final LoadItemPort loadItemPort;
     private final GenerateSoCodePort generateSoCodePort;
     private final SaveSalesOrderPort saveSalesOrderPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * 발주(SalesOrder)를 생성한다.
@@ -93,22 +94,22 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         }
         Instant now = Instant.now();
 
-        SalesOrder salesOrder = new SalesOrder(
+        SalesOrder salesOrder = SalesOrder.create(
                 soCode,
                 command.fromWarehouseCode(),
                 command.toWarehouseCode(),
                 command.status(),
                 command.desiredArrivalDate(),
                 command.requestMemo(),
-                new SalesOrderCreation(command.requestedBy(), now),
-                command.status() == SalesOrderStatus.REQUESTED
-                        ? new SalesOrderRequest(command.requestedBy(), now)
-                        : null,
-                null, null, null, null,
+                command.requestedBy(),
+                now,
                 lines
         );
 
-        return saveSalesOrderPort.save(salesOrder);
+        SalesOrder saved = saveSalesOrderPort.save(salesOrder);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), command.status(), command.requestedBy(), now));
+        return saved;
     }
 
     private void validateNoDuplicateItems(List<CreateSalesOrderLineCommand> lines) {
