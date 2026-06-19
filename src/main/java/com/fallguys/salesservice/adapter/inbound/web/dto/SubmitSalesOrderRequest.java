@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
+import com.fallguys.salesservice.application.port.inbound.command.SubmitSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

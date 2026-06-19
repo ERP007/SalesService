@@ -1,9 +1,9 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -12,6 +12,10 @@ import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

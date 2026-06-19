@@ -1,18 +1,18 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.RequestSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.RequestSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.ItemInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
+import com.fallguys.salesservice.application.port.inbound.command.RequestSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.usecase.RequestSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderLine;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

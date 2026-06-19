@@ -1,16 +1,16 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderHistoryQuery;
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderHistoryUseCase;
-import com.fallguys.salesservice.application.port.inbound.SalesOrderHistoryEntry;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
-import com.fallguys.salesservice.application.port.outbound.UserInfo;
+import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOrderHistoryQuery;
+import com.fallguys.salesservice.application.port.inbound.usecase.GetBranchSalesOrderHistoryUseCase;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderHistoryEntry;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
+import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,13 +1,17 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.CancelSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

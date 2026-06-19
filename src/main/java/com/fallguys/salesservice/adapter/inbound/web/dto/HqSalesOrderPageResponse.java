@@ -1,6 +1,6 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
 
 import java.util.List;
 

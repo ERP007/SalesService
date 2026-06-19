@@ -1,8 +1,8 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderKpiUseCase;
-import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrderKpiPort;
+import com.fallguys.salesservice.application.port.inbound.usecase.GetBranchSalesOrderKpiUseCase;
+import com.fallguys.salesservice.application.port.outbound.model.BranchSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.port.LoadBranchSalesOrderKpiPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.model.UserRole;

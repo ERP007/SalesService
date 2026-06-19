@@ -1,14 +1,24 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.*;
+import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
+import com.fallguys.salesservice.application.port.inbound.command.SubmitSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,10 +41,14 @@ import static org.mockito.BDDMockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class SubmitSalesOrderServiceTest {
 
-    @Mock LoadSalesOrderPort loadSalesOrderPort;
-    @Mock VerifyWarehousePort verifyWarehousePort;
-    @Mock LoadItemPort loadItemPort;
-    @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock
+    LoadSalesOrderPort loadSalesOrderPort;
+    @Mock
+    VerifyWarehousePort verifyWarehousePort;
+    @Mock
+    LoadItemPort loadItemPort;
+    @Mock
+    SaveSalesOrderPort saveSalesOrderPort;
 
     @InjectMocks
     SubmitSalesOrderService service;

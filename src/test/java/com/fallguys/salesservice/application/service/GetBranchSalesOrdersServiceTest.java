@@ -1,13 +1,13 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersQuery;
-import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
-import com.fallguys.salesservice.application.port.inbound.SortDirection;
-import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
-import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOrdersQuery;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.model.SortDirection;
+import com.fallguys.salesservice.application.port.outbound.filter.BranchSalesOrderFilter;
+import com.fallguys.salesservice.application.port.outbound.port.LoadBranchSalesOrdersPort;
+import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

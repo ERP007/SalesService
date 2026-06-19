@@ -1,17 +1,17 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.outbound.UserInfo;
-import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrdersQuery;
-import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
-import com.fallguys.salesservice.application.port.inbound.SortDirection;
-import com.fallguys.salesservice.application.port.outbound.HqSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
-import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrdersPort;
-import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
+import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
+import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrdersQuery;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.model.SortDirection;
+import com.fallguys.salesservice.application.port.outbound.filter.HqSalesOrderFilter;
+import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.outbound.port.LoadHqSalesOrdersPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.HqSalesOrderSummary;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

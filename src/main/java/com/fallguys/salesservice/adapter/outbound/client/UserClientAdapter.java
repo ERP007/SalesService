@@ -2,8 +2,8 @@ package com.fallguys.salesservice.adapter.outbound.client;
 
 import com.fallguys.salesservice.adapter.outbound.client.dto.UserBatchRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.UserBatchResponse;
-import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
-import com.fallguys.salesservice.application.port.outbound.UserInfo;
+import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
+import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;

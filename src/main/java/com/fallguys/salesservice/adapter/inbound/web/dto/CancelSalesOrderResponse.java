@@ -1,6 +1,6 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 
 import java.time.Instant;
 

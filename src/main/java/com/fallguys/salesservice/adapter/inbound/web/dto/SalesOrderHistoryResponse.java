@@ -1,6 +1,6 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.SalesOrderHistoryEntry;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderHistoryEntry;
 
 import java.time.Instant;
 import java.util.List;

@@ -1,14 +1,14 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.CancelSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.usecase.CancelSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

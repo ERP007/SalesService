@@ -1,14 +1,18 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrderDetailQuery;
-import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.LoadWarehousePort;
-import com.fallguys.salesservice.application.port.outbound.WarehouseInfo;
+import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOrderDetailQuery;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
+import com.fallguys.salesservice.application.port.outbound.model.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

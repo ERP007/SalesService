@@ -1,16 +1,18 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderDetailQuery;
-import com.fallguys.salesservice.application.port.inbound.HqSalesOrderDetail;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
-import com.fallguys.salesservice.application.port.outbound.LoadWarehousePort;
-import com.fallguys.salesservice.application.port.outbound.UserInfo;
-import com.fallguys.salesservice.application.port.outbound.WarehouseInfo;
+import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderDetailQuery;
+import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
+import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
+import com.fallguys.salesservice.application.port.outbound.model.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

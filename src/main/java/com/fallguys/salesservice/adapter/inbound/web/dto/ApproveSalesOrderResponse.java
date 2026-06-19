@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderLine;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 
 import java.time.Instant;
 import java.time.LocalDate;

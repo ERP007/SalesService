@@ -1,10 +1,10 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.HqSalesOrderDetail;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderApproval;
-import com.fallguys.salesservice.domain.model.SalesOrderLine;
-import com.fallguys.salesservice.domain.model.SalesOrderRequest;
+import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderApproval;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
 
 import java.time.Instant;
 import java.time.LocalDate;
