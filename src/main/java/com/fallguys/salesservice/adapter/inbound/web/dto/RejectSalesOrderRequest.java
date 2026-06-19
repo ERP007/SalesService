@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.RejectSalesOrderCommand;
-import com.fallguys.salesservice.domain.model.RejectReasonCategory;
+import com.fallguys.salesservice.application.port.inbound.command.RejectSalesOrderCommand;
+import com.fallguys.salesservice.domain.model.salesorderhistory.RejectReasonCategory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

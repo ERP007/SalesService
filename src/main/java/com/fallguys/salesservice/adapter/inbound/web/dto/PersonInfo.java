@@ -1,6 +1,6 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.outbound.UserInfo;
+import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
 
 public record PersonInfo(String code, String name, String position) {
     public static PersonInfo from(UserInfo info) {

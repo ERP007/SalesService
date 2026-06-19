@@ -1,15 +1,20 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.usecase.DeliverSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,8 +29,10 @@ import java.time.ZoneId;
 public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
+    private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final InboundStockPort inboundStockPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * APPROVED 상태의 발주를 DELIVERED로 전환하고 재고 입고를 기록한다.
@@ -35,7 +42,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      * 2) SO 존재 확인 (local DB)
      * 3) JWT warehouseCode가 SO의 fromWarehouseCode(발주 지점=입고 창고)와 일치하는지 검증
      * 4) deliveredDate가 출고일(approvedAt) 이전인지 검증
-     * 5) 도메인 상태 전환 — 각 라인 deliveredQuantity 확정 및 DELIVERED 전환
+     * 5) 도메인 상태 전환 — DELIVERED 전환
      * 6) 저장
      * 7) 재고 서비스 입고 호출
      *
@@ -63,13 +70,18 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        if (order.getApproval() != null) {
-            validateDeliveredDate(command.deliveredDate(), order);
+        Instant approvedAt = findApprovedAt(command.soCode());
+        if (approvedAt != null) {
+            validateDeliveredDate(command.deliveredDate(), approvedAt);
         }
 
-        order.deliver(command.deliveredBy(), command.deliveredDate(), Instant.now());
+        Instant now = Instant.now();
+        order.deliver();
 
         SalesOrder saved = saveSalesOrderPort.save(order);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), SalesOrderStatus.DELIVERED, command.deliveredBy(),
+                new DeliveryPayload(command.deliveredDate()), now));
 
         inboundStockPort.inbound(saved);
 
@@ -78,8 +90,15 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
 
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
 
-    private void validateDeliveredDate(LocalDate deliveredDate, SalesOrder order) {
-        LocalDate approvedDate = order.getApproval().approvedAt().atZone(BUSINESS_ZONE).toLocalDate();
+    // 출고일(approvedAt)은 상태 변경 이력의 APPROVED 행 created_at에서 가져온다(없으면 검증 생략).
+    private Instant findApprovedAt(String soCode) {
+        return loadHistoryPort.findLatestBySoCodeAndStatus(soCode, SalesOrderStatus.APPROVED)
+                .map(SalesOrderStatusHistory::createdAt)
+                .orElse(null);
+    }
+
+    private void validateDeliveredDate(LocalDate deliveredDate, Instant approvedAt) {
+        LocalDate approvedDate = approvedAt.atZone(BUSINESS_ZONE).toLocalDate();
         if (deliveredDate.isBefore(approvedDate)) {
             throw new SalesOrderException(SalesErrorCode.INVALID_DELIVERED_DATE,
                     "도착일은 출고일(" + approvedDate + ")보다 이전일 수 없습니다");

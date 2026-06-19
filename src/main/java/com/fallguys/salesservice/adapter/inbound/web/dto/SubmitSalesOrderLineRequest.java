@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.domain.model.Priority;
+import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

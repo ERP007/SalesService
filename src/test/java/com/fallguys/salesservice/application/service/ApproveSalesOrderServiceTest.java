@@ -1,15 +1,21 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.ApproveSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.OutboundStockPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +39,7 @@ class ApproveSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
     @Mock OutboundStockPort outboundStockPort;
 
     @InjectMocks
@@ -48,7 +55,6 @@ class ApproveSalesOrderServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder());
-        given(loadSalesOrderPort.existsByInvoiceNumber(any())).willReturn(false);
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
         willDoNothing().given(outboundStockPort).outbound(any());
     }
@@ -62,11 +68,13 @@ class ApproveSalesOrderServiceTest {
         SalesOrder result = service.approve(command);
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
-        assertThat(result.getApproval()).isNotNull();
-        assertThat(result.getApproval().approvedBy()).isEqualTo(APPROVED_BY);
-        assertThat(result.getApproval().approvedDate()).isEqualTo(TODAY);
-        assertThat(result.getApproval().carrierType()).isEqualTo(CarrierType.VEHICLE);
-        assertThat(result.getApproval().invoiceNumber()).isEqualTo(INVOICE_NUMBER);
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.APPROVED &&
+                h.actorCode().equals(APPROVED_BY) &&
+                h.payload() instanceof ApprovalPayload p &&
+                p.approvedDate().equals(TODAY) &&
+                p.carrierType() == CarrierType.VEHICLE &&
+                p.invoiceNumber().equals(INVOICE_NUMBER)));
     }
 
     @Test
@@ -88,13 +96,12 @@ class ApproveSalesOrderServiceTest {
     }
 
     @Test
-    void invoiceNumber_null_허용_중복체크_미실행() {
+    void invoiceNumber_null_허용() {
         ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, null);
 
         SalesOrder result = service.approve(command);
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
-        then(loadSalesOrderPort).should(never()).existsByInvoiceNumber(any());
     }
 
     @Test
@@ -108,14 +115,12 @@ class ApproveSalesOrderServiceTest {
     }
 
     @Test
-    void 라인_approvedQuantity_requestedQuantity로_확정됨() {
+    void 승인_후에도_라인_quantity_유지됨() {
         ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
 
         SalesOrder result = service.approve(command);
 
-        assertThat(result.getLines()).allSatisfy(line ->
-                assertThat(line.getApprovedQuantity()).isEqualTo(line.getRequestedQuantity())
-        );
+        assertThat(result.getLines()).allSatisfy(line -> assertThat(line.getQuantity()).isEqualTo(10));
     }
 
     @Test
@@ -134,8 +139,12 @@ class ApproveSalesOrderServiceTest {
         service.approve(command);
 
         then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.APPROVED &&
-                o.getApproval() != null
+                o.getStatus() == SalesOrderStatus.APPROVED
+        ));
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.APPROVED &&
+                h.payload() instanceof ApprovalPayload p &&
+                p.invoiceNumber().equals(INVOICE_NUMBER)
         ));
     }
 
@@ -159,20 +168,6 @@ class ApproveSalesOrderServiceTest {
                 .isInstanceOf(ForbiddenException.class);
 
         then(loadSalesOrderPort).shouldHaveNoInteractions();
-    }
-
-    // ── 송장 번호 중복 ────────────────────────────────────────────────────────
-
-    @Test
-    void 송장번호_중복시_SalesOrderException_DUPLICATE_INVOICE_NUMBER() {
-        given(loadSalesOrderPort.existsByInvoiceNumber(INVOICE_NUMBER)).willReturn(true);
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
-
-        assertThatThrownBy(() -> service.approve(command))
-                .isInstanceOf(SalesOrderException.class)
-                .hasMessageContaining(SalesErrorCode.DUPLICATE_INVOICE_NUMBER.getDefaultMessage());
-
-        then(loadSalesOrderPort).should(never()).load(any());
     }
 
     // ── SO 미존재 ─────────────────────────────────────────────────────────────
@@ -210,7 +205,7 @@ class ApproveSalesOrderServiceTest {
                 SO_CODE, "WH-BRANCH-01", "WH-HQ-01",
                 SalesOrderStatus.DRAFT, TODAY.plusDays(3), null,
                 new SalesOrderCreation("branch001", Instant.now()),
-                null, null, null, null, null, List.of()
+                null, List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
         ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
@@ -228,8 +223,7 @@ class ApproveSalesOrderServiceTest {
                 SalesOrderStatus.APPROVED, TODAY.plusDays(3), null,
                 new SalesOrderCreation("branch001", Instant.now()),
                 new SalesOrderRequest("branch001", REQUESTED_AT),
-                new SalesOrderApproval(APPROVED_BY, Instant.now(), TODAY, CarrierType.VEHICLE, INVOICE_NUMBER),
-                null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder);
         ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, "INV-OTHER");
@@ -261,13 +255,13 @@ class ApproveSalesOrderServiceTest {
     }
 
     private SalesOrder requestedOrder() {
-        SalesOrderLine line = new SalesOrderLine(1L, SO_CODE, "ITEM-001", "브레이크 패드", "EA", 10, null, null, Priority.NORMAL);
+        SalesOrderLine line = new SalesOrderLine(1L, SO_CODE, "ITEM-001", "브레이크 패드", "EA", 10, Priority.NORMAL);
         return new SalesOrder(
                 SO_CODE, "WH-BRANCH-01", "WH-HQ-01",
                 SalesOrderStatus.REQUESTED, TODAY.plusDays(3), null,
                 new SalesOrderCreation("branch001", REQUESTED_AT.minusSeconds(60)),
                 new SalesOrderRequest("branch001", REQUESTED_AT),
-                null, null, null, null, List.of(line)
+                List.of(line)
         );
     }
 }

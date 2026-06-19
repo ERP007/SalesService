@@ -1,15 +1,19 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.RejectSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.RejectSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.RejectSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.usecase.RejectSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.RejectReasonCategory;
-import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorderhistory.RejectReasonCategory;
+import com.fallguys.salesservice.domain.model.salesorderhistory.RejectionPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +31,7 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * REQUESTED 상태의 발주를 REJECTED로 전환한다.
@@ -58,7 +63,12 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
         }
 
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
-        order.reject(command.rejectedBy(), Instant.now(), command.reasonCategory(), command.memo());
-        return saveSalesOrderPort.save(order);
+        Instant now = Instant.now();
+        order.reject();
+        SalesOrder saved = saveSalesOrderPort.save(order);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), SalesOrderStatus.REJECTED, command.rejectedBy(),
+                new RejectionPayload(command.reasonCategory(), command.memo()), now));
+        return saved;
     }
 }

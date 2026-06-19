@@ -3,17 +3,17 @@ package com.fallguys.salesservice.adapter.outbound.client;
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryInboundRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.InventoryOutboundRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.WarehouseResponse;
-import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
-import com.fallguys.salesservice.application.port.outbound.LoadWarehousePort;
-import com.fallguys.salesservice.application.port.outbound.OutboundStockPort;
-import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
-import com.fallguys.salesservice.application.port.outbound.WarehouseInfo;
+import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
+import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
+import com.fallguys.salesservice.application.port.outbound.model.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -37,7 +37,7 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      * 발주 도착 시 재고 서비스에 입고 이력을 기록한다.
      *
      * 흐름:
-     * 1) SalesOrder에서 soCode·toWarehouseCode·라인(itemCode·id·approvedQuantity)을 추출해 요청을 구성한다.
+     * 1) SalesOrder에서 soCode·toWarehouseCode·라인(itemCode·id·quantity)을 추출해 요청을 구성한다.
      * 2) POST /internal/inventory/stocks/inbound 를 호출한다.
      *
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.
@@ -71,7 +71,7 @@ public class InventoryClientAdapter implements InboundStockPort, OutboundStockPo
      * 발주 승인 시 재고 서비스에 출고 이력을 기록한다.
      *
      * 흐름:
-     * 1) SalesOrder에서 soCode·fromWarehouseCode·라인(itemCode·id·requestedQuantity)을 추출해 요청을 구성한다.
+     * 1) SalesOrder에서 soCode·fromWarehouseCode·라인(itemCode·id·quantity)을 추출해 요청을 구성한다.
      * 2) POST /internal/inventory/stocks/outbound 를 호출한다.
      *
      * 트랜잭션: 외부 호출이므로 트랜잭션 경계 밖. 실패 시 호출자(서비스)가 롤백.

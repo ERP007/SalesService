@@ -1,14 +1,20 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.GetHqSalesOrderHistoryQuery;
-import com.fallguys.salesservice.application.port.inbound.SalesOrderHistoryEntry;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.LoadUserInfoPort;
-import com.fallguys.salesservice.application.port.outbound.UserInfo;
+import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderHistoryQuery;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderHistoryEntry;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
+import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CancellationPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +37,7 @@ import static org.mockito.BDDMockito.*;
 class GetHqSalesOrderHistoryServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
+    @Mock LoadSalesOrderStatusHistoryPort loadHistoryPort;
     @Mock LoadUserInfoPort loadUserInfoPort;
 
     @InjectMocks
@@ -50,30 +57,26 @@ class GetHqSalesOrderHistoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder());
+        given(loadSalesOrderPort.load(SO_CODE)).willReturn(order(SalesOrderStatus.REQUESTED));
+        // 이력 테이블은 created_at DESC로 반환한다.
+        given(loadHistoryPort.loadBySoCode(SO_CODE)).willReturn(List.of(requestedRow(), draftRow()));
         given(loadUserInfoPort.loadByUserCodes(List.of(BRANCH_USER_CODE)))
                 .willReturn(Map.of(BRANCH_USER_CODE, BRANCH_USER_INFO));
     }
 
     @Test
     void HQ_MANAGER_이력_조회_성공() {
-        List<SalesOrderHistoryEntry> result = service.get(query(UserRole.HQ_MANAGER));
-
-        assertThat(result).isNotEmpty();
+        assertThat(service.get(query(UserRole.HQ_MANAGER))).isNotEmpty();
     }
 
     @Test
     void HQ_STAFF_이력_조회_성공() {
-        List<SalesOrderHistoryEntry> result = service.get(query(UserRole.HQ_STAFF));
-
-        assertThat(result).isNotEmpty();
+        assertThat(service.get(query(UserRole.HQ_STAFF))).isNotEmpty();
     }
 
     @Test
     void ADMIN_이력_조회_성공() {
-        List<SalesOrderHistoryEntry> result = service.get(query(UserRole.ADMIN));
-
-        assertThat(result).isNotEmpty();
+        assertThat(service.get(query(UserRole.ADMIN))).isNotEmpty();
     }
 
     @Test
@@ -111,8 +114,9 @@ class GetHqSalesOrderHistoryServiceTest {
     }
 
     @Test
-    void 이력_changedAt_역순_정렬() {
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
+    void 이력_created_at_역순_유지() {
+        given(loadHistoryPort.loadBySoCode(SO_CODE))
+                .willReturn(List.of(approvedRow(), requestedRow(), draftRow()));
         given(loadUserInfoPort.loadByUserCodes(argThat(codes ->
                 codes.contains(BRANCH_USER_CODE) && codes.contains(HQ_USER_CODE)
         ))).willReturn(Map.of(
@@ -140,7 +144,8 @@ class GetHqSalesOrderHistoryServiceTest {
 
     @Test
     void 승인_이력_포함시_requester와_approver_batch_조회() {
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
+        given(loadHistoryPort.loadBySoCode(SO_CODE))
+                .willReturn(List.of(approvedRow(), requestedRow(), draftRow()));
         given(loadUserInfoPort.loadByUserCodes(argThat(codes ->
                 codes.contains(BRANCH_USER_CODE) && codes.contains(HQ_USER_CODE) && codes.size() == 2
         ))).willReturn(Map.of(
@@ -156,7 +161,8 @@ class GetHqSalesOrderHistoryServiceTest {
 
     @Test
     void 취소된_발주_CANCELED_이력_포함() {
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(canceledOrder());
+        given(loadHistoryPort.loadBySoCode(SO_CODE))
+                .willReturn(List.of(canceledRow(), requestedRow(), draftRow()));
         given(loadUserInfoPort.loadByUserCodes(anyList()))
                 .willReturn(Map.of(BRANCH_USER_CODE, BRANCH_USER_INFO));
 
@@ -169,36 +175,31 @@ class GetHqSalesOrderHistoryServiceTest {
         return new GetHqSalesOrderHistoryQuery(SO_CODE, role);
     }
 
-    private SalesOrder requestedOrder() {
+    private SalesOrder order(SalesOrderStatus status) {
         return new SalesOrder(
                 SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
+                status, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(BRANCH_USER_CODE, T1),
                 new SalesOrderRequest(BRANCH_USER_CODE, T2),
-                null, null, null, null, List.of()
-        );
-    }
-
-    private SalesOrder approvedOrder() {
-        return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.APPROVED, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(BRANCH_USER_CODE, T1),
-                new SalesOrderRequest(BRANCH_USER_CODE, T2),
-                new SalesOrderApproval(HQ_USER_CODE, T3, T3.atZone(java.time.ZoneOffset.UTC).toLocalDate(), CarrierType.VEHICLE, "INV-001"),
-                null, null, null, List.of()
-        );
-    }
-
-    private SalesOrder canceledOrder() {
-        return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.CANCELED, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(BRANCH_USER_CODE, T1),
-                new SalesOrderRequest(BRANCH_USER_CODE, T2),
-                null, null, null,
-                new SalesOrderCancellation(BRANCH_USER_CODE, T3, "재고 확인 후 취소"),
                 List.of()
         );
+    }
+
+    private SalesOrderStatusHistory draftRow() {
+        return SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.DRAFT, BRANCH_USER_CODE, T1);
+    }
+
+    private SalesOrderStatusHistory requestedRow() {
+        return SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.REQUESTED, BRANCH_USER_CODE, T2);
+    }
+
+    private SalesOrderStatusHistory approvedRow() {
+        return SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED, HQ_USER_CODE,
+                new ApprovalPayload(T3.atZone(java.time.ZoneOffset.UTC).toLocalDate(), CarrierType.VEHICLE, "INV-001"), T3);
+    }
+
+    private SalesOrderStatusHistory canceledRow() {
+        return SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.CANCELED, BRANCH_USER_CODE,
+                new CancellationPayload("재고 확인 후 취소"), T3);
     }
 }

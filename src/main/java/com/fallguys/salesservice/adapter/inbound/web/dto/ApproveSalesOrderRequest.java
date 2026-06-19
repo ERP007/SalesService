@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.ApproveSalesOrderCommand;
-import com.fallguys.salesservice.domain.model.CarrierType;
+import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;

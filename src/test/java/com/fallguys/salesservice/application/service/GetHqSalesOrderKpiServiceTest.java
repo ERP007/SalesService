@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
-import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrderKpiPort;
+import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.port.LoadHqSalesOrderKpiPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.model.UserRole;
 import org.junit.jupiter.api.Test;

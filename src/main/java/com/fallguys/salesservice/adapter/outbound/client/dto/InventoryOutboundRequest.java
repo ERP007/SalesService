@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.adapter.outbound.client.dto;
 
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderLine;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ public record InventoryOutboundRequest(
             Long sourceLineNo
     ) {
         public static LineRequest from(SalesOrderLine line) {
-            return new LineRequest(line.getItemCode(), line.getRequestedQuantity(), line.getId());
+            return new LineRequest(line.getItemCode(), line.getQuantity(), line.getId());
         }
     }
 

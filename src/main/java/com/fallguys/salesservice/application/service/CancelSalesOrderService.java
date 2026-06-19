@@ -1,14 +1,17 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.CancelSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.usecase.CancelSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CancellationPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +25,7 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * REQUESTED 상태의 발주를 CANCELED로 전환한다.
@@ -63,7 +67,12 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
             }
         }
 
-        salesOrder.cancel(command.canceledBy(), Instant.now(), command.reason());
-        return saveSalesOrderPort.save(salesOrder);
+        Instant now = Instant.now();
+        salesOrder.cancel();
+        SalesOrder saved = saveSalesOrderPort.save(salesOrder);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), SalesOrderStatus.CANCELED, command.canceledBy(),
+                new CancellationPayload(command.reason()), now));
+        return saved;
     }
 }

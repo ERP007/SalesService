@@ -1,13 +1,19 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CancelSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.CancelSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CancellationPayload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +37,7 @@ class CancelSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     CancelSalesOrderService service;
@@ -55,10 +62,11 @@ class CancelSalesOrderServiceTest {
         SalesOrder result = service.cancel(command);
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.CANCELED);
-        assertThat(result.getCancellation()).isNotNull();
-        assertThat(result.getCancellation().canceledBy()).isEqualTo(USER_CODE);
-        assertThat(result.getCancellation().cancelReason()).isEqualTo(REASON);
-        assertThat(result.getCancellation().canceledAt()).isNotNull();
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.CANCELED &&
+                h.actorCode().equals(USER_CODE) &&
+                h.payload() instanceof CancellationPayload p &&
+                p.cancelReason().equals(REASON)));
     }
 
     @Test
@@ -135,7 +143,7 @@ class CancelSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
                 SalesOrderStatus.DRAFT, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null, List.of()
+                null, List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
 
@@ -151,7 +159,7 @@ class CancelSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
                 SalesOrderStatus.DRAFT, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null, List.of()
+                null, List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
 
@@ -168,8 +176,12 @@ class CancelSalesOrderServiceTest {
         service.cancel(command);
 
         then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.CANCELED &&
-                o.getCancellation() != null
+                o.getStatus() == SalesOrderStatus.CANCELED
+        ));
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.CANCELED &&
+                h.payload() instanceof CancellationPayload p &&
+                p.cancelReason().equals(REASON)
         ));
     }
 
@@ -183,7 +195,7 @@ class CancelSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(requestedBy, Instant.now()),
                 new SalesOrderRequest(requestedBy, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
     }
 }

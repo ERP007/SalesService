@@ -1,14 +1,25 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.*;
+import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
+import com.fallguys.salesservice.application.port.inbound.command.SubmitSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,10 +42,16 @@ import static org.mockito.BDDMockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class SubmitSalesOrderServiceTest {
 
-    @Mock LoadSalesOrderPort loadSalesOrderPort;
-    @Mock VerifyWarehousePort verifyWarehousePort;
-    @Mock LoadItemPort loadItemPort;
-    @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock
+    LoadSalesOrderPort loadSalesOrderPort;
+    @Mock
+    VerifyWarehousePort verifyWarehousePort;
+    @Mock
+    LoadItemPort loadItemPort;
+    @Mock
+    SaveSalesOrderPort saveSalesOrderPort;
+    @Mock
+    AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     SubmitSalesOrderService service;
@@ -53,8 +70,8 @@ class SubmitSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, DRAFT_TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, DRAFT_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                null,
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
@@ -82,6 +99,11 @@ class SubmitSalesOrderServiceTest {
 
         then(verifyWarehousePort).should().verify(FROM_WAREHOUSE);
         then(verifyWarehousePort).should().verify(TO_WAREHOUSE);
+
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.REQUESTED &&
+                h.actorCode().equals(USER_CODE) &&
+                h.payload() == null));
     }
 
     @Test
@@ -101,7 +123,7 @@ class SubmitSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 

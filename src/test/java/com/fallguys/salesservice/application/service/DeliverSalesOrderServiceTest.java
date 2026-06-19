@@ -1,9 +1,11 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.DeliverSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.InboundStockPort;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -12,6 +14,13 @@ import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
+import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +43,9 @@ import static org.mockito.BDDMockito.*;
 class DeliverSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
+    @Mock LoadSalesOrderStatusHistoryPort loadHistoryPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
     @Mock InboundStockPort inboundStockPort;
 
     @InjectMocks
@@ -51,6 +62,11 @@ class DeliverSalesOrderServiceTest {
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
+        // 출고일(approvedAt) 검증 소스: 최신 APPROVED 상태 변경 이력
+        given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
+                .willReturn(java.util.Optional.of(SalesOrderStatusHistory.of(
+                        SO_CODE, SalesOrderStatus.APPROVED, "hq001",
+                        new ApprovalPayload(LocalDate.of(2026, 6, 1), CarrierType.VEHICLE, "INV-2026-001"), APPROVED_AT)));
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
         willDoNothing().given(inboundStockPort).inbound(any());
     }
@@ -60,10 +76,11 @@ class DeliverSalesOrderServiceTest {
         SalesOrder result = service.deliver(command(UserRole.BRANCH_MANAGER));
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.DELIVERED);
-        assertThat(result.getDelivery()).isNotNull();
-        assertThat(result.getDelivery().deliveredBy()).isEqualTo(USER_CODE);
-        assertThat(result.getDelivery().deliveredDate()).isEqualTo(VALID_DELIVERED_DATE);
-        assertThat(result.getDelivery().deliveredAt()).isNotNull();
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.DELIVERED &&
+                h.actorCode().equals(USER_CODE) &&
+                h.payload() instanceof DeliveryPayload p &&
+                p.deliveredDate().equals(VALID_DELIVERED_DATE)));
     }
 
     @Test
@@ -74,12 +91,11 @@ class DeliverSalesOrderServiceTest {
     }
 
     @Test
-    void 성공시_라인_deliveredQuantity가_approvedQuantity로_확정됨() {
+    void 성공시_라인_quantity_유지됨() {
         SalesOrder result = service.deliver(command(UserRole.BRANCH_MANAGER));
 
-        result.getLines().forEach(line ->
-                assertThat(line.getDeliveredQuantity()).isEqualTo(line.getApprovedQuantity())
-        );
+        assertThat(result.getLines()).extracting(SalesOrderLine::getQuantity)
+                .containsExactly(100, 40);
     }
 
     @Test
@@ -94,8 +110,11 @@ class DeliverSalesOrderServiceTest {
         service.deliver(command(UserRole.BRANCH_MANAGER));
 
         then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.DELIVERED &&
-                o.getDelivery() != null
+                o.getStatus() == SalesOrderStatus.DELIVERED
+        ));
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.DELIVERED &&
+                h.payload() instanceof DeliveryPayload
         ));
     }
 
@@ -155,7 +174,7 @@ class DeliverSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 
@@ -184,16 +203,15 @@ class DeliverSalesOrderServiceTest {
 
     private SalesOrder approvedOrder() {
         List<SalesOrderLine> lines = List.of(
-                new SalesOrderLine(1L, SO_CODE, "HMC-EN-00214", "엔진오일", "EA", 100, 100, null, Priority.NORMAL),
-                new SalesOrderLine(2L, SO_CODE, "HMC-BR-01102", "브레이크패드", "EA", 40, 40, null, Priority.NORMAL)
+                new SalesOrderLine(1L, SO_CODE, "HMC-EN-00214", "엔진오일", "EA", 100, Priority.NORMAL),
+                new SalesOrderLine(2L, SO_CODE, "HMC-BR-01102", "브레이크패드", "EA", 40, Priority.NORMAL)
         );
         return new SalesOrder(
                 SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
                 SalesOrderStatus.APPROVED, LocalDate.of(2026, 6, 5), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                new SalesOrderApproval("hq001", APPROVED_AT, LocalDate.of(2026, 6, 1), CarrierType.VEHICLE, "INV-2026-001"),
-                null, null, null, lines
+                lines
         );
     }
 }
