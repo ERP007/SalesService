@@ -1,6 +1,7 @@
 package com.fallguys.salesservice.adapter.outbound.persistence.salesorder;
 
 import com.fallguys.salesservice.adapter.outbound.persistence.salesorderline.SalesOrderLineEntity;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
@@ -37,6 +38,10 @@ public class SalesOrderEntity {
     @Column(nullable = false)
     private SalesOrderStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "saga_status", nullable = false)
+    private SagaStatus sagaStatus;
+
     @Column(nullable = false)
     private LocalDate desiredArrivalDate;
 
@@ -60,7 +65,7 @@ public class SalesOrderEntity {
                 .toList();
 
         return new SalesOrder(
-                code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
+                code, fromWarehouseCode, toWarehouseCode, status, sagaStatus, desiredArrivalDate, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
                 domainLines
@@ -102,6 +107,7 @@ public class SalesOrderEntity {
         this.fromWarehouseCode = domain.getFromWarehouseCode();
         this.toWarehouseCode = domain.getToWarehouseCode();
         this.status = domain.getStatus();
+        this.sagaStatus = domain.getSagaStatus();
         this.desiredArrivalDate = domain.getDesiredArrivalDate();
         this.requestMemo = domain.getRequestMemo();
         this.creation = CreationEmbeddable.from(domain.getCreation());

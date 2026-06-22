@@ -18,6 +18,7 @@ public class SalesOrder {
     private final String fromWarehouseCode;
     private String toWarehouseCode;
     private SalesOrderStatus status;
+    private SagaStatus sagaStatus;
     private LocalDate desiredArrivalDate;
     private String requestMemo;
 
@@ -25,6 +26,17 @@ public class SalesOrder {
     private SalesOrderRequest request;
 
     private List<SalesOrderLine> lines;
+
+    /**
+     * 기존 9-arg 호출부(생성·테스트) 호환용. sagaStatus는 NONE으로 초기화한다.
+     * 영속성 복원(toDomain)은 sagaStatus를 포함한 @AllArgsConstructor 10-arg를 사용한다.
+     */
+    public SalesOrder(String code, String fromWarehouseCode, String toWarehouseCode,
+                      SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
+                      SalesOrderCreation creation, SalesOrderRequest request, List<SalesOrderLine> lines) {
+        this(code, fromWarehouseCode, toWarehouseCode, status, SagaStatus.NONE,
+                desiredArrivalDate, requestMemo, creation, request, lines);
+    }
 
     /**
      * 발주를 신규 생성한다.
@@ -113,6 +125,7 @@ public class SalesOrder {
                     "REQUESTED 상태에서만 승인 가능합니다. 현재 상태: " + this.status);
         }
         this.status = SalesOrderStatus.APPROVED;
+        this.sagaStatus = SagaStatus.SENDING;
     }
 
     /**
@@ -131,6 +144,7 @@ public class SalesOrder {
                     "APPROVED 상태에서만 배송 처리 가능합니다. 현재 상태: " + this.status);
         }
         this.status = SalesOrderStatus.DELIVERED;
+        this.sagaStatus = SagaStatus.SENDING;
     }
 
     /**
@@ -167,5 +181,73 @@ public class SalesOrder {
                     "REQUESTED 상태에서만 취소 가능합니다. 현재 상태: " + this.status);
         }
         this.status = SalesOrderStatus.CANCELED;
+    }
+
+    /**
+     * saga를 SENDING → PROCESSING으로 전환한다(릴레이 발행 성공 시).
+     *
+     * 예외:
+     * - SENDING이 아닌 경우: InvalidStatusTransitionException (SO-018)
+     */
+    public void markSagaProcessing() {
+        if (this.sagaStatus != SagaStatus.SENDING) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "SENDING 상태에서만 PROCESSING 전환 가능합니다. 현재 saga 상태: " + this.sagaStatus);
+        }
+        this.sagaStatus = SagaStatus.PROCESSING;
+    }
+
+    /**
+     * saga를 PROCESSING → DONE으로 전환한다(재고 서비스 성공 응답 수신 시).
+     *
+     * 예외:
+     * - PROCESSING이 아닌 경우: InvalidStatusTransitionException (SO-018)
+     */
+    public void markSagaDone() {
+        if (this.sagaStatus != SagaStatus.PROCESSING) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "PROCESSING 상태에서만 DONE 전환 가능합니다. 현재 saga 상태: " + this.sagaStatus);
+        }
+        this.sagaStatus = SagaStatus.DONE;
+    }
+
+    /**
+     * 출고 saga 실패 보상: APPROVED를 REQUESTED로 되돌리고 saga를 FAILED로 종료한다.
+     *
+     * 흐름:
+     * 1) APPROVED 상태인지 검증한다.
+     * 2) 상태를 REQUESTED로 되돌린다(재승인·반려 가능).
+     * 3) saga를 FAILED로 종료한다.
+     *
+     * 예외:
+     * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018)
+     */
+    public void compensateApprove() {
+        if (this.status != SalesOrderStatus.APPROVED) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "APPROVED 상태에서만 출고 보상 가능합니다. 현재 상태: " + this.status);
+        }
+        this.status = SalesOrderStatus.REQUESTED;
+        this.sagaStatus = SagaStatus.FAILED;
+    }
+
+    /**
+     * 입고 saga 실패 보상: DELIVERED를 APPROVED로 되돌리고 saga를 FAILED로 종료한다.
+     *
+     * 흐름:
+     * 1) DELIVERED 상태인지 검증한다.
+     * 2) 상태를 APPROVED로 되돌린다(재배송 처리 가능).
+     * 3) saga를 FAILED로 종료한다.
+     *
+     * 예외:
+     * - DELIVERED가 아닌 경우: InvalidStatusTransitionException (SO-018)
+     */
+    public void compensateDeliver() {
+        if (this.status != SalesOrderStatus.DELIVERED) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "DELIVERED 상태에서만 입고 보상 가능합니다. 현재 상태: " + this.status);
+        }
+        this.status = SalesOrderStatus.APPROVED;
+        this.sagaStatus = SagaStatus.FAILED;
     }
 }
