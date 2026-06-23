@@ -2,7 +2,9 @@ package com.fallguys.salesservice.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +20,10 @@ public class RabbitConfig {
     public static final String COMMANDS_EXCHANGE = "erp.commands";
     public static final String EVENT_EXCHANGE = "erp.event";
     public static final String REPLY_QUEUE = "sales.inventory.reply";
+
+    // 재시도 소진·처리 불가 메시지를 격리하는 데드레터
+    public static final String REPLY_DLX = "sales.inventory.reply.dlx";
+    public static final String REPLY_DLQ = "sales.inventory.reply.dlq";
 
     // inventory가 erp.event로 발행하는 응답 routing key
     public static final String RK_OUTBOUND_APPLIED = "inventory.stock.outbound.applied.sales";
@@ -37,7 +43,25 @@ public class RabbitConfig {
 
     @Bean
     Queue replyQueue() {
-        return new Queue(REPLY_QUEUE, true);
+        // 처리 실패(재시도 소진) 시 메시지를 DLX로 보낸다.
+        return QueueBuilder.durable(REPLY_QUEUE)
+                .deadLetterExchange(REPLY_DLX)
+                .build();
+    }
+
+    @Bean
+    FanoutExchange replyDlx() {
+        return new FanoutExchange(REPLY_DLX, true, false);
+    }
+
+    @Bean
+    Queue replyDlq() {
+        return QueueBuilder.durable(REPLY_DLQ).build();
+    }
+
+    @Bean
+    Binding bindReplyDlq(Queue replyDlq, FanoutExchange replyDlx) {
+        return BindingBuilder.bind(replyDlq).to(replyDlx);
     }
 
     @Bean

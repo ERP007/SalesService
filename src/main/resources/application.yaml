@@ -21,6 +21,17 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
     publisher-confirm-type: correlated
     publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: auto
+        # 재시도 소진 후 requeue 대신 reject → DLX로 격리(무한 재전달 방지)
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+          max-interval: 10s
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:sales}
     username: ${DB_USERNAME:postgres}
