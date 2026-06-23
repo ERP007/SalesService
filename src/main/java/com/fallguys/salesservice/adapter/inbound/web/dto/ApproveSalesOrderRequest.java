@@ -17,7 +17,7 @@ public record ApproveSalesOrderRequest(
 
         String invoiceNumber
 ) {
-    public ApproveSalesOrderCommand toCommand(String soCode, String approvedBy, UserRole role) {
-        return new ApproveSalesOrderCommand(soCode, approvedBy, role, approvedDate, carrierType, invoiceNumber);
+    public ApproveSalesOrderCommand toCommand(String soCode, String approvedBy, String approverName, UserRole role) {
+        return new ApproveSalesOrderCommand(soCode, approvedBy, approverName, role, approvedDate, carrierType, invoiceNumber);
     }
 }

@@ -2,6 +2,7 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.ApproveSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.model.Executor;
 import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
@@ -80,7 +81,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
                 new ApprovalPayload(command.approvedDate(), command.carrierType(), command.invoiceNumber()),
                 now));
 
-        outboundStockPort.outbound(saved);
+        outboundStockPort.outbound(saved, new Executor(command.approvedBy(), command.approverName()));
 
         return saved;
     }

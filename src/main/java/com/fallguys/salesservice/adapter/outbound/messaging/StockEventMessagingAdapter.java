@@ -6,6 +6,7 @@ import com.fallguys.salesservice.adapter.outbound.messaging.event.StockInboundRe
 import com.fallguys.salesservice.adapter.outbound.messaging.event.StockOutboundRequestedPayload;
 import com.fallguys.salesservice.adapter.outbound.persistence.outbox.OutboxEntity;
 import com.fallguys.salesservice.adapter.outbound.persistence.outbox.OutboxJpaDao;
+import com.fallguys.salesservice.application.port.outbound.model.Executor;
 import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
@@ -30,15 +31,15 @@ public class StockEventMessagingAdapter implements OutboundStockPort, InboundSto
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
-    public void outbound(SalesOrder order) {
+    public void outbound(SalesOrder order, Executor executor) {
         append(StockEventType.OUTBOUND_REQUESTED, order.getCode(),
-                StockOutboundRequestedPayload.from(order));
+                StockOutboundRequestedPayload.from(order, executor));
     }
 
     @Override
-    public void inbound(SalesOrder order) {
+    public void inbound(SalesOrder order, Executor executor) {
         append(StockEventType.INBOUND_REQUESTED, order.getCode(),
-                StockInboundRequestedPayload.from(order));
+                StockInboundRequestedPayload.from(order, executor));
     }
 
     private void append(StockEventType type, String correlationId, Object payload) {

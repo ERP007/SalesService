@@ -169,8 +169,9 @@ public class SalesOrderController {
             @Valid @RequestBody ApproveSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrder order = approveSalesOrderUseCase.approve(request.toCommand(code, userCode, role));
+        SalesOrder order = approveSalesOrderUseCase.approve(request.toCommand(code, userCode, userName, role));
         return ResponseEntity.ok(SalesOrderResponse.from(order));
     }
 
@@ -213,10 +214,11 @@ public class SalesOrderController {
             @Valid @RequestBody DeliverSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = deliverSalesOrderUseCase.deliver(
-                new DeliverSalesOrderCommand(code, warehouseCode, userCode, role, request.deliveredDate())
+                new DeliverSalesOrderCommand(code, warehouseCode, userCode, userName, role, request.deliveredDate())
         );
         return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
     }

@@ -8,6 +8,7 @@ public record DeliverSalesOrderCommand(
         String soCode,
         String requesterWarehouseCode,
         String deliveredBy,
+        String delivererName,
         UserRole role,
         LocalDate deliveredDate
 ) {

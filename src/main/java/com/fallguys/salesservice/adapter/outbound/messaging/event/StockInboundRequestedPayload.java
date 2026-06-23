@@ -1,5 +1,6 @@
 package com.fallguys.salesservice.adapter.outbound.messaging.event;
 
+import com.fallguys.salesservice.application.port.outbound.model.Executor;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 
 import java.util.List;
@@ -10,12 +11,14 @@ import java.util.List;
 public record StockInboundRequestedPayload(
         String sourceRef,
         String warehouseCode,
+        StockExecutor executor,
         List<StockLine> lines
 ) {
-    public static StockInboundRequestedPayload from(SalesOrder order) {
+    public static StockInboundRequestedPayload from(SalesOrder order, Executor executor) {
         List<StockLine> lines = order.getLines().stream()
                 .map(StockLine::from)
                 .toList();
-        return new StockInboundRequestedPayload(order.getCode(), order.getFromWarehouseCode(), lines);
+        return new StockInboundRequestedPayload(
+                order.getCode(), order.getFromWarehouseCode(), StockExecutor.from(executor), lines);
     }
 }

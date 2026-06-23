@@ -68,7 +68,7 @@ class DeliverSalesOrderServiceTest {
                         SO_CODE, SalesOrderStatus.APPROVED, "hq001",
                         new ApprovalPayload(LocalDate.of(2026, 6, 1), CarrierType.VEHICLE, "INV-2026-001"), APPROVED_AT)));
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
-        willDoNothing().given(inboundStockPort).inbound(any());
+        willDoNothing().given(inboundStockPort).inbound(any(), any());
     }
 
     @Test
@@ -102,7 +102,7 @@ class DeliverSalesOrderServiceTest {
     void 성공시_재고_입고_호출됨() {
         service.deliver(command(UserRole.BRANCH_MANAGER));
 
-        then(inboundStockPort).should().inbound(any());
+        then(inboundStockPort).should().inbound(any(), any());
     }
 
     @Test
@@ -146,7 +146,7 @@ class DeliverSalesOrderServiceTest {
     @Test
     void 창고_불일치시_ForbiddenException() {
         DeliverSalesOrderCommand command = new DeliverSalesOrderCommand(
-                SO_CODE, OTHER_WAREHOUSE, USER_CODE, UserRole.BRANCH_MANAGER, VALID_DELIVERED_DATE);
+                SO_CODE, OTHER_WAREHOUSE, USER_CODE, null, UserRole.BRANCH_MANAGER, VALID_DELIVERED_DATE);
 
         assertThatThrownBy(() -> service.deliver(command))
                 .isInstanceOf(ForbiddenException.class);
@@ -157,7 +157,7 @@ class DeliverSalesOrderServiceTest {
     @Test
     void deliveredDate가_출고일_이전이면_SalesOrderException() {
         DeliverSalesOrderCommand command = new DeliverSalesOrderCommand(
-                SO_CODE, FROM_WAREHOUSE, USER_CODE, UserRole.BRANCH_MANAGER, BEFORE_APPROVED_DATE);
+                SO_CODE, FROM_WAREHOUSE, USER_CODE, null, UserRole.BRANCH_MANAGER, BEFORE_APPROVED_DATE);
 
         assertThatThrownBy(() -> service.deliver(command))
                 .isInstanceOf(SalesOrderException.class)
@@ -189,7 +189,7 @@ class DeliverSalesOrderServiceTest {
         // save → inbound 순서이므로 save는 호출된다. 실제 DB 롤백은 @Transactional이 보장(단위테스트 범위 밖).
         willThrow(new ExternalServiceException(
                 CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(), "재고 서비스 호출 실패", new RuntimeException()))
-                .given(inboundStockPort).inbound(any());
+                .given(inboundStockPort).inbound(any(), any());
 
         assertThatThrownBy(() -> service.deliver(command(UserRole.BRANCH_MANAGER)))
                 .isInstanceOf(ExternalServiceException.class);
@@ -198,7 +198,7 @@ class DeliverSalesOrderServiceTest {
     }
 
     private DeliverSalesOrderCommand command(UserRole role) {
-        return new DeliverSalesOrderCommand(SO_CODE, FROM_WAREHOUSE, USER_CODE, role, VALID_DELIVERED_DATE);
+        return new DeliverSalesOrderCommand(SO_CODE, FROM_WAREHOUSE, USER_CODE, null, role, VALID_DELIVERED_DATE);
     }
 
     private SalesOrder approvedOrder() {

@@ -2,6 +2,7 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.DeliverSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.model.Executor;
 import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
@@ -83,7 +84,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
                 saved.getCode(), SalesOrderStatus.DELIVERED, command.deliveredBy(),
                 new DeliveryPayload(command.deliveredDate()), now));
 
-        inboundStockPort.inbound(saved);
+        inboundStockPort.inbound(saved, new Executor(command.deliveredBy(), command.delivererName()));
 
         return saved;
     }
