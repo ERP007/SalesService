@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitConfig {
 
     public static final String COMMANDS_EXCHANGE = "erp.commands";
-    public static final String EVENT_EXCHANGE = "erp.event";
+    public static final String EVENT_EXCHANGE = "erp.events";
     public static final String REPLY_QUEUE = "sales.inventory.reply";
 
     // 재시도 소진·처리 불가 메시지를 격리하는 데드레터
