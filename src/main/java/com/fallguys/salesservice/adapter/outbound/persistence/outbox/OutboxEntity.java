@@ -27,9 +27,6 @@ public class OutboxEntity {
     @Column(name = "event_id")
     private UUID eventId;
 
-    @Column(name = "aggregate_type", nullable = false)
-    private String aggregateType;
-
     @Column(name = "aggregate_id", nullable = false)
     private String aggregateId;
 
@@ -53,11 +50,10 @@ public class OutboxEntity {
     @Column(name = "published_at")
     private Instant publishedAt;
 
-    public static OutboxEntity pending(UUID eventId, String aggregateType, String aggregateId,
+    public static OutboxEntity pending(UUID eventId, String aggregateId,
                                        StockEventType eventType, String payload, Instant now) {
         OutboxEntity entity = new OutboxEntity();
         entity.eventId = eventId;
-        entity.aggregateType = aggregateType;
         entity.aggregateId = aggregateId;
         entity.eventType = eventType;
         entity.payload = payload;

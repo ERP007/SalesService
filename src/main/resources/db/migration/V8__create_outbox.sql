@@ -2,7 +2,6 @@
 -- payload는 직렬화된 BaseEvent envelope 전체(JSON 문자열).
 CREATE TABLE outbox (
     event_id       UUID         NOT NULL,
-    aggregate_type VARCHAR(255) NOT NULL,
     aggregate_id   VARCHAR(255) NOT NULL,
     event_type     VARCHAR(255) NOT NULL,
     payload        TEXT         NOT NULL,

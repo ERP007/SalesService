@@ -42,12 +42,13 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      * 2) SO 존재 확인 (local DB)
      * 3) JWT warehouseCode가 SO의 fromWarehouseCode(발주 지점=입고 창고)와 일치하는지 검증
      * 4) deliveredDate가 출고일(approvedAt) 이전인지 검증
-     * 5) 도메인 상태 전환 — DELIVERED 전환
-     * 6) 저장
-     * 7) 재고 서비스 입고 호출
+     * 5) 도메인 상태 전환 — DELIVERED 전환 + saga SENDING
+     * 6) 저장 + 배송 이력 기록
+     * 7) 입고 이벤트를 outbox에 적재(동일 트랜잭션)
      *
-     * 트랜잭션: 쓰기. 재고 서비스 호출은 트랜잭션 경계 밖(외부 호출).
-     * 재고 호출 실패 시 트랜잭션이 롤백되어 DB 변경도 취소된다.
+     * 트랜잭션: 쓰기. 상태 전환·저장·이력·outbox 적재가 한 트랜잭션으로 커밋된다.
+     * 동기 REST 호출이 아니라 outbox 적재이므로 비즈니스 변경과 메시지가 원자적으로 커밋되고,
+     * 커밋 후 릴레이가 broker로 발행한다. 재고 처리 결과는 reply 이벤트로 비동기 수신한다.
      *
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
@@ -55,7 +56,6 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      * - 창고 불일치: ForbiddenException (SO-013, 403)
      * - deliveredDate < 출고일: SalesOrderException (SO-003, 400)
      * - APPROVED 아님: InvalidStatusTransitionException (SO-018, 409)
-     * - 재고 서비스 실패: ExternalServiceException (ER-502, 502)
      */
     @Override
     @Transactional
