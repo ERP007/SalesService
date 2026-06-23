@@ -87,6 +87,9 @@ public class OutboxRelay {
             } else {
                 handleFailure(entity, "broker nack: " + confirm.reason());
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            handleFailure(entity, "interrupted while waiting for publisher confirm");
         } catch (Exception e) {
             handleFailure(entity, e.getMessage());
         }
