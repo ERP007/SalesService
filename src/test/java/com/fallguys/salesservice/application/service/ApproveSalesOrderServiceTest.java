@@ -56,7 +56,7 @@ class ApproveSalesOrderServiceTest {
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder());
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
-        willDoNothing().given(outboundStockPort).outbound(any());
+        willDoNothing().given(outboundStockPort).outbound(any(), any());
     }
 
     // ── 성공 케이스 ──────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ class ApproveSalesOrderServiceTest {
 
         service.approve(command);
 
-        then(outboundStockPort).should().outbound(any(SalesOrder.class));
+        then(outboundStockPort).should().outbound(any(SalesOrder.class), any());
     }
 
     @Test
@@ -239,7 +239,7 @@ class ApproveSalesOrderServiceTest {
     @Test
     void 재고_출고_실패시_예외_전파되고_저장은_실행됨() {
         willThrow(new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED))
-                .given(outboundStockPort).outbound(any());
+                .given(outboundStockPort).outbound(any(), any());
         ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
 
         assertThatThrownBy(() -> service.approve(command))
@@ -251,7 +251,7 @@ class ApproveSalesOrderServiceTest {
     // ── 헬퍼 ──────────────────────────────────────────────────────────────────
 
     private ApproveSalesOrderCommand command(UserRole role, LocalDate approvedDate, String invoiceNumber) {
-        return new ApproveSalesOrderCommand(SO_CODE, APPROVED_BY, role, approvedDate, CarrierType.VEHICLE, invoiceNumber);
+        return new ApproveSalesOrderCommand(SO_CODE, APPROVED_BY, null, role, approvedDate, CarrierType.VEHICLE, invoiceNumber);
     }
 
     private SalesOrder requestedOrder() {

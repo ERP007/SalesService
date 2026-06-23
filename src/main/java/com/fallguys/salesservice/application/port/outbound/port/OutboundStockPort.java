@@ -1,9 +1,9 @@
 package com.fallguys.salesservice.application.port.outbound.port;
 
+import com.fallguys.salesservice.application.port.outbound.model.Executor;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 
-// 재고 서비스에 출고 이력을 기록한다.
-// 실패 시 ExternalServiceException 또는 SalesOrderException 발생
+// 재고 서비스에 출고 요청 이벤트를 적재한다(outbox).
 public interface OutboundStockPort {
-    void outbound(SalesOrder order);
+    void outbound(SalesOrder order, Executor executor);
 }

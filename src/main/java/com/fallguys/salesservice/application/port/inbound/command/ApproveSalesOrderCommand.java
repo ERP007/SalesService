@@ -8,6 +8,7 @@ import java.time.LocalDate;
 public record ApproveSalesOrderCommand(
         String soCode,
         String approvedBy,
+        String approverName,
         UserRole role,
         LocalDate approvedDate,
         CarrierType carrierType,
