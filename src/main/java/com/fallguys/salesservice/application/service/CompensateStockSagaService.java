@@ -42,7 +42,9 @@ public class CompensateStockSagaService implements CompensateStockSagaUseCase {
     @Transactional
     public void compensate(CompensateStockSagaCommand command) {
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
-        if (order.getSagaStatus() == SagaStatus.FAILED) {
+        // FAILED(이미 보상)·DONE(이미 성공) 모두 terminal — 늦게 온 거절로 완료 주문을 되돌리지 않는다.
+        SagaStatus saga = order.getSagaStatus();
+        if (saga == SagaStatus.FAILED || saga == SagaStatus.DONE) {
             return;
         }
 
