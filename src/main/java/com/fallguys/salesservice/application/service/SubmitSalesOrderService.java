@@ -7,9 +7,12 @@ import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
@@ -35,6 +38,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final VerifyWarehousePort verifyWarehousePort;
+    private final LoadWarehousePort loadWarehousePort;
     private final LoadItemPort loadItemPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
@@ -80,11 +84,11 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
         validateNoDuplicateItems(command.lines());
         validateDesiredArrivalDate(command.desiredArrivalDate());
 
-        if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(salesOrder.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        verifyWarehousePort.verify(salesOrder.getFromWarehouseCode());
+        verifyWarehousePort.verify(salesOrder.getFrom().code());
         verifyWarehousePort.verify(command.toWarehouseCode());
 
         List<String> itemCodes = command.lines().stream()
@@ -94,15 +98,22 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
 
         List<SalesOrderLine> lines = buildLines(salesOrder.getCode(), command.lines(), itemMap);
         Instant now = Instant.now();
+
+        // 제출은 확정이므로 from·to 창고명과 요청자 name/position을 박제한다.
+        ActorRef requestedBy = ActorRef.of(
+                command.requestedBy(), command.requesterName(), command.requesterPosition());
+        WarehouseRef from = WarehouseRef.of(salesOrder.getFrom().code(),
+                loadWarehousePort.load(salesOrder.getFrom().code()).warehouseName());
+        WarehouseRef to = WarehouseRef.of(command.toWarehouseCode(),
+                loadWarehousePort.load(command.toWarehouseCode()).warehouseName());
         salesOrder.submitRequest(
-                command.requestedBy(), now,
-                command.toWarehouseCode(), command.desiredArrivalDate(),
-                command.requestMemo(), lines
+                requestedBy, now, from, to,
+                command.desiredArrivalDate(), command.requestMemo(), lines
         );
 
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.REQUESTED, command.requestedBy(), now));
+                saved.getCode(), SalesOrderStatus.REQUESTED, requestedBy, now));
         return saved;
     }
 

@@ -95,9 +95,11 @@ public class SalesOrderController {
             @Valid @RequestBody CreateSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
-        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role, warehouseCode));
+        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, userName, position, role, warehouseCode));
         return ResponseEntity.status(HttpStatus.CREATED).body(SalesOrderResponse.from(salesOrder));
     }
 
@@ -108,9 +110,11 @@ public class SalesOrderController {
             @Valid @RequestBody CreateDraftSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
-        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, role, warehouseCode));
+        SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, userName, position, role, warehouseCode));
         return ResponseEntity.status(HttpStatus.CREATED).body(SalesOrderResponse.from(salesOrder));
     }
 
@@ -138,9 +142,11 @@ public class SalesOrderController {
             @Valid @RequestBody SubmitSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
-        SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode, role, warehouseCode));
+        SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode, userName, position, role, warehouseCode));
         return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
     }
 
@@ -151,10 +157,12 @@ public class SalesOrderController {
             @Parameter(description = "발주 코드") @PathVariable String code
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = requestSalesOrderUseCase.request(
-                new RequestSalesOrderCommand(code, userCode, role, warehouseCode)
+                new RequestSalesOrderCommand(code, userCode, userName, position, role, warehouseCode)
         );
         return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
     }
@@ -170,8 +178,9 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrder order = approveSalesOrderUseCase.approve(request.toCommand(code, userCode, userName, role));
+        SalesOrder order = approveSalesOrderUseCase.approve(request.toCommand(code, userCode, userName, position, role));
         return ResponseEntity.ok(SalesOrderResponse.from(order));
     }
 
@@ -183,8 +192,10 @@ public class SalesOrderController {
             @Valid @RequestBody RejectSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        SalesOrder order = rejectSalesOrderUseCase.reject(request.toCommand(code, userCode, role));
+        SalesOrder order = rejectSalesOrderUseCase.reject(request.toCommand(code, userCode, userName, position, role));
         return ResponseEntity.ok(SalesOrderResponse.from(order));
     }
 
@@ -196,10 +207,12 @@ public class SalesOrderController {
             @Valid @RequestBody CancelSalesOrderRequest request
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
+        String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = cancelSalesOrderUseCase.cancel(
-                new CancelSalesOrderCommand(code, userCode, role, warehouseCode, request.reason())
+                new CancelSalesOrderCommand(code, userCode, userName, position, role, warehouseCode, request.reason())
         );
         return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
     }
@@ -215,10 +228,11 @@ public class SalesOrderController {
     ) {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         String userName = JwtClaimExtractor.extractUserName(jwt);
+        String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = deliverSalesOrderUseCase.deliver(
-                new DeliverSalesOrderCommand(code, warehouseCode, userCode, userName, role, request.deliveredDate())
+                new DeliverSalesOrderCommand(code, warehouseCode, userCode, userName, position, role, request.deliveredDate())
         );
         return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
     }

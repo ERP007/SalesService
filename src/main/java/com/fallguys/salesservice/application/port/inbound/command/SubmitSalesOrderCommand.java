@@ -8,6 +8,8 @@ import java.util.List;
 public record SubmitSalesOrderCommand(
         String soCode,
         String requestedBy,
+        String requesterName,
+        String requesterPosition,
         UserRole role,
         String requesterWarehouseCode,
         String toWarehouseCode,

@@ -14,6 +14,8 @@ public record CreateSalesOrderCommand(
         SalesOrderStatus status,
         List<CreateSalesOrderLineCommand> lines,
         String requestedBy,
+        String requesterName,
+        String requesterPosition,
         UserRole role
 ) {
 }

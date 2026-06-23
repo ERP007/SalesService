@@ -1,5 +1,6 @@
 package com.fallguys.salesservice.adapter.outbound.persistence;
 
+import com.fallguys.salesservice.adapter.outbound.persistence.salesorder.RequestEmbeddable;
 import com.fallguys.salesservice.adapter.outbound.persistence.salesorder.SalesOrderEntity;
 import com.fallguys.salesservice.adapter.outbound.persistence.salesorder.SalesOrderJpaDao;
 import com.fallguys.salesservice.adapter.outbound.persistence.salesorderline.SalesOrderLineEntity;
@@ -244,14 +245,15 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
             unitSnapshot = distinctUnits == 1 ? lines.getFirst().getUnitSnapshot() : null;
         }
 
+        RequestEmbeddable request = entity.getRequest();
         return new HqSalesOrderSummary(
                 entity.getCode(),
-                entity.getFromWarehouseCode(),
-                entity.getRequest() != null ? entity.getRequest().requestedBy() : null,
-                null,
-                null,
+                entity.getFrom().code(),
+                request != null ? request.requestedBy() : null,
+                request != null ? request.requestedByName() : null,
+                request != null ? request.requestedByPosition() : null,
                 entity.getStatus(),
-                entity.getRequest() != null ? entity.getRequest().requestedAt() : null,
+                request != null ? request.requestedAt() : null,
                 entity.getDesiredArrivalDate(),
                 lines.size(),
                 totalQuantity,

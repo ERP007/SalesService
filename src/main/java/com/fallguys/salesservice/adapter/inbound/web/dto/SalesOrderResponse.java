@@ -26,8 +26,8 @@ public record SalesOrderResponse(
                 : 0;
         return new SalesOrderResponse(
                 order.getCode(),
-                order.getFromWarehouseCode(),
-                order.getToWarehouseCode(),
+                order.getFrom().code(),
+                order.getTo().code(),
                 order.getDesiredArrivalDate(),
                 order.getStatus(),
                 totalQuantity

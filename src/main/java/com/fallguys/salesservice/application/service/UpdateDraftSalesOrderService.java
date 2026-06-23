@@ -9,6 +9,7 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.UserRole;
@@ -58,7 +59,7 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
 
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
-        if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(salesOrder.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
@@ -66,8 +67,9 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
         validateDesiredArrivalDate(command.desiredArrivalDate());
 
         List<SalesOrderLine> lines = buildDraftLines(salesOrder.getCode(), command.lines());
+        // DRAFT 유지 — 창고명은 박제하지 않고 code만 보관(codeOnly).
         salesOrder.updateDraft(
-                command.toWarehouseCode(), command.desiredArrivalDate(),
+                WarehouseRef.codeOnly(command.toWarehouseCode()), command.desiredArrivalDate(),
                 command.requestMemo(), lines
         );
 

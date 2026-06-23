@@ -11,6 +11,7 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
@@ -77,7 +78,8 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
 
         SalesOrder saved = saveSalesOrderPort.save(order);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.APPROVED, command.approvedBy(),
+                saved.getCode(), SalesOrderStatus.APPROVED,
+                ActorRef.of(command.approvedBy(), command.approverName(), command.approverPosition()),
                 new ApprovalPayload(command.approvedDate(), command.carrierType(), command.invoiceNumber()),
                 now));
 

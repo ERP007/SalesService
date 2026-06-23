@@ -53,8 +53,8 @@ public record BranchSalesOrderDetailResponse(
         return new BranchSalesOrderDetailResponse(
                 order.getCode(),
                 order.getStatus().name(),
-                new WarehouseInfo(order.getFromWarehouseCode(), detail.fromWarehouseName()),
-                new WarehouseInfo(order.getToWarehouseCode(), detail.toWarehouseName()),
+                new WarehouseInfo(order.getFrom().code(), detail.fromWarehouseName()),
+                new WarehouseInfo(order.getTo().code(), detail.toWarehouseName()),
                 order.getDesiredArrivalDate(),
                 order.getRequestMemo(),
                 approvedAt,

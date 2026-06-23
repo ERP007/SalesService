@@ -12,6 +12,7 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
@@ -67,7 +68,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
 
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
 
-        if (!command.requesterWarehouseCode().equals(order.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(order.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
@@ -81,7 +82,8 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
 
         SalesOrder saved = saveSalesOrderPort.save(order);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.DELIVERED, command.deliveredBy(),
+                saved.getCode(), SalesOrderStatus.DELIVERED,
+                ActorRef.of(command.deliveredBy(), command.delivererName(), command.delivererPosition()),
                 new DeliveryPayload(command.deliveredDate()), now));
 
         inboundStockPort.inbound(saved, new Executor(command.deliveredBy(), command.delivererName()));

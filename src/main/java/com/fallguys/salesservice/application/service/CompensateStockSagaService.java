@@ -5,6 +5,7 @@ import com.fallguys.salesservice.application.port.inbound.usecase.CompensateStoc
 import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
@@ -55,7 +56,7 @@ public class CompensateStockSagaService implements CompensateStockSagaUseCase {
         saveSalesOrderPort.save(order);
 
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                order.getCode(), order.getStatus(), SYSTEM_ACTOR, Instant.now()));
+                order.getCode(), order.getStatus(), ActorRef.codeOnly(SYSTEM_ACTOR), Instant.now()));
 
         log.warn("재고 saga 보상 수행 soCode={} stage={} status={} reason={}",
                 command.soCode(), command.stage(), order.getStatus(), command.reason());

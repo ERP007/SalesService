@@ -5,12 +5,9 @@ import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrde
 import com.fallguys.salesservice.application.port.inbound.model.SalesOrderHistoryEntry;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
-import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
-import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
-import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,8 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -32,18 +27,17 @@ public class GetHqSalesOrderHistoryService implements GetHqSalesOrderHistoryUseC
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
-    private final LoadUserInfoPort loadUserInfoPort;
 
     /**
      * 본사 기준 발주 변경 이력을 조회한다.
      *
      * 흐름:
      * 1) 역할 검증 — ADMIN·HQ_MANAGER·HQ_STAFF만 허용
-     * 2) SO 존재 검증 (미존재 시 404)
-     * 3) 이력 테이블 조회(created_at DESC) — 본사 화면은 DRAFT(생성) 행 제외
-     * 4) User 서비스 batch 호출 → 담당자 이름·직급 조회
+     * 2) SO 존재 검증
+     * 3) 이력 조회 후 DRAFT 행 제외(HQ는 확정 이후만 본다)
+     * 4) 담당자 이름·직급은 각 행에 박제된 actor 스냅샷에서 읽는다(외부 호출 없음).
      *
-     * 트랜잭션: 읽기 전용.
+     * 트랜잭션: 읽기 전용. 외부 서비스 호출 없음(스냅샷 사용).
      *
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
@@ -58,28 +52,9 @@ public class GetHqSalesOrderHistoryService implements GetHqSalesOrderHistoryUseC
 
         loadSalesOrderPort.load(query.soCode());
 
-        List<SalesOrderStatusHistory> histories = loadHistoryPort.loadBySoCode(query.soCode()).stream()
+        return loadHistoryPort.loadBySoCode(query.soCode()).stream()
                 .filter(h -> h.status() != SalesOrderStatus.DRAFT)
-                .toList();
-
-        return toEntries(histories);
-    }
-
-    private List<SalesOrderHistoryEntry> toEntries(List<SalesOrderStatusHistory> histories) {
-        List<String> actorCodes = histories.stream()
-                .map(SalesOrderStatusHistory::actorCode)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        Map<String, UserInfo> userInfoMap = actorCodes.isEmpty()
-                ? Map.of()
-                : loadUserInfoPort.loadByUserCodes(actorCodes);
-
-        return histories.stream()
-                .map(h -> new SalesOrderHistoryEntry(
-                        h.status(),
-                        userInfoMap.get(h.actorCode()),
-                        h.createdAt()))
+                .map(h -> new SalesOrderHistoryEntry(h.status(), h.actor(), h.createdAt()))
                 .toList();
     }
 }

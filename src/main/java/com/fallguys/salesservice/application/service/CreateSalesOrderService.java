@@ -7,8 +7,11 @@ import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrder
 import com.fallguys.salesservice.application.port.outbound.port.GenerateSoCodePort;
 import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
@@ -34,6 +37,7 @@ import java.util.Set;
 public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
     private final VerifyWarehousePort verifyWarehousePort;
+    private final LoadWarehousePort loadWarehousePort;
     private final LoadItemPort loadItemPort;
     private final GenerateSoCodePort generateSoCodePort;
     private final SaveSalesOrderPort saveSalesOrderPort;
@@ -94,21 +98,31 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         }
         Instant now = Instant.now();
 
+        // 확정(REQUESTED) 단계에서만 창고명·행위자 name/position을 박제한다. DRAFT는 code만 보관.
+        WarehouseRef from;
+        WarehouseRef to;
+        ActorRef createdBy;
+        if (command.status() == SalesOrderStatus.REQUESTED) {
+            from = WarehouseRef.of(command.fromWarehouseCode(),
+                    loadWarehousePort.load(command.fromWarehouseCode()).warehouseName());
+            to = WarehouseRef.of(command.toWarehouseCode(),
+                    loadWarehousePort.load(command.toWarehouseCode()).warehouseName());
+            createdBy = ActorRef.of(command.requestedBy(), command.requesterName(), command.requesterPosition());
+        } else {
+            from = WarehouseRef.codeOnly(command.fromWarehouseCode());
+            to = WarehouseRef.codeOnly(command.toWarehouseCode());
+            createdBy = ActorRef.codeOnly(command.requestedBy());
+        }
+
         SalesOrder salesOrder = SalesOrder.create(
-                soCode,
-                command.fromWarehouseCode(),
-                command.toWarehouseCode(),
-                command.status(),
-                command.desiredArrivalDate(),
-                command.requestMemo(),
-                command.requestedBy(),
-                now,
-                lines
+                soCode, from, to, command.status(),
+                command.desiredArrivalDate(), command.requestMemo(),
+                createdBy, now, lines
         );
 
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), command.status(), command.requestedBy(), now));
+                saved.getCode(), command.status(), createdBy, now));
         return saved;
     }
 

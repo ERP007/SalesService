@@ -2,6 +2,8 @@ package com.fallguys.salesservice.domain.model.salesorder;
 
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,8 +17,8 @@ import java.util.List;
 public class SalesOrder {
 
     private final String code;
-    private final String fromWarehouseCode;
-    private String toWarehouseCode;
+    private WarehouseRef from;
+    private WarehouseRef to;
     private SalesOrderStatus status;
     private SagaStatus sagaStatus;
     private LocalDate desiredArrivalDate;
@@ -31,10 +33,10 @@ public class SalesOrder {
      * 기존 9-arg 호출부(생성·테스트) 호환용. sagaStatus는 NONE으로 초기화한다.
      * 영속성 복원(toDomain)은 sagaStatus를 포함한 @AllArgsConstructor 10-arg를 사용한다.
      */
-    public SalesOrder(String code, String fromWarehouseCode, String toWarehouseCode,
+    public SalesOrder(String code, WarehouseRef from, WarehouseRef to,
                       SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
                       SalesOrderCreation creation, SalesOrderRequest request, List<SalesOrderLine> lines) {
-        this(code, fromWarehouseCode, toWarehouseCode, status, SagaStatus.NONE,
+        this(code, from, to, status, SagaStatus.NONE,
                 desiredArrivalDate, requestMemo, creation, request, lines);
     }
 
@@ -45,16 +47,18 @@ public class SalesOrder {
      * 1) 생성 이력(createdBy, now)을 항상 기록한다.
      * 2) 즉시 요청(REQUESTED)이면 요청 이력(requestedBy=createdBy, now)도 기록하고, DRAFT면 남기지 않는다.
      *
-     * 상태별 분기(REQUESTED → request 기록)는 도메인 규칙이므로 여기서 결정한다.
+     * createdBy·from·to는 호출자(서비스)가 단계에 맞게 구성한다 — DRAFT는 code만(codeOnly),
+     * REQUESTED는 name·position·창고명을 박제(of)해 넘긴다. 상태별 분기(REQUESTED → request 기록)는
+     * 도메인 규칙이므로 여기서 결정한다.
      */
-    public static SalesOrder create(String code, String fromWarehouseCode, String toWarehouseCode,
+    public static SalesOrder create(String code, WarehouseRef from, WarehouseRef to,
                                     SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
-                                    String createdBy, Instant now, List<SalesOrderLine> lines) {
+                                    ActorRef createdBy, Instant now, List<SalesOrderLine> lines) {
         SalesOrderRequest request = status == SalesOrderStatus.REQUESTED
                 ? new SalesOrderRequest(createdBy, now)
                 : null;
         return new SalesOrder(
-                code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
+                code, from, to, status, desiredArrivalDate, requestMemo,
                 new SalesOrderCreation(createdBy, now),
                 request,
                 lines
@@ -71,13 +75,13 @@ public class SalesOrder {
      * 예외:
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void updateDraft(String toWarehouseCode, LocalDate desiredArrivalDate,
+    public void updateDraft(WarehouseRef to, LocalDate desiredArrivalDate,
                             String requestMemo, List<SalesOrderLine> lines) {
         if (this.status != SalesOrderStatus.DRAFT) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DRAFT 상태에서만 수정 가능합니다. 현재 상태: " + this.status);
         }
-        this.toWarehouseCode = toWarehouseCode;
+        this.to = to;
         this.desiredArrivalDate = desiredArrivalDate;
         this.requestMemo = requestMemo;
         this.lines = lines;
@@ -88,20 +92,24 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) DRAFT 상태인지 검증한다.
-     * 2) 요청 데이터(창고, 날짜, 메모, 라인)를 덮어쓴다.
+     * 2) 요청 데이터(창고, 날짜, 메모, 라인)를 덮어쓴다. 확정 시점이므로 from·to 창고명을
+     *    박제한 WarehouseRef로 교체한다(DRAFT 동안 code만 들고 있던 것을 확정).
      * 3) 상태를 REQUESTED로, request(요청자·요청시각) 운영 정보를 기록한다.
+     *
+     * requestedBy·from·to는 호출자(서비스)가 확정 스냅샷(name·position·창고명)으로 구성해 넘긴다.
      *
      * 예외:
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void submitRequest(String requestedBy, Instant now, String toWarehouseCode,
+    public void submitRequest(ActorRef requestedBy, Instant now, WarehouseRef from, WarehouseRef to,
                               LocalDate desiredArrivalDate, String requestMemo,
                               List<SalesOrderLine> lines) {
         if (this.status != SalesOrderStatus.DRAFT) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DRAFT 상태에서만 요청 가능합니다. 현재 상태: " + this.status);
         }
-        this.toWarehouseCode = toWarehouseCode;
+        this.from = from;
+        this.to = to;
         this.desiredArrivalDate = desiredArrivalDate;
         this.requestMemo = requestMemo;
         this.lines = lines;

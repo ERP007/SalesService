@@ -26,10 +26,12 @@ public record SubmitSalesOrderRequest(
         @Valid
         List<@NotNull(message = "발주 품목에 빈 항목이 포함될 수 없습니다") SubmitSalesOrderLineRequest> lines
 ) {
-    public SubmitSalesOrderCommand toCommand(String soCode, String requestedBy, UserRole role, String requesterWarehouseCode) {
+    public SubmitSalesOrderCommand toCommand(String soCode, String requestedBy, String requesterName,
+                                             String requesterPosition, UserRole role, String requesterWarehouseCode) {
         List<CreateSalesOrderLineCommand> lineCommands = lines.stream()
                 .map(SubmitSalesOrderLineRequest::toCommand)
                 .toList();
-        return new SubmitSalesOrderCommand(soCode, requestedBy, role, requesterWarehouseCode, warehouseCode, desiredArrivalDate, memo, lineCommands);
+        return new SubmitSalesOrderCommand(soCode, requestedBy, requesterName, requesterPosition, role,
+                requesterWarehouseCode, warehouseCode, desiredArrivalDate, memo, lineCommands);
     }
 }

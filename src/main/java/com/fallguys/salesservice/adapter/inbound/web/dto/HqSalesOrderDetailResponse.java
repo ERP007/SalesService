@@ -50,13 +50,13 @@ public record HqSalesOrderDetailResponse(
         return new HqSalesOrderDetailResponse(
                 order.getCode(),
                 order.getStatus().name(),
-                new WarehouseInfo(order.getFromWarehouseCode(), detail.fromWarehouseName()),
-                new WarehouseInfo(order.getToWarehouseCode(), detail.toWarehouseName()),
-                PersonInfo.from(detail.requesterInfo()),
+                new WarehouseInfo(order.getFrom().code(), detail.fromWarehouseName()),
+                new WarehouseInfo(order.getTo().code(), detail.toWarehouseName()),
+                PersonInfo.from(detail.requester()),
                 request != null ? request.requestedAt() : null,
                 order.getRequestMemo(),
                 order.getDesiredArrivalDate(),
-                detail.approverInfo() != null ? PersonInfo.from(detail.approverInfo()) : null,
+                PersonInfo.from(detail.approver()),
                 lines
         );
     }

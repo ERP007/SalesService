@@ -28,11 +28,20 @@ public class SalesOrderEntity {
     @Column(nullable = false)
     private Long version;
 
-    @Column(name = "from_warehouse_code", nullable = false)
-    private String fromWarehouseCode;
+    // 창고명 스냅샷. DRAFT는 code만 들고 name은 null, REQUESTED 확정 시 박제.
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "code", column = @Column(name = "from_warehouse_code", nullable = false)),
+            @AttributeOverride(name = "name", column = @Column(name = "from_warehouse_name"))
+    })
+    private WarehouseEmbeddable from;
 
-    @Column(name = "to_warehouse_code", nullable = false)
-    private String toWarehouseCode;
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "code", column = @Column(name = "to_warehouse_code", nullable = false)),
+            @AttributeOverride(name = "name", column = @Column(name = "to_warehouse_name"))
+    })
+    private WarehouseEmbeddable to;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -65,7 +74,7 @@ public class SalesOrderEntity {
                 .toList();
 
         return new SalesOrder(
-                code, fromWarehouseCode, toWarehouseCode, status, sagaStatus, desiredArrivalDate, requestMemo,
+                code, from.toDomain(), to.toDomain(), status, sagaStatus, desiredArrivalDate, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
                 domainLines
@@ -104,8 +113,8 @@ public class SalesOrderEntity {
 
     private void applyDomain(SalesOrder domain) {
         this.code = domain.getCode();
-        this.fromWarehouseCode = domain.getFromWarehouseCode();
-        this.toWarehouseCode = domain.getToWarehouseCode();
+        this.from = WarehouseEmbeddable.from(domain.getFrom());
+        this.to = WarehouseEmbeddable.from(domain.getTo());
         this.status = domain.getStatus();
         this.sagaStatus = domain.getSagaStatus();
         this.desiredArrivalDate = domain.getDesiredArrivalDate();

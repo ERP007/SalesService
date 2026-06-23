@@ -62,13 +62,13 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
 
         SalesOrder salesOrder = loadSalesOrderPort.load(query.soCode());
 
-        if (!query.warehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!query.warehouseCode().equals(salesOrder.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        String fromWarehouseName = loadWarehousePort.load(salesOrder.getFromWarehouseCode()).warehouseName();
-        String toWarehouseName = salesOrder.getToWarehouseCode() != null
-                ? loadWarehousePort.load(salesOrder.getToWarehouseCode()).warehouseName()
+        String fromWarehouseName = loadWarehousePort.load(salesOrder.getFrom().code()).warehouseName();
+        String toWarehouseName = salesOrder.getTo().code() != null
+                ? loadWarehousePort.load(salesOrder.getTo().code()).warehouseName()
                 : null;
 
         SalesOrderStatusHistory approved = findApprovedRow(query.soCode());
