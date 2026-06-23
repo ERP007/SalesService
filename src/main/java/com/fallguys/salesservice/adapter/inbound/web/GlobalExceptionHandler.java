@@ -53,6 +53,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getCode(), ex.getMessage());
     }
 
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ProblemDetail handleOptimisticLock(org.springframework.orm.ObjectOptimisticLockingFailureException ex) {
+        log.warn("Optimistic lock conflict: {}", ex.getMessage());
+        return build(HttpStatus.CONFLICT, SalesErrorCode.CONCURRENT_MODIFICATION.getCode(),
+                SalesErrorCode.CONCURRENT_MODIFICATION.getDefaultMessage());
+    }
+
     @ExceptionHandler(ExternalServiceException.class)
     public ProblemDetail handleExternalService(ExternalServiceException ex) {
         log.error("External service error: code={}, message={}", ex.getCode(), ex.getMessage(), ex);

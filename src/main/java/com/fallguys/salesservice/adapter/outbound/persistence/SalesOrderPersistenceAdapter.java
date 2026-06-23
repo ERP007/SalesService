@@ -1,26 +1,29 @@
 package com.fallguys.salesservice.adapter.outbound.persistence;
 
-import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
-import com.fallguys.salesservice.application.port.inbound.SortDirection;
-import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.GenerateSoCodePort;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrderKpiPort;
-import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrdersPort;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
-import com.fallguys.salesservice.application.port.outbound.HqSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.HqSalesOrderKpi;
-import com.fallguys.salesservice.application.port.outbound.HqSalesOrderSummaryPage;
-import com.fallguys.salesservice.application.port.outbound.LoadHqSalesOrderKpiPort;
-import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
+import com.fallguys.salesservice.adapter.outbound.persistence.salesorder.SalesOrderEntity;
+import com.fallguys.salesservice.adapter.outbound.persistence.salesorder.SalesOrderJpaDao;
+import com.fallguys.salesservice.adapter.outbound.persistence.salesorderline.SalesOrderLineEntity;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.model.SortDirection;
+import com.fallguys.salesservice.application.port.outbound.filter.BranchSalesOrderFilter;
+import com.fallguys.salesservice.application.port.outbound.port.GenerateSoCodePort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadBranchSalesOrdersPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadBranchSalesOrderKpiPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadHqSalesOrdersPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.model.BranchSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.filter.HqSalesOrderFilter;
+import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.outbound.port.LoadHqSalesOrderKpiPort;
+import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.HqSalesOrderSummary;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
-import com.fallguys.salesservice.domain.model.SalesOrderSummary;
+import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderSummary;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -121,11 +124,6 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
                 .map(SalesOrderEntity::toDomain)
                 .orElseThrow(() -> new ResourceNotFoundException(SalesErrorCode.SO_NOT_FOUND,
                         "발주를 찾을 수 없습니다: " + soCode));
-    }
-
-    @Override
-    public boolean existsByInvoiceNumber(String invoiceNumber) {
-        return salesOrderJpaDao.existsByApprovalInvoiceNumber(invoiceNumber);
     }
 
     @Override
@@ -235,7 +233,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
     private HqSalesOrderSummary toHqSummary(SalesOrderEntity entity) {
         List<SalesOrderLineEntity> lines = entity.getLines();
-        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getRequestedQuantity).sum();
+        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getQuantity).sum();
 
         String unitSnapshot = null;
         if (!lines.isEmpty()) {
@@ -263,7 +261,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
 
     private SalesOrderSummary toSummary(SalesOrderEntity entity) {
         List<SalesOrderLineEntity> lines = entity.getLines();
-        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getRequestedQuantity).sum();
+        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getQuantity).sum();
 
         String unitSnapshot = null;
         if (!lines.isEmpty()) {

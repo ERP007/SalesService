@@ -1,19 +1,22 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.SubmitSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.ItemInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.VerifyWarehousePort;
+import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
+import com.fallguys.salesservice.application.port.inbound.command.SubmitSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.usecase.SubmitSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderLine;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -34,6 +37,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
     private final VerifyWarehousePort verifyWarehousePort;
     private final LoadItemPort loadItemPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
+    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     /**
      * DRAFT 상태의 발주를 REQUESTED로 전환한다.
@@ -89,13 +93,17 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
         Map<String, ItemInfo> itemMap = loadItemPort.loadAll(itemCodes);
 
         List<SalesOrderLine> lines = buildLines(salesOrder.getCode(), command.lines(), itemMap);
+        Instant now = Instant.now();
         salesOrder.submitRequest(
-                command.requestedBy(), Instant.now(),
+                command.requestedBy(), now,
                 command.toWarehouseCode(), command.desiredArrivalDate(),
                 command.requestMemo(), lines
         );
 
-        return saveSalesOrderPort.save(salesOrder);
+        SalesOrder saved = saveSalesOrderPort.save(salesOrder);
+        appendHistoryPort.append(SalesOrderStatusHistory.of(
+                saved.getCode(), SalesOrderStatus.REQUESTED, command.requestedBy(), now));
+        return saved;
     }
 
     private void validateLinesNotEmpty(List<CreateSalesOrderLineCommand> lines) {
@@ -135,7 +143,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
                     return new SalesOrderLine(
                             null, soCode, cmd.itemCode(),
                             item.itemName(), item.unit(),
-                            cmd.quantity(), null, null, cmd.priority()
+                            cmd.quantity(), cmd.priority()
                     );
                 })
                 .toList();

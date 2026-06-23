@@ -1,9 +1,8 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.SalesOrderDetail;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderApproval;
-import com.fallguys.salesservice.domain.model.SalesOrderLine;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -35,7 +34,7 @@ public record BranchSalesOrderDetailResponse(
                     line.getItemCode(),
                     line.getItemNameSnapshot(),
                     line.getUnitSnapshot(),
-                    line.getRequestedQuantity(),
+                    line.getQuantity(),
                     line.getPriority().name()
             );
         }
@@ -43,10 +42,9 @@ public record BranchSalesOrderDetailResponse(
 
     public static BranchSalesOrderDetailResponse from(SalesOrderDetail detail) {
         SalesOrder order = detail.salesOrder();
-        SalesOrderApproval approval = order.getApproval();
-        Instant approvedAt = approval != null ? approval.approvedAt() : null;
-        String invoiceNumber = approval != null ? approval.invoiceNumber() : null;
-        String carrierType = approval != null && approval.carrierType() != null ? approval.carrierType().name() : null;
+        Instant approvedAt = detail.approvedAt();
+        String invoiceNumber = detail.invoiceNumber();
+        String carrierType = detail.carrierType() != null ? detail.carrierType().name() : null;
 
         List<LineResponse> lines = order.getLines() != null
                 ? order.getLines().stream().map(LineResponse::from).toList()

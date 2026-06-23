@@ -1,13 +1,24 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.RequestSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.*;
+import com.fallguys.salesservice.application.port.inbound.command.RequestSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,10 +41,16 @@ import static org.mockito.BDDMockito.*;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class RequestSalesOrderServiceTest {
 
-    @Mock LoadSalesOrderPort loadSalesOrderPort;
-    @Mock VerifyWarehousePort verifyWarehousePort;
-    @Mock LoadItemPort loadItemPort;
-    @Mock SaveSalesOrderPort saveSalesOrderPort;
+    @Mock
+    LoadSalesOrderPort loadSalesOrderPort;
+    @Mock
+    VerifyWarehousePort verifyWarehousePort;
+    @Mock
+    LoadItemPort loadItemPort;
+    @Mock
+    SaveSalesOrderPort saveSalesOrderPort;
+    @Mock
+    AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     RequestSalesOrderService service;
@@ -44,16 +61,14 @@ class RequestSalesOrderServiceTest {
     private static final String TO_WAREHOUSE = "WH-HQ-01";
     private static final LocalDate VALID_DATE = LocalDate.now().plusDays(3);
 
-    private SalesOrder draftSalesOrder;
-
     @BeforeEach
     void setUp() {
-        draftSalesOrder = new SalesOrder(
+        SalesOrder draftSalesOrder = new SalesOrder(
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                null,
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
@@ -78,6 +93,11 @@ class RequestSalesOrderServiceTest {
 
         then(verifyWarehousePort).should().verify(FROM_WAREHOUSE);
         then(verifyWarehousePort).should().verify(TO_WAREHOUSE);
+
+        then(appendHistoryPort).should().append(argThat(h ->
+                h.status() == SalesOrderStatus.REQUESTED &&
+                h.actorCode().equals(USER_CODE) &&
+                h.payload() == null));
     }
 
     @Test
@@ -112,7 +132,7 @@ class RequestSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 
@@ -126,10 +146,10 @@ class RequestSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, VALID_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
+                null,
                 List.of(
-                    new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL),
-                    new SalesOrderLine(2L, SO_CODE, "ITEM-01", null, null, 3, null, null, Priority.NORMAL)
+                    new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL),
+                    new SalesOrderLine(2L, SO_CODE, "ITEM-01", null, null, 3, Priority.NORMAL)
                 )
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftWithDuplicates);
@@ -145,8 +165,8 @@ class RequestSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, LocalDate.now(), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                null,
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithTodayDate);
 
@@ -160,8 +180,8 @@ class RequestSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, LocalDate.now().plusDays(61), null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                null,
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithLateDate);
 

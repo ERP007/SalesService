@@ -1,0 +1,1 @@
+ALTER TABLE sales_orders ADD COLUMN version BIGINT NOT NULL DEFAULT 0;

@@ -1,16 +1,16 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.application.port.inbound.UpdateDraftSalesOrderCommand;
-import com.fallguys.salesservice.application.port.inbound.UpdateDraftSalesOrderUseCase;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
+import com.fallguys.salesservice.application.port.inbound.command.UpdateDraftSalesOrderCommand;
+import com.fallguys.salesservice.application.port.inbound.usecase.UpdateDraftSalesOrderUseCase;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.SalesOrder;
-import com.fallguys.salesservice.domain.model.SalesOrderLine;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -101,7 +101,7 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
                 .map(cmd -> new SalesOrderLine(
                         null, soCode, cmd.itemCode(),
                         null, null,
-                        cmd.quantity(), null, null, cmd.priority()
+                        cmd.quantity(), cmd.priority()
                 ))
                 .toList();
     }

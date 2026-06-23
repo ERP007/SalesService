@@ -1,6 +1,6 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderKpi;
+import com.fallguys.salesservice.application.port.outbound.model.BranchSalesOrderKpi;
 
 public record BranchSalesOrderKpiResponse(
         long totalCount,

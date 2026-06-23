@@ -1,9 +1,9 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersQuery;
-import com.fallguys.salesservice.application.port.inbound.SalesOrderSortField;
-import com.fallguys.salesservice.application.port.inbound.SortDirection;
-import com.fallguys.salesservice.domain.model.SalesOrderStatus;
+import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOrdersQuery;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderSortField;
+import com.fallguys.salesservice.application.port.inbound.model.SortDirection;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;

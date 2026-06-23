@@ -2,8 +2,8 @@ package com.fallguys.salesservice.adapter.outbound.client;
 
 import com.fallguys.salesservice.adapter.outbound.client.dto.ItemBatchRequest;
 import com.fallguys.salesservice.adapter.outbound.client.dto.ItemBatchResponse;
-import com.fallguys.salesservice.application.port.outbound.ItemInfo;
-import com.fallguys.salesservice.application.port.outbound.LoadItemPort;
+import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;

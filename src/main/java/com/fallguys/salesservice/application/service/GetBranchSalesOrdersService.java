@@ -1,10 +1,10 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersQuery;
-import com.fallguys.salesservice.application.port.inbound.GetBranchSalesOrdersUseCase;
-import com.fallguys.salesservice.application.port.outbound.BranchSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.LoadBranchSalesOrdersPort;
-import com.fallguys.salesservice.application.port.outbound.SalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOrdersQuery;
+import com.fallguys.salesservice.application.port.inbound.usecase.GetBranchSalesOrdersUseCase;
+import com.fallguys.salesservice.application.port.outbound.filter.BranchSalesOrderFilter;
+import com.fallguys.salesservice.application.port.outbound.port.LoadBranchSalesOrdersPort;
+import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;

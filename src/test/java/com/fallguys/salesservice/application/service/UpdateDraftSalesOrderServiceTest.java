@@ -1,15 +1,21 @@
 package com.fallguys.salesservice.application.service;
 
-import com.fallguys.salesservice.application.port.inbound.CreateSalesOrderLineCommand;
-import com.fallguys.salesservice.application.port.inbound.UpdateDraftSalesOrderCommand;
-import com.fallguys.salesservice.application.port.outbound.LoadSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.inbound.command.CreateSalesOrderLineCommand;
+import com.fallguys.salesservice.application.port.inbound.command.UpdateDraftSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
+import com.fallguys.salesservice.domain.model.salesorderline.Priority;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,8 +57,8 @@ class UpdateDraftSalesOrderServiceTest {
                 SO_CODE, FROM_WAREHOUSE, OLD_TO_WAREHOUSE,
                 SalesOrderStatus.DRAFT, OLD_DATE, "old memo",
                 new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, null, null, null, null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, null, null, Priority.NORMAL))
+                null,
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
@@ -75,7 +81,7 @@ class UpdateDraftSalesOrderServiceTest {
         assertThat(result.getLines()).hasSize(1);
         SalesOrderLine line = result.getLines().getFirst();
         assertThat(line.getItemCode()).isEqualTo("ITEM-02");
-        assertThat(line.getRequestedQuantity()).isEqualTo(7);
+        assertThat(line.getQuantity()).isEqualTo(7);
         assertThat(line.getItemNameSnapshot()).isNull();
         assertThat(line.getUnitSnapshot()).isNull();
         then(saveSalesOrderPort).should().save(any());
@@ -130,7 +136,7 @@ class UpdateDraftSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, OLD_DATE, null,
                 new SalesOrderCreation(USER_CODE, Instant.now()),
                 new SalesOrderRequest(USER_CODE, Instant.now()),
-                null, null, null, null, List.of()
+                List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 

@@ -1,7 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.ApproveSalesOrderCommand;
-import com.fallguys.salesservice.domain.model.CarrierType;
+import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
+import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.UserRole;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
@@ -17,7 +17,7 @@ public record ApproveSalesOrderRequest(
 
         String invoiceNumber
 ) {
-    public ApproveSalesOrderCommand toCommand(String soCode, String approvedBy, UserRole role) {
-        return new ApproveSalesOrderCommand(soCode, approvedBy, role, approvedDate, carrierType, invoiceNumber);
+    public ApproveSalesOrderCommand toCommand(String soCode, String approvedBy, String approverName, UserRole role) {
+        return new ApproveSalesOrderCommand(soCode, approvedBy, approverName, role, approvedDate, carrierType, invoiceNumber);
     }
 }
