@@ -9,8 +9,8 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum StockEventType {
-    OUTBOUND_REQUESTED("inventory.stock.outbound.requested"),
-    INBOUND_REQUESTED("inventory.stock.inbound.requested");
+    OUTBOUND_REQUESTED("inventory.stock.outbound.requested.sales"),
+    INBOUND_REQUESTED("inventory.stock.inbound.requested.sales");
 
     private final String wire;
 }
