@@ -79,9 +79,11 @@ public class OutboxRelay {
                     correlation.getFuture().get(CONFIRM_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             if (confirm.ack()) {
+                // saga 전진을 먼저 확정한다. outbox를 PUBLISHED로 바꾸기 전에 실패하면
+                // 행이 PENDING으로 남아 폴러가 재발행→멱등 수렴한다(불일치가 self-healing).
+                confirmStockEventPublishedUseCase.confirmPublished(entity.getAggregateId());
                 entity.markPublished(Instant.now());
                 outboxJpaDao.save(entity);
-                confirmStockEventPublishedUseCase.confirmPublished(entity.getAggregateId());
             } else {
                 handleFailure(entity, "broker nack: " + confirm.reason());
             }
