@@ -10,21 +10,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.EnumSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class GetHqSalesOrderKpiService implements GetHqSalesOrderKpiUseCase {
 
     private final LoadHqSalesOrderKpiPort loadHqSalesOrderKpiPort;
-
-    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
-            UserRole.ADMIN,
-            UserRole.HQ_MANAGER,
-            UserRole.HQ_STAFF
-    );
-
     /**
      * 본사 전체 KPI를 조회한다.
      *
@@ -40,7 +31,7 @@ public class GetHqSalesOrderKpiService implements GetHqSalesOrderKpiUseCase {
     @Override
     @Transactional(readOnly = true)
     public HqSalesOrderKpi getKpi(UserRole role) {
-        if (!ALLOWED_ROLES.contains(role)) {
+        if (!role.isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         return loadHqSalesOrderKpiPort.loadHqKpi();

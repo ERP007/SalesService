@@ -9,14 +9,13 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -35,7 +34,6 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
      * 1) SO 존재 확인 (local DB)
      * 2) SO 소유 지점과 요청자 창고 일치 검증 (local)
      * 3) 중복 부품 코드 검증 (local)
-     * 4) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 5) 도메인 수정 및 저장 (상태 DRAFT 유지, 외부 호출·스냅샷 없음)
      *
      * 트랜잭션: 쓰기. 조회·수정·저장이 한 트랜잭션으로 묶이며 예외 시 전체 롤백.
@@ -47,27 +45,26 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
      * - SO 소유 지점 불일치: ForbiddenException (SO-013, 403)
      * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 중복 부품: SalesOrderException (SO-002, 400)
-     * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
      */
     @Override
     @Transactional
     public SalesOrder updateDraft(UpdateDraftSalesOrderCommand command) {
-        if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
+        if (!command.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
-        if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(salesOrder.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
         validateNoDuplicateItems(command.lines());
-        validateDesiredArrivalDate(command.desiredArrivalDate());
 
         List<SalesOrderLine> lines = buildDraftLines(salesOrder.getCode(), command.lines());
+        // DRAFT 유지 — 창고명은 박제하지 않고 code만 보관(codeOnly).
         salesOrder.updateDraft(
-                command.toWarehouseCode(), command.desiredArrivalDate(),
+                WarehouseRef.codeOnly(command.toWarehouseCode()),
                 command.requestMemo(), lines
         );
 
@@ -81,18 +78,6 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
                 throw new SalesOrderException(SalesErrorCode.DUPLICATE_ITEM,
                         "부품 코드 " + line.itemCode() + "이(가) 중복되었습니다");
             }
-        }
-    }
-
-    private void validateDesiredArrivalDate(LocalDate date) {
-        LocalDate today = LocalDate.now();
-        if (!date.isAfter(today)) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘 이후여야 합니다");
-        }
-        if (date.isAfter(today.plusDays(60))) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘로부터 60일 이내여야 합니다");
         }
     }
 

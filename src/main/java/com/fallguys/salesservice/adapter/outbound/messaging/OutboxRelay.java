@@ -12,6 +12,7 @@ import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -43,6 +44,7 @@ public class OutboxRelay {
     private final OutboxJpaDao outboxJpaDao;
     private final ConfirmStockEventPublishedUseCase confirmStockEventPublishedUseCase;
 
+    @Async("outboxRelayExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onAppended(OutboxAppendedEvent event) {
         outboxJpaDao.findById(event.eventId())

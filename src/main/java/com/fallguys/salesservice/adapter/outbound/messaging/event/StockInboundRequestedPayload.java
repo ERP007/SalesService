@@ -19,6 +19,6 @@ public record StockInboundRequestedPayload(
                 .map(StockLine::from)
                 .toList();
         return new StockInboundRequestedPayload(
-                order.getCode(), order.getFromWarehouseCode(), StockExecutor.from(executor), lines);
+                order.getCode(), order.getFrom().code(), StockExecutor.from(executor), lines);
     }
 }

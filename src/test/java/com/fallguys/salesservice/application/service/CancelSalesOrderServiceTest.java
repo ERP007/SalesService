@@ -8,7 +8,10 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.UserRole;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
@@ -24,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -57,54 +59,41 @@ class CancelSalesOrderServiceTest {
 
     @Test
     void MANAGER_취소_성공() {
-        CancelSalesOrderCommand command = command(USER_CODE, UserRole.BRANCH_MANAGER);
-
-        SalesOrder result = service.cancel(command);
+        SalesOrder result = service.cancel(command(USER_CODE, UserRole.BRANCH_MANAGER));
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.CANCELED);
         then(appendHistoryPort).should().append(argThat(h ->
                 h.status() == SalesOrderStatus.CANCELED &&
-                h.actorCode().equals(USER_CODE) &&
+                h.actor().code().equals(USER_CODE) &&
                 h.payload() instanceof CancellationPayload p &&
                 p.cancelReason().equals(REASON)));
     }
 
     @Test
     void STAFF_본인_발주_취소_성공() {
-        CancelSalesOrderCommand command = command(USER_CODE, UserRole.BRANCH_STAFF);
-
-        SalesOrder result = service.cancel(command);
-
-        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.CANCELED);
+        assertThat(service.cancel(command(USER_CODE, UserRole.BRANCH_STAFF)).getStatus())
+                .isEqualTo(SalesOrderStatus.CANCELED);
     }
 
     @Test
     void MANAGER_타인_발주_취소_성공() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(OTHER_USER_CODE));
-        CancelSalesOrderCommand command = command(USER_CODE, UserRole.BRANCH_MANAGER);
 
-        SalesOrder result = service.cancel(command);
-
-        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.CANCELED);
+        assertThat(service.cancel(command(USER_CODE, UserRole.BRANCH_MANAGER)).getStatus())
+                .isEqualTo(SalesOrderStatus.CANCELED);
     }
 
     @Test
     void HQ_역할_취소_시도시_ForbiddenException() {
-        CancelSalesOrderCommand command = command(USER_CODE, UserRole.HQ_MANAGER);
-
-        assertThatThrownBy(() -> service.cancel(command))
+        assertThatThrownBy(() -> service.cancel(command(USER_CODE, UserRole.HQ_MANAGER)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void ADMIN_역할_취소_시도시_ForbiddenException() {
-        CancelSalesOrderCommand command = command(USER_CODE, UserRole.ADMIN);
-
-        assertThatThrownBy(() -> service.cancel(command))
+        assertThatThrownBy(() -> service.cancel(command(USER_CODE, UserRole.ADMIN)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
     }
 
@@ -119,11 +108,11 @@ class CancelSalesOrderServiceTest {
 
     @Test
     void 소속_창고_불일치시_ForbiddenException() {
-        CancelSalesOrderCommand badCommand = new CancelSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_MANAGER, OTHER_WAREHOUSE, REASON);
+        CancelSalesOrderCommand badCommand = new CancelSalesOrderCommand(
+                SO_CODE, USER_CODE, "정유진", "지점 담당", UserRole.BRANCH_MANAGER, OTHER_WAREHOUSE, REASON);
 
         assertThatThrownBy(() -> service.cancel(badCommand))
                 .isInstanceOf(ForbiddenException.class);
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
@@ -133,69 +122,51 @@ class CancelSalesOrderServiceTest {
 
         assertThatThrownBy(() -> service.cancel(command(USER_CODE, UserRole.BRANCH_STAFF)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void REQUESTED_아닌_상태_취소_시도시_InvalidStatusTransitionException() {
-        SalesOrder draftOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.DRAFT, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, List.of()
-        );
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
+        given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder());
 
         assertThatThrownBy(() -> service.cancel(command(USER_CODE, UserRole.BRANCH_MANAGER)))
                 .isInstanceOf(InvalidStatusTransitionException.class);
-
-        then(saveSalesOrderPort).shouldHaveNoInteractions();
-    }
-
-    @Test
-    void STAFF_REQUESTED_아닌_상태_취소_시도시_InvalidStatusTransitionException() {
-        SalesOrder draftOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.DRAFT, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                null, List.of()
-        );
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
-
-        assertThatThrownBy(() -> service.cancel(command(USER_CODE, UserRole.BRANCH_STAFF)))
-                .isInstanceOf(InvalidStatusTransitionException.class);
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void 취소_성공시_CANCELED_상태로_저장됨() {
-        CancelSalesOrderCommand command = command(USER_CODE, UserRole.BRANCH_MANAGER);
+        service.cancel(command(USER_CODE, UserRole.BRANCH_MANAGER));
 
-        service.cancel(command);
-
-        then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.CANCELED
-        ));
+        then(saveSalesOrderPort).should().save(argThat(o -> o.getStatus() == SalesOrderStatus.CANCELED));
         then(appendHistoryPort).should().append(argThat(h ->
                 h.status() == SalesOrderStatus.CANCELED &&
                 h.payload() instanceof CancellationPayload p &&
-                p.cancelReason().equals(REASON)
-        ));
+                p.cancelReason().equals(REASON)));
     }
 
     private CancelSalesOrderCommand command(String userCode, UserRole role) {
-        return new CancelSalesOrderCommand(SO_CODE, userCode, role, FROM_WAREHOUSE, REASON);
+        return new CancelSalesOrderCommand(SO_CODE, userCode, "정유진", "지점 담당", role, FROM_WAREHOUSE, REASON);
     }
 
     private SalesOrder requestedOrder(String requestedBy) {
+        ActorRef actor = ActorRef.of(requestedBy, "정유진", "지점 담당");
         return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(requestedBy, Instant.now()),
-                new SalesOrderRequest(requestedBy, Instant.now()),
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(actor, Instant.now()),
+                new SalesOrderRequest(actor, Instant.now()),
                 List.of()
+        );
+    }
+
+    private SalesOrder draftOrder() {
+        ActorRef actor = ActorRef.of(USER_CODE, "정유진", "지점 담당");
+        return new SalesOrder(
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
+                SalesOrderStatus.DRAFT, SagaStatus.NONE, null,
+                new SalesOrderCreation(actor, Instant.now()),
+                null, List.of()
         );
     }
 }

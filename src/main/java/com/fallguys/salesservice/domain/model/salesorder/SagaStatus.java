@@ -15,5 +15,13 @@ public enum SagaStatus {
     SENDING,
     PROCESSING,
     DONE,
-    FAILED
+    FAILED;
+
+    /**
+     * 재고 saga가 진행 중인지 여부. SENDING·PROCESSING은 broker 발행·재고 처리 응답을
+     * 기다리는 미완료 상태이므로, 이 동안 다음 상태 전환(승인·배송)을 막는 데 쓴다.
+     */
+    public boolean inProgress() {
+        return this == SENDING || this == PROCESSING;
+    }
 }

@@ -1,5 +1,6 @@
 package com.fallguys.salesservice.adapter.outbound.persistence.salesorderhistory;
 
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.salesorderhistory.StatusChangePayload;
@@ -31,6 +32,13 @@ public class SalesOrderStatusHistoryEntity {
     @Column(name = "actor_code", nullable = false)
     private String actorCode;
 
+    // 행위자 name·position 스냅샷. 확정 행위 시점에 박제(없으면 null).
+    @Column(name = "actor_name")
+    private String actorName;
+
+    @Column(name = "actor_position")
+    private String actorPosition;
+
     // 상태별 부가 데이터 JSON. 직렬화/역직렬화는 어댑터(ObjectMapper)가 담당.
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload")
@@ -44,13 +52,16 @@ public class SalesOrderStatusHistoryEntity {
         SalesOrderStatusHistoryEntity entity = new SalesOrderStatusHistoryEntity();
         entity.soCode = domain.soCode();
         entity.status = domain.status();
-        entity.actorCode = domain.actorCode();
+        entity.actorCode = domain.actor().code();
+        entity.actorName = domain.actor().nameSnapshot();
+        entity.actorPosition = domain.actor().positionSnapshot();
         entity.payload = payloadJson;
         entity.createdAt = domain.createdAt();
         return entity;
     }
 
     public SalesOrderStatusHistory toDomain(StatusChangePayload payload) {
-        return new SalesOrderStatusHistory(soCode, status, actorCode, payload, createdAt);
+        return new SalesOrderStatusHistory(
+                soCode, status, ActorRef.of(actorCode, actorName, actorPosition), payload, createdAt);
     }
 }

@@ -9,7 +9,10 @@ import com.fallguys.salesservice.application.port.outbound.model.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.UserRole;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
@@ -24,8 +27,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -48,18 +51,20 @@ class GetBranchSalesOrderDetailServiceTest {
     private static final String TO_WAREHOUSE = "WH-HQ-01";
     private static final String TO_WAREHOUSE_NAME = "본사 중앙창고";
 
+    private static final ActorRef ACTOR = ActorRef.of(USER_CODE, "정유진", "지점 담당");
+
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(FROM_WAREHOUSE, TO_WAREHOUSE));
         given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
-                .willReturn(java.util.Optional.empty());
+                .willReturn(Optional.empty());
         given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME));
         given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, TO_WAREHOUSE_NAME));
     }
 
     @Test
     void MANAGER_상세_조회_성공() {
-        SalesOrderDetail result = service.get(query(USER_CODE, UserRole.BRANCH_MANAGER));
+        SalesOrderDetail result = service.get(query(UserRole.BRANCH_MANAGER));
 
         assertThat(result.salesOrder().getCode()).isEqualTo(SO_CODE);
         assertThat(result.fromWarehouseName()).isEqualTo(FROM_WAREHOUSE_NAME);
@@ -68,28 +73,16 @@ class GetBranchSalesOrderDetailServiceTest {
 
     @Test
     void STAFF_상세_조회_성공() {
-        SalesOrderDetail result = service.get(query(USER_CODE, UserRole.BRANCH_STAFF));
+        SalesOrderDetail result = service.get(query(UserRole.BRANCH_STAFF));
 
         assertThat(result.salesOrder().getCode()).isEqualTo(SO_CODE);
-        assertThat(result.fromWarehouseName()).isEqualTo(FROM_WAREHOUSE_NAME);
-        assertThat(result.toWarehouseName()).isEqualTo(TO_WAREHOUSE_NAME);
-    }
-
-    @Test
-    void toWarehouseCode_null이면_toWarehouseName_null_반환() {
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder(FROM_WAREHOUSE, null));
-
-        SalesOrderDetail result = service.get(query(USER_CODE, UserRole.BRANCH_MANAGER));
-
-        assertThat(result.toWarehouseName()).isNull();
-        then(loadWarehousePort).should(never()).load(null);
+        assertThat(result.requester().nameSnapshot()).isEqualTo("정유진");
     }
 
     @Test
     void HQ_역할_조회_시도시_ForbiddenException() {
-        assertThatThrownBy(() -> service.get(query(USER_CODE, UserRole.HQ_MANAGER)))
+        assertThatThrownBy(() -> service.get(query(UserRole.HQ_MANAGER)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
         then(loadHistoryPort).shouldHaveNoInteractions();
     }
@@ -99,38 +92,38 @@ class GetBranchSalesOrderDetailServiceTest {
         given(loadSalesOrderPort.load(SO_CODE))
                 .willThrow(new ResourceNotFoundException(SalesErrorCode.SO_NOT_FOUND));
 
-        assertThatThrownBy(() -> service.get(query(USER_CODE, UserRole.BRANCH_STAFF)))
+        assertThatThrownBy(() -> service.get(query(UserRole.BRANCH_STAFF)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
     void 소속_창고_불일치시_ForbiddenException() {
-        assertThatThrownBy(() -> service.get(new GetBranchSalesOrderDetailQuery(SO_CODE, USER_CODE, UserRole.BRANCH_MANAGER, "WH-BRANCH-99")))
+        assertThatThrownBy(() -> service.get(
+                new GetBranchSalesOrderDetailQuery(SO_CODE, USER_CODE, UserRole.BRANCH_MANAGER, "WH-BRANCH-99")))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadWarehousePort).shouldHaveNoInteractions();
     }
 
     @Test
-    void 창고명이_응답에_올바르게_매핑됨() {
-        SalesOrderDetail result = service.get(query(USER_CODE, UserRole.BRANCH_MANAGER));
+    void 창고_code와_name이_매핑됨() {
+        SalesOrderDetail result = service.get(query(UserRole.BRANCH_MANAGER));
 
-        assertThat(result.salesOrder().getFromWarehouseCode()).isEqualTo(FROM_WAREHOUSE);
+        assertThat(result.salesOrder().getFrom().code()).isEqualTo(FROM_WAREHOUSE);
         assertThat(result.fromWarehouseName()).isEqualTo(FROM_WAREHOUSE_NAME);
-        assertThat(result.salesOrder().getToWarehouseCode()).isEqualTo(TO_WAREHOUSE);
+        assertThat(result.salesOrder().getTo().code()).isEqualTo(TO_WAREHOUSE);
         assertThat(result.toWarehouseName()).isEqualTo(TO_WAREHOUSE_NAME);
     }
 
-    private GetBranchSalesOrderDetailQuery query(String userCode, UserRole role) {
-        return new GetBranchSalesOrderDetailQuery(SO_CODE, userCode, role, FROM_WAREHOUSE);
+    private GetBranchSalesOrderDetailQuery query(UserRole role) {
+        return new GetBranchSalesOrderDetailQuery(SO_CODE, USER_CODE, role, FROM_WAREHOUSE);
     }
 
-    private SalesOrder requestedOrder(String fromWarehouseCode, String toWarehouseCode) {
+    private SalesOrder requestedOrder(String fromCode, String toCode) {
         return new SalesOrder(
-                SO_CODE, fromWarehouseCode, toWarehouseCode,
-                SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                new SalesOrderRequest(USER_CODE, Instant.now()),
+                SO_CODE, WarehouseRef.of(fromCode, null), WarehouseRef.of(toCode, null),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(ACTOR, Instant.now()),
+                new SalesOrderRequest(ACTOR, Instant.now()),
                 List.of()
         );
     }

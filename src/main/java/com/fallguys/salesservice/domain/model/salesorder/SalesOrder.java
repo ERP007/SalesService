@@ -2,12 +2,13 @@ package com.fallguys.salesservice.domain.model.salesorder;
 
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -15,11 +16,10 @@ import java.util.List;
 public class SalesOrder {
 
     private final String code;
-    private final String fromWarehouseCode;
-    private String toWarehouseCode;
+    private WarehouseRef from;
+    private WarehouseRef to;
     private SalesOrderStatus status;
     private SagaStatus sagaStatus;
-    private LocalDate desiredArrivalDate;
     private String requestMemo;
 
     private final SalesOrderCreation creation;
@@ -27,15 +27,20 @@ public class SalesOrder {
 
     private List<SalesOrderLine> lines;
 
-    /**
-     * 기존 9-arg 호출부(생성·테스트) 호환용. sagaStatus는 NONE으로 초기화한다.
-     * 영속성 복원(toDomain)은 sagaStatus를 포함한 @AllArgsConstructor 10-arg를 사용한다.
-     */
-    public SalesOrder(String code, String fromWarehouseCode, String toWarehouseCode,
-                      SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
-                      SalesOrderCreation creation, SalesOrderRequest request, List<SalesOrderLine> lines) {
-        this(code, fromWarehouseCode, toWarehouseCode, status, SagaStatus.NONE,
-                desiredArrivalDate, requestMemo, creation, request, lines);
+    // 직전 재고 saga 실패 사유. 보상 시 기록, 재시도(approve/deliver) 시 초기화. 진행 페이지 노출용.
+    private String lastFailureReason;
+
+    /** 화면 표시용 진행 상태(status·sagaStatus 조합 파생). 조합 규칙은 OrderProgress가 소유. */
+    public OrderProgress progress() {
+        return OrderProgress.from(status, sagaStatus);
+    }
+
+    /** 진행 페이지 폴링용 결과 구분. 폴링 지속 여부(pending)·성패를 백엔드가 saga 상태로 판단한다. */
+    public ProgressOutcome sagaOutcome() {
+        if (sagaStatus.inProgress()) {
+            return ProgressOutcome.PENDING;
+        }
+        return sagaStatus == SagaStatus.FAILED ? ProgressOutcome.FAILED : ProgressOutcome.SUCCESS;
     }
 
     /**
@@ -45,19 +50,22 @@ public class SalesOrder {
      * 1) 생성 이력(createdBy, now)을 항상 기록한다.
      * 2) 즉시 요청(REQUESTED)이면 요청 이력(requestedBy=createdBy, now)도 기록하고, DRAFT면 남기지 않는다.
      *
+     * createdBy(행위자)는 단계 무관 항상 name·position을 박제해 넘긴다(이력에 남는 불변 사실).
+     * from·to(창고)는 변동 가능하므로 DRAFT는 code만(codeOnly), REQUESTED는 창고명을 박제(of)해 넘긴다.
      * 상태별 분기(REQUESTED → request 기록)는 도메인 규칙이므로 여기서 결정한다.
      */
-    public static SalesOrder create(String code, String fromWarehouseCode, String toWarehouseCode,
-                                    SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
-                                    String createdBy, Instant now, List<SalesOrderLine> lines) {
+    public static SalesOrder create(String code, WarehouseRef from, WarehouseRef to,
+                                    SalesOrderStatus status, String requestMemo,
+                                    ActorRef createdBy, Instant now, List<SalesOrderLine> lines) {
         SalesOrderRequest request = status == SalesOrderStatus.REQUESTED
                 ? new SalesOrderRequest(createdBy, now)
                 : null;
         return new SalesOrder(
-                code, fromWarehouseCode, toWarehouseCode, status, desiredArrivalDate, requestMemo,
+                code, from, to, status, SagaStatus.NONE, requestMemo,
                 new SalesOrderCreation(createdBy, now),
                 request,
-                lines
+                lines,
+                null
         );
     }
 
@@ -66,19 +74,17 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) DRAFT 상태인지 검증한다.
-     * 2) 창고·날짜·메모·라인을 덮어쓴다. 상태는 변경하지 않는다.
+     * 2) 창고·메모·라인을 덮어쓴다. 상태는 변경하지 않는다.
      *
      * 예외:
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void updateDraft(String toWarehouseCode, LocalDate desiredArrivalDate,
-                            String requestMemo, List<SalesOrderLine> lines) {
+    public void updateDraft(WarehouseRef to, String requestMemo, List<SalesOrderLine> lines) {
         if (this.status != SalesOrderStatus.DRAFT) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DRAFT 상태에서만 수정 가능합니다. 현재 상태: " + this.status);
         }
-        this.toWarehouseCode = toWarehouseCode;
-        this.desiredArrivalDate = desiredArrivalDate;
+        this.to = to;
         this.requestMemo = requestMemo;
         this.lines = lines;
     }
@@ -88,21 +94,23 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) DRAFT 상태인지 검증한다.
-     * 2) 요청 데이터(창고, 날짜, 메모, 라인)를 덮어쓴다.
+     * 2) 요청 데이터(창고, 메모, 라인)를 덮어쓴다. 확정 시점이므로 from·to 창고명을
+     *    박제한 WarehouseRef로 교체한다(DRAFT 동안 code만 들고 있던 것을 확정).
      * 3) 상태를 REQUESTED로, request(요청자·요청시각) 운영 정보를 기록한다.
+     *
+     * requestedBy·from·to는 호출자(서비스)가 확정 스냅샷(name·position·창고명)으로 구성해 넘긴다.
      *
      * 예외:
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void submitRequest(String requestedBy, Instant now, String toWarehouseCode,
-                              LocalDate desiredArrivalDate, String requestMemo,
-                              List<SalesOrderLine> lines) {
+    public void submitRequest(ActorRef requestedBy, Instant now, WarehouseRef from, WarehouseRef to,
+                              String requestMemo, List<SalesOrderLine> lines) {
         if (this.status != SalesOrderStatus.DRAFT) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DRAFT 상태에서만 요청 가능합니다. 현재 상태: " + this.status);
         }
-        this.toWarehouseCode = toWarehouseCode;
-        this.desiredArrivalDate = desiredArrivalDate;
+        this.from = from;
+        this.to = to;
         this.requestMemo = requestMemo;
         this.lines = lines;
         this.status = SalesOrderStatus.REQUESTED;
@@ -114,18 +122,25 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) REQUESTED 상태인지 검증한다.
-     * 2) 상태를 APPROVED로 전환한다. 승인 부가 데이터는 상태 변경 이력으로 별도 기록한다.
+     * 2) 직전 재고 saga가 진행 중(SENDING·PROCESSING)이면 거부한다(중복 출고 방지).
+     * 3) 상태를 APPROVED로 전환한다. 승인 부가 데이터는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
+     * - saga 진행 중인 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void approve() {
         if (this.status != SalesOrderStatus.REQUESTED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "REQUESTED 상태에서만 승인 가능합니다. 현재 상태: " + this.status);
         }
+        if (this.sagaStatus.inProgress()) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "재고 saga 진행 중에는 승인할 수 없습니다. 현재 saga 상태: " + this.sagaStatus);
+        }
         this.status = SalesOrderStatus.APPROVED;
         this.sagaStatus = SagaStatus.SENDING;
+        this.lastFailureReason = null;
     }
 
     /**
@@ -133,18 +148,25 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) APPROVED 상태인지 검증한다.
-     * 2) 상태를 DELIVERED로 전환한다. 배송 부가 데이터는 상태 변경 이력으로 별도 기록한다.
+     * 2) 직전 출고 saga가 진행 중(SENDING·PROCESSING)이면 거부한다(출고 완료 전 입고 방지).
+     * 3) 상태를 DELIVERED로 전환한다. 배송 부가 데이터는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
+     * - saga 진행 중인 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void deliver() {
         if (this.status != SalesOrderStatus.APPROVED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "APPROVED 상태에서만 배송 처리 가능합니다. 현재 상태: " + this.status);
         }
+        if (this.sagaStatus.inProgress()) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "재고 saga 진행 중에는 배송 처리할 수 없습니다. 현재 saga 상태: " + this.sagaStatus);
+        }
         this.status = SalesOrderStatus.DELIVERED;
         this.sagaStatus = SagaStatus.SENDING;
+        this.lastFailureReason = null;
     }
 
     /**
@@ -222,13 +244,14 @@ public class SalesOrder {
      * 예외:
      * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018)
      */
-    public void compensateApprove() {
+    public void compensateApprove(String reason) {
         if (this.status != SalesOrderStatus.APPROVED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "APPROVED 상태에서만 출고 보상 가능합니다. 현재 상태: " + this.status);
         }
         this.status = SalesOrderStatus.REQUESTED;
         this.sagaStatus = SagaStatus.FAILED;
+        this.lastFailureReason = reason;
     }
 
     /**
@@ -242,12 +265,13 @@ public class SalesOrder {
      * 예외:
      * - DELIVERED가 아닌 경우: InvalidStatusTransitionException (SO-018)
      */
-    public void compensateDeliver() {
+    public void compensateDeliver(String reason) {
         if (this.status != SalesOrderStatus.DELIVERED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DELIVERED 상태에서만 입고 보상 가능합니다. 현재 상태: " + this.status);
         }
         this.status = SalesOrderStatus.APPROVED;
         this.sagaStatus = SagaStatus.FAILED;
+        this.lastFailureReason = reason;
     }
 }

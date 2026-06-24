@@ -9,6 +9,7 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorderhistory.RejectReasonCategory;
 import com.fallguys.salesservice.domain.model.salesorderhistory.RejectionPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
@@ -67,7 +68,8 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
         order.reject();
         SalesOrder saved = saveSalesOrderPort.save(order);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.REJECTED, command.rejectedBy(),
+                saved.getCode(), SalesOrderStatus.REJECTED,
+                ActorRef.of(command.rejectedBy(), command.rejectedByName(), command.rejectedByPosition()),
                 new RejectionPayload(command.reasonCategory(), command.memo()), now));
         return saved;
     }

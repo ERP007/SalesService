@@ -26,7 +26,7 @@ class GetHqSalesOrderKpiServiceTest {
 
     @Test
     void HQ_MANAGER_정상_조회() {
-        HqSalesOrderKpi expected = new HqSalesOrderKpi(214L, 18L, 26L, 7L);
+        HqSalesOrderKpi expected = new HqSalesOrderKpi(214L, 18L, 26L);
         given(loadHqSalesOrderKpiPort.loadHqKpi()).willReturn(expected);
 
         HqSalesOrderKpi result = sut.getKpi(UserRole.HQ_MANAGER);
@@ -34,12 +34,11 @@ class GetHqSalesOrderKpiServiceTest {
         assertThat(result.totalCount()).isEqualTo(214L);
         assertThat(result.requestedCount()).isEqualTo(18L);
         assertThat(result.approvedCount()).isEqualTo(26L);
-        assertThat(result.delayedCount()).isEqualTo(7L);
     }
 
     @Test
     void HQ_STAFF_정상_조회() {
-        HqSalesOrderKpi expected = new HqSalesOrderKpi(10L, 3L, 4L, 1L);
+        HqSalesOrderKpi expected = new HqSalesOrderKpi(10L, 3L, 4L);
         given(loadHqSalesOrderKpiPort.loadHqKpi()).willReturn(expected);
 
         HqSalesOrderKpi result = sut.getKpi(UserRole.HQ_STAFF);
@@ -47,12 +46,11 @@ class GetHqSalesOrderKpiServiceTest {
         assertThat(result.totalCount()).isEqualTo(10L);
         assertThat(result.requestedCount()).isEqualTo(3L);
         assertThat(result.approvedCount()).isEqualTo(4L);
-        assertThat(result.delayedCount()).isEqualTo(1L);
     }
 
     @Test
     void ADMIN_정상_조회() {
-        HqSalesOrderKpi expected = new HqSalesOrderKpi(5L, 1L, 2L, 0L);
+        HqSalesOrderKpi expected = new HqSalesOrderKpi(5L, 1L, 2L);
         given(loadHqSalesOrderKpiPort.loadHqKpi()).willReturn(expected);
 
         HqSalesOrderKpi result = sut.getKpi(UserRole.ADMIN);
@@ -60,12 +58,11 @@ class GetHqSalesOrderKpiServiceTest {
         assertThat(result.totalCount()).isEqualTo(5L);
         assertThat(result.requestedCount()).isEqualTo(1L);
         assertThat(result.approvedCount()).isEqualTo(2L);
-        assertThat(result.delayedCount()).isEqualTo(0L);
     }
 
     @Test
     void 발주_없을때_전부_0_반환() {
-        HqSalesOrderKpi empty = new HqSalesOrderKpi(0L, 0L, 0L, 0L);
+        HqSalesOrderKpi empty = new HqSalesOrderKpi(0L, 0L, 0L);
         given(loadHqSalesOrderKpiPort.loadHqKpi()).willReturn(empty);
 
         HqSalesOrderKpi result = sut.getKpi(UserRole.HQ_MANAGER);
@@ -73,7 +70,6 @@ class GetHqSalesOrderKpiServiceTest {
         assertThat(result.totalCount()).isZero();
         assertThat(result.requestedCount()).isZero();
         assertThat(result.approvedCount()).isZero();
-        assertThat(result.delayedCount()).isZero();
     }
 
     @Test

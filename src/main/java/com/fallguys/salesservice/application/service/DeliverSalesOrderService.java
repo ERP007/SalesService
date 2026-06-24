@@ -3,20 +3,21 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.DeliverSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.model.Executor;
-import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.PendingStatusChangePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
+import com.fallguys.salesservice.domain.model.salesorderhistory.PendingStatusChange;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +34,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
     private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final InboundStockPort inboundStockPort;
-    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    private final PendingStatusChangePort pendingStatusChangePort;
 
     /**
      * APPROVED 상태의 발주를 DELIVERED로 전환하고 재고 입고를 기록한다.
@@ -43,8 +44,8 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
      * 2) SO 존재 확인 (local DB)
      * 3) JWT warehouseCode가 SO의 fromWarehouseCode(발주 지점=입고 창고)와 일치하는지 검증
      * 4) deliveredDate가 출고일(approvedAt) 이전인지 검증
-     * 5) 도메인 상태 전환 — DELIVERED 전환 + saga SENDING
-     * 6) 저장 + 배송 이력 기록
+     * 5) 도메인 상태 전환 — DELIVERED 전환(provisional) + saga SENDING
+     * 6) 저장 + 배송 staging 보관(이력은 saga DONE 확정 후 승격)
      * 7) 입고 이벤트를 outbox에 적재(동일 트랜잭션)
      *
      * 트랜잭션: 쓰기. 상태 전환·저장·이력·outbox 적재가 한 트랜잭션으로 커밋된다.
@@ -61,13 +62,13 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder deliver(DeliverSalesOrderCommand command) {
-        if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
+        if (!command.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
 
-        if (!command.requesterWarehouseCode().equals(order.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(order.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
@@ -80,8 +81,11 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
         order.deliver();
 
         SalesOrder saved = saveSalesOrderPort.save(order);
-        appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.DELIVERED, command.deliveredBy(),
+        // 배송은 재고 입고 saga가 DONE으로 확정돼야 이력에 남는다. 지금은 staging에만 보관하고,
+        // reply 성공 수신 시 이력으로 승격한다(실패 시 폐기).
+        pendingStatusChangePort.save(new PendingStatusChange(
+                saved.getCode(), SalesOrderStatus.DELIVERED,
+                ActorRef.of(command.deliveredBy(), command.delivererName(), command.delivererPosition()),
                 new DeliveryPayload(command.deliveredDate()), now));
 
         inboundStockPort.inbound(saved, new Executor(command.deliveredBy(), command.delivererName()));

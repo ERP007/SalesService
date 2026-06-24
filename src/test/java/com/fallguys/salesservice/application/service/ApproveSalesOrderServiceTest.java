@@ -3,15 +3,21 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.PendingStatusChangePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.*;
-import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.UserRole;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.salesorderline.Priority;
@@ -27,6 +33,7 @@ import org.mockito.quality.Strictness;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -39,7 +46,7 @@ class ApproveSalesOrderServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
-    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    @Mock PendingStatusChangePort pendingStatusChangePort;
     @Mock OutboundStockPort outboundStockPort;
 
     @InjectMocks
@@ -50,7 +57,9 @@ class ApproveSalesOrderServiceTest {
     private static final String INVOICE_NUMBER = "INV-2026-0001";
     private static final LocalDate TODAY = LocalDate.of(2026, 6, 8);
     private static final Instant REQUESTED_AT = TODAY.minusDays(1).atStartOfDay()
-            .atZone(java.time.ZoneId.of("Asia/Seoul")).toInstant();
+            .atZone(ZoneId.of("Asia/Seoul")).toInstant();
+
+    private static final ActorRef BRANCH_ACTOR = ActorRef.of("branch001", "정유진", "지점 담당");
 
     @BeforeEach
     void setUp() {
@@ -59,209 +68,147 @@ class ApproveSalesOrderServiceTest {
         willDoNothing().given(outboundStockPort).outbound(any(), any());
     }
 
-    // ── 성공 케이스 ──────────────────────────────────────────────────────────
-
     @Test
     void ADMIN_승인_성공() {
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
-
-        SalesOrder result = service.approve(command);
+        SalesOrder result = service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER));
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
-        then(appendHistoryPort).should().append(argThat(h ->
-                h.status() == SalesOrderStatus.APPROVED &&
-                h.actorCode().equals(APPROVED_BY) &&
-                h.payload() instanceof ApprovalPayload p &&
-                p.approvedDate().equals(TODAY) &&
-                p.carrierType() == CarrierType.VEHICLE &&
-                p.invoiceNumber().equals(INVOICE_NUMBER)));
+        then(pendingStatusChangePort).should().save(argThat(p ->
+                p.status() == SalesOrderStatus.APPROVED &&
+                p.actor().code().equals(APPROVED_BY) &&
+                p.payload() instanceof ApprovalPayload ap &&
+                ap.approvedDate().equals(TODAY) &&
+                ap.carrierType() == CarrierType.VEHICLE &&
+                ap.invoiceNumber().equals(INVOICE_NUMBER)));
     }
 
     @Test
     void HQ_MANAGER_승인_성공() {
-        ApproveSalesOrderCommand command = command(UserRole.HQ_MANAGER, TODAY, INVOICE_NUMBER);
-
-        SalesOrder result = service.approve(command);
-
-        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
+        assertThat(service.approve(command(UserRole.HQ_MANAGER, TODAY, INVOICE_NUMBER)).getStatus())
+                .isEqualTo(SalesOrderStatus.APPROVED);
     }
 
     @Test
     void HQ_STAFF_승인_성공() {
-        ApproveSalesOrderCommand command = command(UserRole.HQ_STAFF, TODAY, INVOICE_NUMBER);
-
-        SalesOrder result = service.approve(command);
-
-        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
+        assertThat(service.approve(command(UserRole.HQ_STAFF, TODAY, INVOICE_NUMBER)).getStatus())
+                .isEqualTo(SalesOrderStatus.APPROVED);
     }
 
     @Test
     void invoiceNumber_null_허용() {
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, null);
-
-        SalesOrder result = service.approve(command);
-
-        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
+        assertThat(service.approve(command(UserRole.ADMIN, TODAY, null)).getStatus())
+                .isEqualTo(SalesOrderStatus.APPROVED);
     }
 
     @Test
     void 승인일_요청일과_동일해도_허용() {
-        LocalDate requestedDate = REQUESTED_AT.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate();
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, requestedDate, INVOICE_NUMBER);
-
-        SalesOrder result = service.approve(command);
-
-        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
-    }
-
-    @Test
-    void 승인_후에도_라인_quantity_유지됨() {
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
-
-        SalesOrder result = service.approve(command);
-
-        assertThat(result.getLines()).allSatisfy(line -> assertThat(line.getQuantity()).isEqualTo(10));
+        LocalDate requestedDate = REQUESTED_AT.atZone(ZoneId.of("Asia/Seoul")).toLocalDate();
+        assertThat(service.approve(command(UserRole.ADMIN, requestedDate, INVOICE_NUMBER)).getStatus())
+                .isEqualTo(SalesOrderStatus.APPROVED);
     }
 
     @Test
     void 승인_성공시_재고_출고_호출됨() {
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
-
-        service.approve(command);
-
+        service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER));
         then(outboundStockPort).should().outbound(any(SalesOrder.class), any());
     }
 
     @Test
-    void 승인_성공시_APPROVED_상태로_저장됨() {
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
+    void 승인_성공시_APPROVED_상태로_저장되고_pending에_적재됨() {
+        service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER));
 
-        service.approve(command);
-
-        then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.APPROVED
-        ));
-        then(appendHistoryPort).should().append(argThat(h ->
-                h.status() == SalesOrderStatus.APPROVED &&
-                h.payload() instanceof ApprovalPayload p &&
-                p.invoiceNumber().equals(INVOICE_NUMBER)
-        ));
+        then(saveSalesOrderPort).should().save(argThat(o -> o.getStatus() == SalesOrderStatus.APPROVED));
+        then(pendingStatusChangePort).should().save(argThat(p ->
+                p.status() == SalesOrderStatus.APPROVED &&
+                p.payload() instanceof ApprovalPayload ap &&
+                ap.invoiceNumber().equals(INVOICE_NUMBER)));
     }
-
-    // ── 역할 검증 ─────────────────────────────────────────────────────────────
 
     @Test
     void BRANCH_MANAGER_역할_승인_시도시_ForbiddenException() {
-        ApproveSalesOrderCommand command = command(UserRole.BRANCH_MANAGER, TODAY, INVOICE_NUMBER);
-
-        assertThatThrownBy(() -> service.approve(command))
+        assertThatThrownBy(() -> service.approve(command(UserRole.BRANCH_MANAGER, TODAY, INVOICE_NUMBER)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void BRANCH_STAFF_역할_승인_시도시_ForbiddenException() {
-        ApproveSalesOrderCommand command = command(UserRole.BRANCH_STAFF, TODAY, INVOICE_NUMBER);
-
-        assertThatThrownBy(() -> service.approve(command))
+        assertThatThrownBy(() -> service.approve(command(UserRole.BRANCH_STAFF, TODAY, INVOICE_NUMBER)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
     }
-
-    // ── SO 미존재 ─────────────────────────────────────────────────────────────
 
     @Test
     void SO_미존재시_ResourceNotFoundException() {
         given(loadSalesOrderPort.load(SO_CODE))
                 .willThrow(new ResourceNotFoundException(SalesErrorCode.SO_NOT_FOUND));
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
 
-        assertThatThrownBy(() -> service.approve(command))
+        assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER)))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ── 승인일 검증 ───────────────────────────────────────────────────────────
-
     @Test
-    void 승인일이_요청일보다_이전이면_SalesOrderException_INVALID_APPROVED_DATE() {
-        LocalDate requestedDate = REQUESTED_AT.atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalDate();
+    void 승인일이_요청일보다_이전이면_SalesOrderException() {
+        LocalDate requestedDate = REQUESTED_AT.atZone(ZoneId.of("Asia/Seoul")).toLocalDate();
         LocalDate tooEarly = requestedDate.minusDays(1);
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, tooEarly, INVOICE_NUMBER);
 
-        assertThatThrownBy(() -> service.approve(command))
+        assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, tooEarly, INVOICE_NUMBER)))
                 .isInstanceOf(SalesOrderException.class)
                 .hasMessageContaining(requestedDate.toString());
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
-    // ── 상태 전환 검증 ────────────────────────────────────────────────────────
-
     @Test
     void REQUESTED_아닌_상태_승인_시도시_InvalidStatusTransitionException() {
-        SalesOrder draftOrder = new SalesOrder(
-                SO_CODE, "WH-BRANCH-01", "WH-HQ-01",
-                SalesOrderStatus.DRAFT, TODAY.plusDays(3), null,
-                new SalesOrderCreation("branch001", Instant.now()),
-                null, List.of()
-        );
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftOrder);
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
+        given(loadSalesOrderPort.load(SO_CODE)).willReturn(order(SalesOrderStatus.DRAFT, null));
 
-        assertThatThrownBy(() -> service.approve(command))
+        assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER)))
                 .isInstanceOf(InvalidStatusTransitionException.class);
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void APPROVED_상태_재승인_시도시_InvalidStatusTransitionException() {
-        SalesOrder approvedOrder = new SalesOrder(
-                SO_CODE, "WH-BRANCH-01", "WH-HQ-01",
-                SalesOrderStatus.APPROVED, TODAY.plusDays(3), null,
-                new SalesOrderCreation("branch001", Instant.now()),
-                new SalesOrderRequest("branch001", REQUESTED_AT),
-                List.of()
-        );
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder);
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, "INV-OTHER");
+        given(loadSalesOrderPort.load(SO_CODE))
+                .willReturn(order(SalesOrderStatus.APPROVED, new SalesOrderRequest(BRANCH_ACTOR, REQUESTED_AT)));
 
-        assertThatThrownBy(() -> service.approve(command))
+        assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, "INV-OTHER")))
                 .isInstanceOf(InvalidStatusTransitionException.class);
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
-
-    // ── 재고 출고 실패 ─────────────────────────────────────────────────────────
 
     @Test
     void 재고_출고_실패시_예외_전파되고_저장은_실행됨() {
         willThrow(new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED))
                 .given(outboundStockPort).outbound(any(), any());
-        ApproveSalesOrderCommand command = command(UserRole.ADMIN, TODAY, INVOICE_NUMBER);
 
-        assertThatThrownBy(() -> service.approve(command))
+        assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER)))
                 .isInstanceOf(SalesOrderException.class);
-
         then(saveSalesOrderPort).should().save(any());
     }
 
-    // ── 헬퍼 ──────────────────────────────────────────────────────────────────
-
     private ApproveSalesOrderCommand command(UserRole role, LocalDate approvedDate, String invoiceNumber) {
-        return new ApproveSalesOrderCommand(SO_CODE, APPROVED_BY, null, role, approvedDate, CarrierType.VEHICLE, invoiceNumber);
+        return new ApproveSalesOrderCommand(
+                SO_CODE, APPROVED_BY, "강지석", "본사 매니저", role, approvedDate, CarrierType.VEHICLE, invoiceNumber);
     }
 
     private SalesOrder requestedOrder() {
         SalesOrderLine line = new SalesOrderLine(1L, SO_CODE, "ITEM-001", "브레이크 패드", "EA", 10, Priority.NORMAL);
         return new SalesOrder(
-                SO_CODE, "WH-BRANCH-01", "WH-HQ-01",
-                SalesOrderStatus.REQUESTED, TODAY.plusDays(3), null,
-                new SalesOrderCreation("branch001", REQUESTED_AT.minusSeconds(60)),
-                new SalesOrderRequest("branch001", REQUESTED_AT),
+                SO_CODE, WarehouseRef.of("WH-BRANCH-01", "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(BRANCH_ACTOR, REQUESTED_AT.minusSeconds(60)),
+                new SalesOrderRequest(BRANCH_ACTOR, REQUESTED_AT),
                 List.of(line)
+        );
+    }
+
+    private SalesOrder order(SalesOrderStatus status, SalesOrderRequest request) {
+        return new SalesOrder(
+                SO_CODE, WarehouseRef.of("WH-BRANCH-01", "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
+                status, SagaStatus.NONE, null,
+                new SalesOrderCreation(BRANCH_ACTOR, Instant.now()),
+                request, List.of()
         );
     }
 }

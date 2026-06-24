@@ -6,6 +6,8 @@ import com.fallguys.salesservice.domain.model.UserRole;
 public record RejectSalesOrderCommand(
         String soCode,
         String rejectedBy,
+        String rejectedByName,
+        String rejectedByPosition,
         UserRole role,
         RejectReasonCategory reasonCategory,
         String memo

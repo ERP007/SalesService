@@ -4,8 +4,8 @@ import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOr
 import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.application.port.outbound.port.PendingStatusChangePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
-import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -13,8 +13,14 @@ import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionExcepti
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.*;
-import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.UserRole;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
@@ -33,6 +39,7 @@ import org.mockito.quality.Strictness;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,7 +52,7 @@ class DeliverSalesOrderServiceTest {
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock LoadSalesOrderStatusHistoryPort loadHistoryPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
-    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    @Mock PendingStatusChangePort pendingStatusChangePort;
     @Mock InboundStockPort inboundStockPort;
 
     @InjectMocks
@@ -59,13 +66,15 @@ class DeliverSalesOrderServiceTest {
     private static final LocalDate VALID_DELIVERED_DATE = LocalDate.of(2026, 6, 3);
     private static final LocalDate BEFORE_APPROVED_DATE = LocalDate.of(2026, 5, 31);
 
+    private static final ActorRef ACTOR = ActorRef.of(USER_CODE, "정유진", "지점 담당");
+    private static final ActorRef HQ_ACTOR = ActorRef.of("hq001", "강지석", "본사 매니저");
+
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
-        // 출고일(approvedAt) 검증 소스: 최신 APPROVED 상태 변경 이력
         given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
-                .willReturn(java.util.Optional.of(SalesOrderStatusHistory.of(
-                        SO_CODE, SalesOrderStatus.APPROVED, "hq001",
+                .willReturn(Optional.of(SalesOrderStatusHistory.of(
+                        SO_CODE, SalesOrderStatus.APPROVED, HQ_ACTOR,
                         new ApprovalPayload(LocalDate.of(2026, 6, 1), CarrierType.VEHICLE, "INV-2026-001"), APPROVED_AT)));
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
         willDoNothing().given(inboundStockPort).inbound(any(), any());
@@ -76,53 +85,44 @@ class DeliverSalesOrderServiceTest {
         SalesOrder result = service.deliver(command(UserRole.BRANCH_MANAGER));
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.DELIVERED);
-        then(appendHistoryPort).should().append(argThat(h ->
-                h.status() == SalesOrderStatus.DELIVERED &&
-                h.actorCode().equals(USER_CODE) &&
-                h.payload() instanceof DeliveryPayload p &&
-                p.deliveredDate().equals(VALID_DELIVERED_DATE)));
+        then(pendingStatusChangePort).should().save(argThat(p ->
+                p.status() == SalesOrderStatus.DELIVERED &&
+                p.actor().code().equals(USER_CODE) &&
+                p.payload() instanceof DeliveryPayload dp &&
+                dp.deliveredDate().equals(VALID_DELIVERED_DATE)));
     }
 
     @Test
     void STAFF_도착_확인_성공() {
-        SalesOrder result = service.deliver(command(UserRole.BRANCH_STAFF));
-
-        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.DELIVERED);
+        assertThat(service.deliver(command(UserRole.BRANCH_STAFF)).getStatus())
+                .isEqualTo(SalesOrderStatus.DELIVERED);
     }
 
     @Test
     void 성공시_라인_quantity_유지됨() {
-        SalesOrder result = service.deliver(command(UserRole.BRANCH_MANAGER));
-
-        assertThat(result.getLines()).extracting(SalesOrderLine::getQuantity)
-                .containsExactly(100, 40);
+        assertThat(service.deliver(command(UserRole.BRANCH_MANAGER)).getLines())
+                .extracting(SalesOrderLine::getQuantity).containsExactly(100, 40);
     }
 
     @Test
     void 성공시_재고_입고_호출됨() {
         service.deliver(command(UserRole.BRANCH_MANAGER));
-
         then(inboundStockPort).should().inbound(any(), any());
     }
 
     @Test
-    void 성공시_DELIVERED_상태로_저장됨() {
+    void 성공시_DELIVERED_저장되고_pending_적재됨() {
         service.deliver(command(UserRole.BRANCH_MANAGER));
 
-        then(saveSalesOrderPort).should().save(argThat(o ->
-                o.getStatus() == SalesOrderStatus.DELIVERED
-        ));
-        then(appendHistoryPort).should().append(argThat(h ->
-                h.status() == SalesOrderStatus.DELIVERED &&
-                h.payload() instanceof DeliveryPayload
-        ));
+        then(saveSalesOrderPort).should().save(argThat(o -> o.getStatus() == SalesOrderStatus.DELIVERED));
+        then(pendingStatusChangePort).should().save(argThat(p ->
+                p.status() == SalesOrderStatus.DELIVERED && p.payload() instanceof DeliveryPayload));
     }
 
     @Test
     void HQ_MANAGER_역할_시도시_ForbiddenException() {
         assertThatThrownBy(() -> service.deliver(command(UserRole.HQ_MANAGER)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
     }
 
@@ -130,7 +130,6 @@ class DeliverSalesOrderServiceTest {
     void ADMIN_역할_시도시_ForbiddenException() {
         assertThatThrownBy(() -> service.deliver(command(UserRole.ADMIN)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
     }
 
@@ -146,59 +145,54 @@ class DeliverSalesOrderServiceTest {
     @Test
     void 창고_불일치시_ForbiddenException() {
         DeliverSalesOrderCommand command = new DeliverSalesOrderCommand(
-                SO_CODE, OTHER_WAREHOUSE, USER_CODE, null, UserRole.BRANCH_MANAGER, VALID_DELIVERED_DATE);
+                SO_CODE, OTHER_WAREHOUSE, USER_CODE, "정유진", "지점 담당", UserRole.BRANCH_MANAGER, VALID_DELIVERED_DATE);
 
         assertThatThrownBy(() -> service.deliver(command))
                 .isInstanceOf(ForbiddenException.class);
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void deliveredDate가_출고일_이전이면_SalesOrderException() {
         DeliverSalesOrderCommand command = new DeliverSalesOrderCommand(
-                SO_CODE, FROM_WAREHOUSE, USER_CODE, null, UserRole.BRANCH_MANAGER, BEFORE_APPROVED_DATE);
+                SO_CODE, FROM_WAREHOUSE, USER_CODE, "정유진", "지점 담당", UserRole.BRANCH_MANAGER, BEFORE_APPROVED_DATE);
 
         assertThatThrownBy(() -> service.deliver(command))
                 .isInstanceOf(SalesOrderException.class)
                 .extracting(e -> ((SalesOrderException) e).getCode())
                 .isEqualTo(SalesErrorCode.INVALID_DELIVERED_DATE.getCode());
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void APPROVED_아닌_상태_시도시_InvalidStatusTransitionException() {
         SalesOrder requestedOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                new SalesOrderRequest(USER_CODE, Instant.now()),
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(ACTOR, Instant.now()),
+                new SalesOrderRequest(ACTOR, Instant.now()),
                 List.of()
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 
         assertThatThrownBy(() -> service.deliver(command(UserRole.BRANCH_MANAGER)))
                 .isInstanceOf(InvalidStatusTransitionException.class);
-
         then(saveSalesOrderPort).shouldHaveNoInteractions();
     }
 
     @Test
     void 재고_서비스_실패시_예외_전파되고_저장은_실행됨() {
-        // save → inbound 순서이므로 save는 호출된다. 실제 DB 롤백은 @Transactional이 보장(단위테스트 범위 밖).
         willThrow(new ExternalServiceException(
                 CommonErrorCode.EXTERNAL_SERVICE_ERROR.getCode(), "재고 서비스 호출 실패", new RuntimeException()))
                 .given(inboundStockPort).inbound(any(), any());
 
         assertThatThrownBy(() -> service.deliver(command(UserRole.BRANCH_MANAGER)))
                 .isInstanceOf(ExternalServiceException.class);
-
         then(saveSalesOrderPort).should().save(any());
     }
 
     private DeliverSalesOrderCommand command(UserRole role) {
-        return new DeliverSalesOrderCommand(SO_CODE, FROM_WAREHOUSE, USER_CODE, null, role, VALID_DELIVERED_DATE);
+        return new DeliverSalesOrderCommand(SO_CODE, FROM_WAREHOUSE, USER_CODE, "정유진", "지점 담당", role, VALID_DELIVERED_DATE);
     }
 
     private SalesOrder approvedOrder() {
@@ -206,11 +200,12 @@ class DeliverSalesOrderServiceTest {
                 new SalesOrderLine(1L, SO_CODE, "HMC-EN-00214", "엔진오일", "EA", 100, Priority.NORMAL),
                 new SalesOrderLine(2L, SO_CODE, "HMC-BR-01102", "브레이크패드", "EA", 40, Priority.NORMAL)
         );
+        // 출고 saga 완료(DONE) 후 입고 시도 — deliver 가드(saga 진행 중 금지) 통과
         return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.APPROVED, LocalDate.of(2026, 6, 5), null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                new SalesOrderRequest(USER_CODE, Instant.now()),
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
+                SalesOrderStatus.APPROVED, SagaStatus.DONE, null,
+                new SalesOrderCreation(ACTOR, Instant.now()),
+                new SalesOrderRequest(ACTOR, Instant.now()),
                 lines
         );
     }

@@ -1,29 +1,22 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
-import com.fallguys.salesservice.domain.model.salesorder.SalesOrderSummary;
-
-import java.time.Instant;
-import java.time.LocalDate;
+import com.fallguys.salesservice.domain.model.salesorder.BranchSalesOrderSummary;
 
 public record BranchSalesOrderSummaryResponse(
         String code,
         SalesOrderStatus status,
-        Instant requestedAt,
-        LocalDate desiredArrivalDate,
-        int itemCount,
-        int totalQuantity,
-        String unitSnapshot
+        String progress,
+        RequestInfo request,
+        int itemCount
 ) {
-    public static BranchSalesOrderSummaryResponse from(SalesOrderSummary summary) {
+    public static BranchSalesOrderSummaryResponse from(BranchSalesOrderSummary summary) {
         return new BranchSalesOrderSummaryResponse(
                 summary.code(),
                 summary.status(),
-                summary.requestedAt(),
-                summary.desiredArrivalDate(),
-                summary.itemCount(),
-                summary.totalQuantity(),
-                summary.unitSnapshot()
+                summary.progress().name(),
+                RequestInfo.from(summary.request()),
+                summary.itemCount()
         );
     }
 }

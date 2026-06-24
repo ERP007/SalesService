@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String> {
@@ -30,15 +29,6 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
             GROUP BY s.status
             """)
     List<Object[]> countAllGroupByStatus();
-
-    // 지연 발주 수 — desiredArrivalDate가 today 이전이면서 REQUESTED·APPROVED 상태
-    @Query("""
-            SELECT COUNT(s)
-            FROM SalesOrderEntity s
-            WHERE s.status IN :statuses
-              AND s.desiredArrivalDate < :today
-            """)
-    long countDelayed(@Param("statuses") List<SalesOrderStatus> statuses, @Param("today") LocalDate today);
 
     // 지점 발주 목록 페이지 조회 — search는 발주번호·부품코드·부품명 부분 일치, null이면 전체
     // searchPattern은 어댑터에서 %/_/\를 이스케이프 후 전달. ESCAPE '\\'로 와일드카드 인젝션 차단.

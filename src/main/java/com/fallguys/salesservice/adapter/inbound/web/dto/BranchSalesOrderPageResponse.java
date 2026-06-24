@@ -1,6 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
 import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
+import com.fallguys.salesservice.domain.model.salesorder.BranchSalesOrderSummary;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ public record BranchSalesOrderPageResponse(
         boolean hasPrevious,
         boolean hasNext
 ) {
-    public static BranchSalesOrderPageResponse from(SalesOrderSummaryPage summaryPage) {
+    public static BranchSalesOrderPageResponse from(SalesOrderSummaryPage<BranchSalesOrderSummary> summaryPage) {
         List<BranchSalesOrderSummaryResponse> content = summaryPage.content().stream()
                 .map(BranchSalesOrderSummaryResponse::from)
                 .toList();

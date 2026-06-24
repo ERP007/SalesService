@@ -5,11 +5,11 @@ import com.fallguys.salesservice.application.port.inbound.usecase.GetBranchSales
 import com.fallguys.salesservice.application.port.outbound.filter.BranchSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.port.LoadBranchSalesOrdersPort;
 import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
+import com.fallguys.salesservice.domain.model.salesorder.BranchSalesOrderSummary;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,8 +45,8 @@ public class GetBranchSalesOrdersService implements GetBranchSalesOrdersUseCase 
      */
     @Override
     @Transactional(readOnly = true)
-    public SalesOrderSummaryPage getBranchOrders(GetBranchSalesOrdersQuery query) {
-        if (query.role() != UserRole.BRANCH_MANAGER && query.role() != UserRole.BRANCH_STAFF) {
+    public SalesOrderSummaryPage<BranchSalesOrderSummary> getBranchOrders(GetBranchSalesOrdersQuery query) {
+        if (!query.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         validateDateRange(query.startDate(), query.endDate());
