@@ -64,6 +64,10 @@ public class SalesOrderEntity {
     @Column(columnDefinition = "text")
     private String requestMemo;
 
+    // 직전 재고 saga 실패 사유(보상 시 기록). 진행 페이지 노출용.
+    @Column(name = "last_failure_reason", columnDefinition = "text")
+    private String lastFailureReason;
+
     @Embedded
     private CreationEmbeddable creation;
 
@@ -88,7 +92,8 @@ public class SalesOrderEntity {
                 code, from.toDomain(), to.toDomain(), status, sagaStatus, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
-                domainLines
+                domainLines,
+                lastFailureReason
         );
     }
 
@@ -145,6 +150,7 @@ public class SalesOrderEntity {
         this.status = domain.getStatus();
         this.sagaStatus = domain.getSagaStatus();
         this.requestMemo = domain.getRequestMemo();
+        this.lastFailureReason = domain.getLastFailureReason();
         this.creation = CreationEmbeddable.from(domain.getCreation());
         this.request = RequestEmbeddable.from(domain.getRequest());
     }

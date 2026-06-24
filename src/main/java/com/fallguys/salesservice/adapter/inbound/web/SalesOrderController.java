@@ -8,6 +8,7 @@ import com.fallguys.salesservice.adapter.inbound.web.dto.CreateDraftSalesOrderRe
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderDetailResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderProgressResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderStatusChangedResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderKpiResponse;
@@ -36,6 +37,9 @@ import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderH
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrderHistoryUseCase;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrdersUseCase;
+import com.fallguys.salesservice.application.port.inbound.usecase.GetSalesOrderProgressUseCase;
+import com.fallguys.salesservice.application.port.inbound.query.GetSalesOrderProgressQuery;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderProgressView;
 import com.fallguys.salesservice.application.port.inbound.usecase.RejectSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.command.RequestSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.RequestSalesOrderUseCase;
@@ -81,6 +85,7 @@ public class SalesOrderController {
     private final GetHqSalesOrderKpiUseCase getHqSalesOrderKpiUseCase;
     private final GetBranchSalesOrderHistoryUseCase getBranchSalesOrderHistoryUseCase;
     private final GetHqSalesOrderHistoryUseCase getHqSalesOrderHistoryUseCase;
+    private final GetSalesOrderProgressUseCase getSalesOrderProgressUseCase;
 
     // ── 발주 생성 ──────────────────────────────────────────────────────────────
 
@@ -266,6 +271,20 @@ public class SalesOrderController {
                     getHqSalesOrderDetailUseCase.get(new GetHqSalesOrderDetailQuery(code, role));
         };
         return ResponseEntity.ok(SalesOrderDetailResponse.from(detail));
+    }
+
+    @Operation(summary = "발주 진행 상태 조회(폴링)",
+            description = "출고/입고 saga 진행을 가볍게 폴링한다. pending=true면 계속 폴링, false면 outcome(SUCCESS/FAILED)으로 결과 확인.")
+    @GetMapping("/{code}/progress")
+    public ResponseEntity<SalesOrderProgressResponse> getProgress(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "발주 코드") @PathVariable String code
+    ) {
+        UserRole role = JwtClaimExtractor.extractRole(jwt);
+        String warehouseCode = role.isBranchUser() ? JwtClaimExtractor.extractWarehouseCode(jwt) : null;
+        SalesOrderProgressView view = getSalesOrderProgressUseCase.get(
+                new GetSalesOrderProgressQuery(code, role, warehouseCode));
+        return ResponseEntity.ok(SalesOrderProgressResponse.from(view));
     }
 
     @Operation(summary = "지점 발주 KPI 조회")

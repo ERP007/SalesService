@@ -45,8 +45,8 @@ public class CompensateStockSagaService implements CompensateStockSagaUseCase {
         }
 
         switch (command.stage()) {
-            case OUTBOUND -> order.compensateApprove();
-            case INBOUND -> order.compensateDeliver();
+            case OUTBOUND -> order.compensateApprove(command.reason());
+            case INBOUND -> order.compensateDeliver(command.reason());
         }
         saveSalesOrderPort.save(order);
 

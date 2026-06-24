@@ -27,9 +27,20 @@ public class SalesOrder {
 
     private List<SalesOrderLine> lines;
 
+    // 직전 재고 saga 실패 사유. 보상 시 기록, 재시도(approve/deliver) 시 초기화. 진행 페이지 노출용.
+    private String lastFailureReason;
+
     /** 화면 표시용 진행 상태(status·sagaStatus 조합 파생). 조합 규칙은 OrderProgress가 소유. */
     public OrderProgress progress() {
         return OrderProgress.from(status, sagaStatus);
+    }
+
+    /** 진행 페이지 폴링용 결과 구분. 폴링 지속 여부(pending)·성패를 백엔드가 saga 상태로 판단한다. */
+    public ProgressOutcome sagaOutcome() {
+        if (sagaStatus.inProgress()) {
+            return ProgressOutcome.PENDING;
+        }
+        return sagaStatus == SagaStatus.FAILED ? ProgressOutcome.FAILED : ProgressOutcome.SUCCESS;
     }
 
     /**
@@ -53,7 +64,8 @@ public class SalesOrder {
                 code, from, to, status, SagaStatus.NONE, requestMemo,
                 new SalesOrderCreation(createdBy, now),
                 request,
-                lines
+                lines,
+                null
         );
     }
 
@@ -128,6 +140,7 @@ public class SalesOrder {
         }
         this.status = SalesOrderStatus.APPROVED;
         this.sagaStatus = SagaStatus.SENDING;
+        this.lastFailureReason = null;
     }
 
     /**
@@ -153,6 +166,7 @@ public class SalesOrder {
         }
         this.status = SalesOrderStatus.DELIVERED;
         this.sagaStatus = SagaStatus.SENDING;
+        this.lastFailureReason = null;
     }
 
     /**
@@ -230,13 +244,14 @@ public class SalesOrder {
      * 예외:
      * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018)
      */
-    public void compensateApprove() {
+    public void compensateApprove(String reason) {
         if (this.status != SalesOrderStatus.APPROVED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "APPROVED 상태에서만 출고 보상 가능합니다. 현재 상태: " + this.status);
         }
         this.status = SalesOrderStatus.REQUESTED;
         this.sagaStatus = SagaStatus.FAILED;
+        this.lastFailureReason = reason;
     }
 
     /**
@@ -250,12 +265,13 @@ public class SalesOrder {
      * 예외:
      * - DELIVERED가 아닌 경우: InvalidStatusTransitionException (SO-018)
      */
-    public void compensateDeliver() {
+    public void compensateDeliver(String reason) {
         if (this.status != SalesOrderStatus.DELIVERED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DELIVERED 상태에서만 입고 보상 가능합니다. 현재 상태: " + this.status);
         }
         this.status = SalesOrderStatus.APPROVED;
         this.sagaStatus = SagaStatus.FAILED;
+        this.lastFailureReason = reason;
     }
 }

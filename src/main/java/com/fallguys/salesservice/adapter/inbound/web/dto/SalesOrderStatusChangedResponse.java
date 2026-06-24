@@ -15,6 +15,7 @@ public record SalesOrderStatusChangedResponse(
         String fromWarehouseCode,
         String toWarehouseCode,
         SalesOrderStatus status,
+        String progress,
         int totalQuantity
 ) {
     public static SalesOrderStatusChangedResponse from(SalesOrder order) {
@@ -26,6 +27,7 @@ public record SalesOrderStatusChangedResponse(
                 order.getFrom().code(),
                 order.getTo().code(),
                 order.getStatus(),
+                order.progress().name(),
                 totalQuantity
         );
     }
