@@ -3,16 +3,13 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrdersQuery;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.outbound.filter.HqSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.port.LoadHqSalesOrdersPort;
-import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
-import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
+import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,22 +19,11 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
-
-    private static final Set<UserRole> ALLOWED_ROLES = Set.of(
-            UserRole.ADMIN, UserRole.HQ_MANAGER, UserRole.HQ_STAFF
-    );
-
     private final LoadHqSalesOrdersPort loadHqSalesOrdersPort;
-    private final LoadUserInfoPort loadUserInfoPort;
 
     /**
      * 본사 기준 전체 발주 목록을 페이지네이션으로 조회한다.
@@ -58,8 +44,8 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
      */
     @Override
     @Transactional(readOnly = true)
-    public HqSalesOrderSummaryPage getOrders(GetHqSalesOrdersQuery query) {
-        if (!ALLOWED_ROLES.contains(query.role())) {
+    public SalesOrderSummaryPage<HqSalesOrderSummary> getOrders(GetHqSalesOrdersQuery query) {
+        if (!query.role().isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         validateDateRange(query.startDate(), query.endDate());
@@ -79,46 +65,9 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
                 query.size()
         );
 
-        HqSalesOrderSummaryPage rawPage = loadHqSalesOrdersPort.loadOrders(filter);
-
-        List<String> userCodes = rawPage.content().stream()
-                .map(HqSalesOrderSummary::requestedBy)
-                .filter(Objects::nonNull)
-                .distinct()
-                .collect(Collectors.toList());
-
-        Map<String, UserInfo> userInfoMap = userCodes.isEmpty()
-                ? Map.of()
-                : loadUserInfoPort.loadByUserCodes(userCodes);
-
-        List<HqSalesOrderSummary> enriched = rawPage.content().stream()
-                .map(summary -> {
-                    UserInfo info = summary.requestedBy() != null ? userInfoMap.get(summary.requestedBy()) : null;
-                    return new HqSalesOrderSummary(
-                            summary.code(),
-                            summary.fromWarehouseCode(),
-                            summary.requestedBy(),
-                            info != null ? info.name() : null,
-                            info != null ? info.position() : null,
-                            summary.status(),
-                            summary.requestedAt(),
-                            summary.desiredArrivalDate(),
-                            summary.itemCount(),
-                            summary.totalQuantity(),
-                            summary.unitSnapshot()
-                    );
-                })
-                .toList();
-
-        return new HqSalesOrderSummaryPage(
-                enriched,
-                rawPage.page(),
-                rawPage.size(),
-                rawPage.totalElements(),
-                rawPage.totalPages(),
-                rawPage.hasPrevious(),
-                rawPage.hasNext()
-        );
+        // 요청자 이름·직급은 발주 확정 시점에 박제된 스냅샷에서 채워지므로(영속 어댑터의
+        // toHqSummary) User 서비스 호출 없이 그대로 반환한다.
+        return loadHqSalesOrdersPort.loadOrders(filter);
     }
 
     private void validateDateRange(LocalDate startDate, LocalDate endDate) {

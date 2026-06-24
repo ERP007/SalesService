@@ -1,10 +1,10 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
+import com.fallguys.salesservice.domain.model.ActorRef;
 
 public record PersonInfo(String code, String name, String position) {
-    public static PersonInfo from(UserInfo info) {
-        if (info == null) return null;
-        return new PersonInfo(info.userCode(), info.name(), info.position());
+    public static PersonInfo from(ActorRef actor) {
+        if (actor == null) return null;
+        return new PersonInfo(actor.code(), actor.nameSnapshot(), actor.positionSnapshot());
     }
 }

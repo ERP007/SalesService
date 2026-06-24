@@ -1,6 +1,7 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
+import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
 
 import java.util.List;
 
@@ -13,15 +14,16 @@ public record HqSalesOrderPageResponse(
         boolean hasPrevious,
         boolean hasNext
 ) {
-    public static HqSalesOrderPageResponse from(HqSalesOrderSummaryPage summaryPage, List<HqSalesOrderSummaryResponse> content) {
+    public static HqSalesOrderPageResponse from(SalesOrderSummaryPage<HqSalesOrderSummary> summaryPage,
+                                                List<HqSalesOrderSummaryResponse> content) {
         return new HqSalesOrderPageResponse(
                 content,
                 summaryPage.page(),
                 summaryPage.size(),
                 summaryPage.totalElements(),
                 summaryPage.totalPages(),
-                summaryPage.hasPrevious(),
-                summaryPage.hasNext()
+                summaryPage.page() > 1,
+                summaryPage.page() < summaryPage.totalPages()
         );
     }
 }

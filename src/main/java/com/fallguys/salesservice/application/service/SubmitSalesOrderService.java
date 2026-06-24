@@ -7,9 +7,12 @@ import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
@@ -17,13 +20,11 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final VerifyWarehousePort verifyWarehousePort;
+    private final LoadWarehousePort loadWarehousePort;
     private final LoadItemPort loadItemPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
@@ -46,7 +48,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * 1) SO 존재 확인 (local DB)
      * 2) DRAFT 상태 검증 (local)
      * 3) 중복 부품 코드 검증 (local)
-     * 4) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 5) 요청자 창고 코드(JWT)와 SO 소유 지점 일치 검증 (local)
      * 6) 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
      * 6-1) 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
@@ -62,7 +63,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * - SO 미존재: ResourceNotFoundException (SO-014, 404)
      * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 중복 부품: SalesOrderException (SO-002, 400)
-     * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
      * - SO 소유 지점 불일치: ForbiddenException (SO-013, 403)
      * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)
@@ -71,20 +71,19 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder submit(SubmitSalesOrderCommand command) {
-        if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
+        if (!command.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
         validateLinesNotEmpty(command.lines());
         validateNoDuplicateItems(command.lines());
-        validateDesiredArrivalDate(command.desiredArrivalDate());
 
-        if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(salesOrder.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        verifyWarehousePort.verify(salesOrder.getFromWarehouseCode());
+        verifyWarehousePort.verify(salesOrder.getFrom().code());
         verifyWarehousePort.verify(command.toWarehouseCode());
 
         List<String> itemCodes = command.lines().stream()
@@ -94,15 +93,22 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
 
         List<SalesOrderLine> lines = buildLines(salesOrder.getCode(), command.lines(), itemMap);
         Instant now = Instant.now();
+
+        // 제출은 확정이므로 from·to 창고명과 요청자 name/position을 박제한다.
+        ActorRef requestedBy = ActorRef.of(
+                command.requestedBy(), command.requesterName(), command.requesterPosition());
+        WarehouseRef from = WarehouseRef.of(salesOrder.getFrom().code(),
+                loadWarehousePort.load(salesOrder.getFrom().code()).warehouseName());
+        WarehouseRef to = WarehouseRef.of(command.toWarehouseCode(),
+                loadWarehousePort.load(command.toWarehouseCode()).warehouseName());
         salesOrder.submitRequest(
-                command.requestedBy(), now,
-                command.toWarehouseCode(), command.desiredArrivalDate(),
+                requestedBy, now, from, to,
                 command.requestMemo(), lines
         );
 
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.REQUESTED, command.requestedBy(), now));
+                saved.getCode(), SalesOrderStatus.REQUESTED, requestedBy, now));
         return saved;
     }
 
@@ -120,18 +126,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
                 throw new SalesOrderException(SalesErrorCode.DUPLICATE_ITEM,
                         "부품 코드 " + line.itemCode() + "이(가) 중복되었습니다");
             }
-        }
-    }
-
-    private void validateDesiredArrivalDate(LocalDate date) {
-        LocalDate today = LocalDate.now();
-        if (!date.isAfter(today)) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘 이후여야 합니다");
-        }
-        if (date.isAfter(today.plusDays(60))) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘로부터 60일 이내여야 합니다");
         }
     }
 

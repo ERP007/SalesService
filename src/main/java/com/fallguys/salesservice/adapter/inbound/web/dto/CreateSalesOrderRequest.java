@@ -10,15 +10,11 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public record CreateSalesOrderRequest(
         @NotBlank(message = "창고 지정은 필수입니다")
         String warehouseCode,
-
-        @NotNull(message = "도착 희망일은 필수입니다")
-        LocalDate desiredArrivalDate,
 
         @Size(max = 500, message = "메모는 500자 이하여야 합니다")
         String memo,
@@ -28,10 +24,12 @@ public record CreateSalesOrderRequest(
         @Valid
         List<@NotNull CreateSalesOrderLineRequest> lines
 ) {
-    public CreateSalesOrderCommand toCommand(String requestedBy, UserRole role, String fromWarehouseCode) {
+    public CreateSalesOrderCommand toCommand(String requestedBy, String requesterName, String requesterPosition,
+                                             UserRole role, String fromWarehouseCode) {
         List<CreateSalesOrderLineCommand> lineCommands = lines.stream()
                 .map(CreateSalesOrderLineRequest::toCommand)
                 .toList();
-        return new CreateSalesOrderCommand(fromWarehouseCode, warehouseCode, desiredArrivalDate, memo, SalesOrderStatus.REQUESTED, lineCommands, requestedBy, role);
+        return new CreateSalesOrderCommand(fromWarehouseCode, warehouseCode, memo,
+                SalesOrderStatus.REQUESTED, lineCommands, requestedBy, requesterName, requesterPosition, role);
     }
 }

@@ -21,6 +21,10 @@ public class JwtClaimExtractor {
         return jwt.getClaimAsString("name");
     }
 
+    public static String extractPosition(Jwt jwt) {
+        return jwt.getClaimAsString("position");
+    }
+
     public static UserRole extractRole(Jwt jwt) {
         try {
             String role = jwt.getClaimAsString("user_role");

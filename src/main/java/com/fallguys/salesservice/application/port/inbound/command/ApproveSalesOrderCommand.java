@@ -9,6 +9,7 @@ public record ApproveSalesOrderCommand(
         String soCode,
         String approvedBy,
         String approverName,
+        String approverPosition,
         UserRole role,
         LocalDate approvedDate,
         CarrierType carrierType,

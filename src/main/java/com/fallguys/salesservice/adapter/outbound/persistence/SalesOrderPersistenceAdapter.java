@@ -2,7 +2,6 @@ package com.fallguys.salesservice.adapter.outbound.persistence;
 
 import com.fallguys.salesservice.adapter.outbound.persistence.salesorder.SalesOrderEntity;
 import com.fallguys.salesservice.adapter.outbound.persistence.salesorder.SalesOrderJpaDao;
-import com.fallguys.salesservice.adapter.outbound.persistence.salesorderline.SalesOrderLineEntity;
 import com.fallguys.salesservice.application.port.inbound.model.SalesOrderSortField;
 import com.fallguys.salesservice.application.port.inbound.model.SortDirection;
 import com.fallguys.salesservice.application.port.outbound.filter.BranchSalesOrderFilter;
@@ -15,7 +14,6 @@ import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPo
 import com.fallguys.salesservice.application.port.outbound.model.BranchSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.filter.HqSalesOrderFilter;
 import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderKpi;
-import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.port.LoadHqSalesOrderKpiPort;
 import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -23,7 +21,7 @@ import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
-import com.fallguys.salesservice.domain.model.salesorder.SalesOrderSummary;
+import com.fallguys.salesservice.domain.model.salesorder.BranchSalesOrderSummary;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,7 +30,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +55,6 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     private static String toJpaSortField(SalesOrderSortField field) {
         return switch (field) {
             case REQUESTED_AT -> "request.requestedAt";
-            case DESIRED_ARRIVAL_DATE -> "desiredArrivalDate";
         };
     }
 
@@ -89,11 +85,6 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         );
     }
 
-    private static final List<SalesOrderStatus> DELAYED_STATUSES = List.of(
-            SalesOrderStatus.REQUESTED,
-            SalesOrderStatus.APPROVED
-    );
-
     private static final Set<SalesOrderStatus> HQ_ACTIVE_STATUSES = Set.of(
             SalesOrderStatus.REQUESTED,
             SalesOrderStatus.APPROVED,
@@ -109,12 +100,10 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         long total = HQ_ACTIVE_STATUSES.stream()
                 .mapToLong(s -> counts.getOrDefault(s, 0L))
                 .sum();
-        long delayed = salesOrderJpaDao.countDelayed(DELAYED_STATUSES, LocalDate.now());
         return new HqSalesOrderKpi(
                 total,
                 counts.getOrDefault(SalesOrderStatus.REQUESTED, 0L),
-                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L),
-                delayed
+                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L)
         );
     }
 
@@ -167,7 +156,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     }
 
     @Override
-    public SalesOrderSummaryPage load(BranchSalesOrderFilter filter) {
+    public SalesOrderSummaryPage<BranchSalesOrderSummary> load(BranchSalesOrderFilter filter) {
         Sort.Direction direction = toJpaDirection(filter.sortDirection());
         String jpaSort = toJpaSortField(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
@@ -183,11 +172,11 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
                 pageable
         );
 
-        List<SalesOrderSummary> summaries = page.getContent().stream()
-                .map(this::toSummary)
+        List<BranchSalesOrderSummary> summaries = page.getContent().stream()
+                .map(SalesOrderEntity::toBranchSummary)
                 .toList();
 
-        return new SalesOrderSummaryPage(
+        return new SalesOrderSummaryPage<>(
                 summaries,
                 filter.page() + 1,
                 filter.size(),
@@ -197,7 +186,7 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     }
 
     @Override
-    public HqSalesOrderSummaryPage loadOrders(HqSalesOrderFilter filter) {
+    public SalesOrderSummaryPage<HqSalesOrderSummary> loadOrders(HqSalesOrderFilter filter) {
         Sort.Direction direction = toJpaDirection(filter.sortDirection());
         String jpaSort = toJpaSortField(filter.sortField());
         Pageable pageable = PageRequest.of(filter.page(), filter.size(), Sort.by(direction, jpaSort));
@@ -214,74 +203,15 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         );
 
         List<HqSalesOrderSummary> summaries = page.getContent().stream()
-                .map(this::toHqSummary)
+                .map(SalesOrderEntity::toHqSummary)
                 .toList();
 
-        int currentPage = filter.page() + 1;
-        int totalPages = page.getTotalPages();
-
-        return new HqSalesOrderSummaryPage(
+        return new SalesOrderSummaryPage<>(
                 summaries,
-                currentPage,
+                filter.page() + 1,
                 filter.size(),
                 page.getTotalElements(),
-                totalPages,
-                currentPage > 1,
-                currentPage < totalPages
-        );
-    }
-
-    private HqSalesOrderSummary toHqSummary(SalesOrderEntity entity) {
-        List<SalesOrderLineEntity> lines = entity.getLines();
-        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getQuantity).sum();
-
-        String unitSnapshot = null;
-        if (!lines.isEmpty()) {
-            long distinctUnits = lines.stream()
-                    .map(SalesOrderLineEntity::getUnitSnapshot)
-                    .distinct()
-                    .count();
-            unitSnapshot = distinctUnits == 1 ? lines.getFirst().getUnitSnapshot() : null;
-        }
-
-        return new HqSalesOrderSummary(
-                entity.getCode(),
-                entity.getFromWarehouseCode(),
-                entity.getRequest() != null ? entity.getRequest().requestedBy() : null,
-                null,
-                null,
-                entity.getStatus(),
-                entity.getRequest() != null ? entity.getRequest().requestedAt() : null,
-                entity.getDesiredArrivalDate(),
-                lines.size(),
-                totalQuantity,
-                unitSnapshot
-        );
-    }
-
-    private SalesOrderSummary toSummary(SalesOrderEntity entity) {
-        List<SalesOrderLineEntity> lines = entity.getLines();
-        int totalQuantity = lines.stream().mapToInt(SalesOrderLineEntity::getQuantity).sum();
-
-        String unitSnapshot = null;
-        if (!lines.isEmpty()) {
-            long distinctUnits = lines.stream()
-                    .map(SalesOrderLineEntity::getUnitSnapshot)
-                    .distinct()
-                    .count();
-            unitSnapshot = distinctUnits == 1 ? lines.getFirst().getUnitSnapshot() : null;
-        }
-
-        Instant requestedAt = entity.getRequest() != null ? entity.getRequest().requestedAt() : null;
-
-        return new SalesOrderSummary(
-                entity.getCode(),
-                entity.getStatus(),
-                entity.getDesiredArrivalDate(),
-                requestedAt,
-                lines.size(),
-                totalQuantity,
-                unitSnapshot
+                page.getTotalPages()
         );
     }
 

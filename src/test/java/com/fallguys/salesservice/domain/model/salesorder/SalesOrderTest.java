@@ -1,10 +1,11 @@
 package com.fallguys.salesservice.domain.model.salesorder;
 
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,9 +14,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SalesOrderTest {
 
     private SalesOrder requestedOrder() {
-        return SalesOrder.create("SO-1", "WH-FROM", "WH-TO",
-                SalesOrderStatus.REQUESTED, LocalDate.now(), "memo",
-                "user", Instant.now(), List.of());
+        return SalesOrder.create("SO-1", WarehouseRef.of("WH-FROM", "출발창고"), WarehouseRef.of("WH-TO", "도착창고"),
+                SalesOrderStatus.REQUESTED, "memo",
+                ActorRef.of("user", "정유진", "담당"), Instant.now(), List.of());
     }
 
     @Test

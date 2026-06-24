@@ -3,35 +3,22 @@ package com.fallguys.salesservice.adapter.inbound.web.dto;
 import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 
-import java.time.Instant;
-import java.time.LocalDate;
-
 public record HqSalesOrderSummaryResponse(
         String code,
-        String fromWarehouseCode,
-        String requestedBy,
-        String requesterName,
-        String requesterPosition,
-        Instant requestedAt,
-        LocalDate desiredArrivalDate,
+        WarehouseInfo fromWarehouse,
+        RequestInfo request,
         int itemCount,
-        int totalQuantity,
-        String unitSnapshot,
-        SalesOrderStatus status
+        SalesOrderStatus status,
+        String progress
 ) {
     public static HqSalesOrderSummaryResponse from(HqSalesOrderSummary summary) {
         return new HqSalesOrderSummaryResponse(
                 summary.code(),
-                summary.fromWarehouseCode(),
-                summary.requestedBy(),
-                summary.requesterName(),
-                summary.requesterPosition(),
-                summary.requestedAt(),
-                summary.desiredArrivalDate(),
+                WarehouseInfo.from(summary.from()),
+                RequestInfo.from(summary.request()),
                 summary.itemCount(),
-                summary.totalQuantity(),
-                summary.unitSnapshot(),
-                summary.status()
+                summary.status(),
+                summary.progress().name()
         );
     }
 }

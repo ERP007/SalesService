@@ -8,6 +8,7 @@ import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPo
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CancellationPayload;
@@ -49,19 +50,19 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder cancel(CancelSalesOrderCommand command) {
-        if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
+        if (!command.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
         SalesOrder salesOrder = loadSalesOrderPort.load(command.soCode());
 
-        if (!command.requesterWarehouseCode().equals(salesOrder.getFromWarehouseCode())) {
+        if (!command.requesterWarehouseCode().equals(salesOrder.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
         if (command.role() == UserRole.BRANCH_STAFF &&
                 salesOrder.getStatus() == SalesOrderStatus.REQUESTED) {
-            String requestedBy = salesOrder.getRequest().requestedBy();
+            String requestedBy = salesOrder.getRequest().requestedBy().code();
             if (requestedBy == null || !requestedBy.equals(command.canceledBy())) {
                 throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
             }
@@ -71,7 +72,8 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
         salesOrder.cancel();
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.CANCELED, command.canceledBy(),
+                saved.getCode(), SalesOrderStatus.CANCELED,
+                ActorRef.of(command.canceledBy(), command.canceledByName(), command.canceledByPosition()),
                 new CancellationPayload(command.reason()), now));
         return saved;
     }

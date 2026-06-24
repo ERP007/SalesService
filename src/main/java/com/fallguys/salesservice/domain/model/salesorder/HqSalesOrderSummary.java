@@ -1,18 +1,12 @@
 package com.fallguys.salesservice.domain.model.salesorder;
 
-import java.time.Instant;
-import java.time.LocalDate;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 
 public record HqSalesOrderSummary(
         String code,
-        String fromWarehouseCode,
-        String requestedBy,
-        String requesterName,
-        String requesterPosition,
+        WarehouseRef from,
         SalesOrderStatus status,
-        Instant requestedAt,
-        LocalDate desiredArrivalDate,
-        int itemCount,
-        int totalQuantity,
-        String unitSnapshot
+        OrderProgress progress,
+        SalesOrderRequest request,
+        int itemCount
 ) {}

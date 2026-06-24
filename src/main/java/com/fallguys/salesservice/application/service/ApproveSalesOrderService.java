@@ -3,19 +3,19 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.ApproveSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.model.Executor;
-import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
+import com.fallguys.salesservice.application.port.outbound.port.PendingStatusChangePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
-import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
-import com.fallguys.salesservice.domain.model.UserRole;
+import com.fallguys.salesservice.domain.model.salesorderhistory.PendingStatusChange;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,22 +23,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.EnumSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
 
-    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
-            UserRole.ADMIN, UserRole.HQ_MANAGER, UserRole.HQ_STAFF
-    );
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final OutboundStockPort outboundStockPort;
-    private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    private final PendingStatusChangePort pendingStatusChangePort;
 
     /**
      * REQUESTED 상태의 발주를 APPROVED로 전환하고 재고 출고를 기록한다.
@@ -47,8 +42,8 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      * 1) 역할 검증 — ADMIN·HQ_MANAGER·HQ_STAFF만 허용
      * 2) SO 조회
      * 3) 승인일 검증 — approvedDate가 requestedAt 날짜보다 이전이면 거부
-     * 4) 도메인 상태 전환 — APPROVED 전환 + saga SENDING
-     * 5) 저장 + 승인 이력 기록
+     * 4) 도메인 상태 전환 — APPROVED 전환(provisional) + saga SENDING
+     * 5) 저장 + 승인 staging 보관(이력은 saga DONE 확정 후 승격)
      * 6) 출고 이벤트를 outbox에 적재(동일 트랜잭션)
      *
      * 트랜잭션: 쓰기. 상태 전환·저장·이력·outbox 적재가 한 트랜잭션으로 커밋된다.
@@ -64,7 +59,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder approve(ApproveSalesOrderCommand command) {
-        if (!ALLOWED_ROLES.contains(command.role())) {
+        if (!command.role().isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
@@ -76,8 +71,11 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
         order.approve();
 
         SalesOrder saved = saveSalesOrderPort.save(order);
-        appendHistoryPort.append(SalesOrderStatusHistory.of(
-                saved.getCode(), SalesOrderStatus.APPROVED, command.approvedBy(),
+        // 승인은 재고 출고 saga가 DONE으로 확정돼야 이력에 남는다. 지금은 행위자·승인 부가 데이터를
+        // staging에만 보관하고, reply 성공 수신 시 이력으로 승격한다(실패 시 폐기).
+        pendingStatusChangePort.save(new PendingStatusChange(
+                saved.getCode(), SalesOrderStatus.APPROVED,
+                ActorRef.of(command.approvedBy(), command.approverName(), command.approverPosition()),
                 new ApprovalPayload(command.approvedDate(), command.carrierType(), command.invoiceNumber()),
                 now));
 

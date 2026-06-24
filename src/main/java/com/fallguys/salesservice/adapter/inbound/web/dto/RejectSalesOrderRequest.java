@@ -17,7 +17,9 @@ public record RejectSalesOrderRequest(
         }
     }
 
-    public RejectSalesOrderCommand toCommand(String soCode, String rejectedBy, UserRole role) {
-        return new RejectSalesOrderCommand(soCode, rejectedBy, role, reasonCategory, memo);
+    public RejectSalesOrderCommand toCommand(String soCode, String rejectedBy, String rejectedByName,
+                                             String rejectedByPosition, UserRole role) {
+        return new RejectSalesOrderCommand(soCode, rejectedBy, rejectedByName, rejectedByPosition, role,
+                reasonCategory, memo);
     }
 }
