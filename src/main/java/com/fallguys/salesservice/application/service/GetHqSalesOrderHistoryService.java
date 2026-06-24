@@ -8,23 +8,15 @@ import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderSt
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class GetHqSalesOrderHistoryService implements GetHqSalesOrderHistoryUseCase {
-
-    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
-            UserRole.ADMIN, UserRole.HQ_MANAGER, UserRole.HQ_STAFF
-    );
-
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
 
@@ -46,7 +38,7 @@ public class GetHqSalesOrderHistoryService implements GetHqSalesOrderHistoryUseC
     @Override
     @Transactional(readOnly = true)
     public List<SalesOrderHistoryEntry> get(GetHqSalesOrderHistoryQuery query) {
-        if (!ALLOWED_ROLES.contains(query.role())) {
+        if (!query.role().isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 

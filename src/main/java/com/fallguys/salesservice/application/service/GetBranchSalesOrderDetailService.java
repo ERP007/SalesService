@@ -14,14 +14,11 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CarrierType;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.EnumSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -30,12 +27,6 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
     private final LoadWarehousePort loadWarehousePort;
-
-    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
-        UserRole.BRANCH_MANAGER,
-        UserRole.BRANCH_STAFF
-    );
-
     /**
      * 지점 발주 상세를 조회한다.
      *
@@ -56,7 +47,7 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
     @Override
     @Transactional(readOnly = true)
     public SalesOrderDetail get(GetBranchSalesOrderDetailQuery query) {
-        if (!ALLOWED_ROLES.contains(query.role())) {
+        if (!query.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 

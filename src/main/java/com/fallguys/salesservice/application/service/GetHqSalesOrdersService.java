@@ -9,7 +9,6 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,16 +18,10 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
-
-    private static final Set<UserRole> ALLOWED_ROLES = Set.of(
-            UserRole.ADMIN, UserRole.HQ_MANAGER, UserRole.HQ_STAFF
-    );
-
     private final LoadHqSalesOrdersPort loadHqSalesOrdersPort;
 
     /**
@@ -51,7 +44,7 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
     @Override
     @Transactional(readOnly = true)
     public HqSalesOrderSummaryPage getOrders(GetHqSalesOrdersQuery query) {
-        if (!ALLOWED_ROLES.contains(query.role())) {
+        if (!query.role().isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         validateDateRange(query.startDate(), query.endDate());

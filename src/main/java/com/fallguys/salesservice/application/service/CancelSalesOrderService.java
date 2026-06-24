@@ -50,7 +50,7 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder cancel(CancelSalesOrderCommand command) {
-        if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
+        if (!command.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 

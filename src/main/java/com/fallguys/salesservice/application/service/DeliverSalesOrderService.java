@@ -17,7 +17,6 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.DeliveryPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,7 +61,7 @@ public class DeliverSalesOrderService implements DeliverSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder deliver(DeliverSalesOrderCommand command) {
-        if (command.role() != UserRole.BRANCH_MANAGER && command.role() != UserRole.BRANCH_STAFF) {
+        if (!command.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 

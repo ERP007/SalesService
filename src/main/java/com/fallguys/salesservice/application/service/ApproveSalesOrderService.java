@@ -16,7 +16,6 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,17 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.EnumSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
-
-    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
-            UserRole.ADMIN, UserRole.HQ_MANAGER, UserRole.HQ_STAFF
-    );
-    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
+public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Seoul");
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
@@ -65,7 +57,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
     @Override
     @Transactional
     public SalesOrder approve(ApproveSalesOrderCommand command) {
-        if (!ALLOWED_ROLES.contains(command.role())) {
+        if (!command.role().isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 

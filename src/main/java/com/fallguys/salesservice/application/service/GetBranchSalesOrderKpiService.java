@@ -10,20 +10,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.EnumSet;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class GetBranchSalesOrderKpiService implements GetBranchSalesOrderKpiUseCase {
 
     private final LoadBranchSalesOrderKpiPort loadBranchSalesOrderKpiPort;
-
-    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
-            UserRole.BRANCH_MANAGER,
-            UserRole.BRANCH_STAFF
-    );
-
     /**
      * 지점 KPI를 조회한다.
      *
@@ -39,7 +31,7 @@ public class GetBranchSalesOrderKpiService implements GetBranchSalesOrderKpiUseC
     @Override
     @Transactional(readOnly = true)
     public BranchSalesOrderKpi getKpi(String warehouseCode, UserRole role) {
-        if (!ALLOWED_ROLES.contains(role)) {
+        if (!role.isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         return loadBranchSalesOrderKpiPort.loadByBranchCode(warehouseCode);

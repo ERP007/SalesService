@@ -9,24 +9,16 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
-import com.fallguys.salesservice.domain.model.UserRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHistoryUseCase {
-
-    private static final Set<UserRole> ALLOWED_ROLES = EnumSet.of(
-            UserRole.BRANCH_MANAGER, UserRole.BRANCH_STAFF
-    );
-
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
 
@@ -51,7 +43,7 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
     @Override
     @Transactional(readOnly = true)
     public List<SalesOrderHistoryEntry> get(GetBranchSalesOrderHistoryQuery query) {
-        if (!ALLOWED_ROLES.contains(query.role())) {
+        if (!query.role().isBranchUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
 
