@@ -122,15 +122,21 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) REQUESTED 상태인지 검증한다.
-     * 2) 상태를 APPROVED로 전환한다. 승인 부가 데이터는 상태 변경 이력으로 별도 기록한다.
+     * 2) 직전 재고 saga가 진행 중(SENDING·PROCESSING)이면 거부한다(중복 출고 방지).
+     * 3) 상태를 APPROVED로 전환한다. 승인 부가 데이터는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - REQUESTED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
+     * - saga 진행 중인 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void approve() {
         if (this.status != SalesOrderStatus.REQUESTED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "REQUESTED 상태에서만 승인 가능합니다. 현재 상태: " + this.status);
+        }
+        if (this.sagaStatus.inProgress()) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "재고 saga 진행 중에는 승인할 수 없습니다. 현재 saga 상태: " + this.sagaStatus);
         }
         this.status = SalesOrderStatus.APPROVED;
         this.sagaStatus = SagaStatus.SENDING;
@@ -141,15 +147,21 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) APPROVED 상태인지 검증한다.
-     * 2) 상태를 DELIVERED로 전환한다. 배송 부가 데이터는 상태 변경 이력으로 별도 기록한다.
+     * 2) 직전 출고 saga가 진행 중(SENDING·PROCESSING)이면 거부한다(출고 완료 전 입고 방지).
+     * 3) 상태를 DELIVERED로 전환한다. 배송 부가 데이터는 상태 변경 이력으로 별도 기록한다.
      *
      * 예외:
      * - APPROVED가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
+     * - saga 진행 중인 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void deliver() {
         if (this.status != SalesOrderStatus.APPROVED) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "APPROVED 상태에서만 배송 처리 가능합니다. 현재 상태: " + this.status);
+        }
+        if (this.sagaStatus.inProgress()) {
+            throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
+                    "재고 saga 진행 중에는 배송 처리할 수 없습니다. 현재 saga 상태: " + this.sagaStatus);
         }
         this.status = SalesOrderStatus.DELIVERED;
         this.sagaStatus = SagaStatus.SENDING;
