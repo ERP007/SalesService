@@ -3,6 +3,8 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.query.GetBranchSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetBranchSalesOrderDetailUseCase;
 import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
+import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
+import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
@@ -14,9 +16,13 @@ import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +31,7 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final LoadSalesOrderStatusHistoryPort loadHistoryPort;
     private final LoadWarehousePort loadWarehousePort;
+    private final LoadItemPort loadItemPort;
 
     /**
      * 지점 발주 상세를 조회한다.
@@ -64,7 +71,7 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
         ActorRef requester = salesOrder.getRequest() != null ? salesOrder.getRequest().requestedBy() : null;
 
         return new SalesOrderDetail(salesOrder, fromWarehouseName, toWarehouseName, requester,
-                findApprovedActor(query.soCode()));
+                findApprovedActor(query.soCode()), displayLines(salesOrder, draft));
     }
 
     private String warehouseName(WarehouseRef ref, boolean draft) {
@@ -72,6 +79,25 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
             return null;
         }
         return draft ? loadWarehousePort.load(ref.code()).warehouseName() : ref.nameSnapshot();
+    }
+
+    // 확정 라인은 박제된 부품명/단위 스냅샷을 그대로 쓴다. DRAFT는 스냅샷이 없으므로 Item에서 현재값을 채운다.
+    private List<SalesOrderLine> displayLines(SalesOrder order, boolean draft) {
+        if (!draft) {
+            return order.getLines();
+        }
+        List<String> itemCodes = order.getLines().stream().map(SalesOrderLine::getItemCode).toList();
+        Map<String, ItemInfo> items = itemCodes.isEmpty() ? Map.of() : loadItemPort.loadAll(itemCodes);
+        return order.getLines().stream()
+                .map(line -> {
+                    ItemInfo info = items.get(line.getItemCode());
+                    return new SalesOrderLine(
+                            line.getId(), line.getSoCode(), line.getItemCode(),
+                            info != null ? info.itemName() : null,
+                            info != null ? info.unit() : null,
+                            line.getQuantity(), line.getPriority());
+                })
+                .toList();
     }
 
     // 승인자는 상태 변경 이력의 APPROVED 행 actor 스냅샷에서 가져온다(미승인이면 null).

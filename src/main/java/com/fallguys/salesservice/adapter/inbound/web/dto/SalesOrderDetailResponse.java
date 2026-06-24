@@ -42,8 +42,8 @@ public record SalesOrderDetailResponse(
         SalesOrder order = detail.salesOrder();
         SalesOrderRequest request = order.getRequest();
 
-        List<LineResponse> lines = order.getLines() != null
-                ? order.getLines().stream().map(LineResponse::from).toList()
+        List<LineResponse> lines = detail.lines() != null
+                ? detail.lines().stream().map(LineResponse::from).toList()
                 : List.of();
 
         return new SalesOrderDetailResponse(

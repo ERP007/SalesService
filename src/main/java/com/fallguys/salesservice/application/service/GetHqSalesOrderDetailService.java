@@ -53,7 +53,8 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
                 order.getFrom().nameSnapshot(),
                 order.getTo().nameSnapshot(),
                 requester,
-                findApprovedActor(query.soCode())
+                findApprovedActor(query.soCode()),
+                order.getLines()
         );
     }
 
