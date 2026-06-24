@@ -10,18 +10,18 @@ import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
  * 상태별 부가 데이터(승인 송장·반려 사유 등)는 이력 조회로 확인하며, 전환 응답은
  * 결과 상태와 공통 식별 정보만 반환한다.
  */
-public record SalesOrderResponse(
+public record SalesOrderStatusChangedResponse(
         String code,
         String fromWarehouseCode,
         String toWarehouseCode,
         SalesOrderStatus status,
         int totalQuantity
 ) {
-    public static SalesOrderResponse from(SalesOrder order) {
+    public static SalesOrderStatusChangedResponse from(SalesOrder order) {
         int totalQuantity = order.getLines() != null
                 ? order.getLines().stream().mapToInt(SalesOrderLine::getQuantity).sum()
                 : 0;
-        return new SalesOrderResponse(
+        return new SalesOrderStatusChangedResponse(
                 order.getCode(),
                 order.getFrom().code(),
                 order.getTo().code(),

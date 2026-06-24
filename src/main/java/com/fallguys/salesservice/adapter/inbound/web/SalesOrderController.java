@@ -1,16 +1,15 @@
 package com.fallguys.salesservice.adapter.inbound.web;
 
 import com.fallguys.salesservice.adapter.inbound.web.dto.ApproveSalesOrderRequest;
-import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderDetailResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CancelSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateDraftSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.CreateSalesOrderRequest;
 import com.fallguys.salesservice.adapter.inbound.web.dto.DeliverSalesOrderRequest;
-import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderDetailResponse;
+import com.fallguys.salesservice.adapter.inbound.web.dto.SalesOrderStatusChangedResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.BranchSalesOrderKpiResponse;
-import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderDetailResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderKpiResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderPageResponse;
 import com.fallguys.salesservice.adapter.inbound.web.dto.HqSalesOrderRequest;
@@ -37,7 +36,6 @@ import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderH
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrderHistoryUseCase;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrderKpiUseCase;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrdersUseCase;
-import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
 import com.fallguys.salesservice.application.port.inbound.usecase.RejectSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.inbound.command.RequestSalesOrderCommand;
 import com.fallguys.salesservice.application.port.inbound.usecase.RequestSalesOrderUseCase;
@@ -88,7 +86,7 @@ public class SalesOrderController {
 
     @Operation(summary = "발주 생성(즉시 제출)", description = "REQUESTED 상태로 발주를 생성한다. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
     @PostMapping
-    public ResponseEntity<SalesOrderResponse> create(
+    public ResponseEntity<SalesOrderStatusChangedResponse> create(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateSalesOrderRequest request
     ) {
@@ -98,12 +96,12 @@ public class SalesOrderController {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, userName, position, role, warehouseCode));
-        return ResponseEntity.status(HttpStatus.CREATED).body(SalesOrderResponse.from(salesOrder));
+        return ResponseEntity.status(HttpStatus.CREATED).body(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
     @Operation(summary = "발주 임시저장", description = "DRAFT 상태로 발주를 생성한다. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
     @PostMapping("/drafts")
-    public ResponseEntity<SalesOrderResponse> createDraft(
+    public ResponseEntity<SalesOrderStatusChangedResponse> createDraft(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody CreateDraftSalesOrderRequest request
     ) {
@@ -113,12 +111,12 @@ public class SalesOrderController {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = createSalesOrderUseCase.create(request.toCommand(userCode, userName, position, role, warehouseCode));
-        return ResponseEntity.status(HttpStatus.CREATED).body(SalesOrderResponse.from(salesOrder));
+        return ResponseEntity.status(HttpStatus.CREATED).body(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
     @Operation(summary = "발주 임시저장 수정", description = "DRAFT 발주를 DRAFT 상태 그대로 수정한다. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
     @PutMapping("/drafts/{code}")
-    public ResponseEntity<SalesOrderResponse> updateDraft(
+    public ResponseEntity<SalesOrderStatusChangedResponse> updateDraft(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody UpdateDraftSalesOrderRequest request
@@ -127,14 +125,14 @@ public class SalesOrderController {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = updateDraftSalesOrderUseCase.updateDraft(request.toCommand(code, userCode, role, warehouseCode));
-        return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
+        return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
     // ── DRAFT → REQUESTED ─────────────────────────────────────────────────────
 
     @Operation(summary = "발주 제출(수정 포함)", description = "DRAFT 발주를 REQUESTED로 전환한다. 라인·창고·날짜를 함께 수정한다.")
     @PutMapping("/{code}")
-    public ResponseEntity<SalesOrderResponse> submit(
+    public ResponseEntity<SalesOrderStatusChangedResponse> submit(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody SubmitSalesOrderRequest request
@@ -145,12 +143,12 @@ public class SalesOrderController {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
         SalesOrder salesOrder = submitSalesOrderUseCase.submit(request.toCommand(code, userCode, userName, position, role, warehouseCode));
-        return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
+        return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
     @Operation(summary = "발주 제출(기존 데이터 그대로)", description = "DRAFT 발주를 REQUESTED로 전환한다. 기존 라인·창고·날짜 그대로 사용. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
     @PatchMapping("/{code}/request")
-    public ResponseEntity<SalesOrderResponse> request(
+    public ResponseEntity<SalesOrderStatusChangedResponse> request(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code
     ) {
@@ -162,14 +160,14 @@ public class SalesOrderController {
         SalesOrder salesOrder = requestSalesOrderUseCase.request(
                 new RequestSalesOrderCommand(code, userCode, userName, position, role, warehouseCode)
         );
-        return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
+        return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
     // ── REQUESTED → 승인 / 반려 / 취소 ───────────────────────────────────────
 
     @Operation(summary = "발주 승인", description = "REQUESTED 발주를 APPROVED로 전환하고 재고 출고를 기록한다.")
     @PatchMapping("/{code}/approve")
-    public ResponseEntity<SalesOrderResponse> approve(
+    public ResponseEntity<SalesOrderStatusChangedResponse> approve(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody ApproveSalesOrderRequest request
@@ -179,12 +177,12 @@ public class SalesOrderController {
         String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         SalesOrder order = approveSalesOrderUseCase.approve(request.toCommand(code, userCode, userName, position, role));
-        return ResponseEntity.ok(SalesOrderResponse.from(order));
+        return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(order));
     }
 
     @Operation(summary = "발주 반려", description = "REQUESTED 발주를 REJECTED로 전환한다.")
     @PatchMapping("/{code}/reject")
-    public ResponseEntity<SalesOrderResponse> reject(
+    public ResponseEntity<SalesOrderStatusChangedResponse> reject(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody RejectSalesOrderRequest request
@@ -194,12 +192,12 @@ public class SalesOrderController {
         String position = JwtClaimExtractor.extractPosition(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         SalesOrder order = rejectSalesOrderUseCase.reject(request.toCommand(code, userCode, userName, position, role));
-        return ResponseEntity.ok(SalesOrderResponse.from(order));
+        return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(order));
     }
 
     @Operation(summary = "발주 취소", description = "REQUESTED 발주를 CANCELED로 전환한다.")
     @PatchMapping("/{code}/cancel")
-    public ResponseEntity<SalesOrderResponse> cancel(
+    public ResponseEntity<SalesOrderStatusChangedResponse> cancel(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody CancelSalesOrderRequest request
@@ -212,14 +210,14 @@ public class SalesOrderController {
         SalesOrder salesOrder = cancelSalesOrderUseCase.cancel(
                 new CancelSalesOrderCommand(code, userCode, userName, position, role, warehouseCode, request.reason())
         );
-        return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
+        return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
     // ── APPROVED → 입고 ───────────────────────────────────────────────────────
 
     @Operation(summary = "입고 처리", description = "APPROVED 발주를 DELIVERED로 전환하고 재고 입고를 기록한다.")
     @PatchMapping("/{code}/deliver")
-    public ResponseEntity<SalesOrderResponse> deliver(
+    public ResponseEntity<SalesOrderStatusChangedResponse> deliver(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code,
             @Valid @RequestBody DeliverSalesOrderRequest request
@@ -232,7 +230,7 @@ public class SalesOrderController {
         SalesOrder salesOrder = deliverSalesOrderUseCase.deliver(
                 new DeliverSalesOrderCommand(code, warehouseCode, userCode, userName, position, role, request.deliveredDate())
         );
-        return ResponseEntity.ok(SalesOrderResponse.from(salesOrder));
+        return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
     // ── 지점 조회 ─────────────────────────────────────────────────────────────
@@ -250,19 +248,24 @@ public class SalesOrderController {
         return ResponseEntity.ok(BranchSalesOrderPageResponse.from(summaryPage));
     }
 
-    @Operation(summary = "지점 발주 상세 조회")
-    @GetMapping("/branch/{code}")
-    public ResponseEntity<BranchSalesOrderDetailResponse> getBranchOrderDetail(
+    @Operation(summary = "발주 상세 조회", description = "역할에 따라 지점·본사 권한으로 상세를 조회한다. 응답 형식은 공통.")
+    @GetMapping("/{code}")
+    public ResponseEntity<SalesOrderDetailResponse> getOrderDetail(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "발주 코드") @PathVariable String code
     ) {
-        String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
-        SalesOrderDetail detail = getBranchSalesOrderDetailUseCase.get(
-                new GetBranchSalesOrderDetailQuery(code, userCode, role, warehouseCode)
-        );
-        return ResponseEntity.ok(BranchSalesOrderDetailResponse.from(detail));
+        SalesOrderDetail detail = switch (role) {
+            case BRANCH_MANAGER, BRANCH_STAFF -> {
+                String userCode = JwtClaimExtractor.extractUserCode(jwt);
+                String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
+                yield getBranchSalesOrderDetailUseCase.get(
+                        new GetBranchSalesOrderDetailQuery(code, userCode, role, warehouseCode));
+            }
+            case ADMIN, HQ_MANAGER, HQ_STAFF ->
+                    getHqSalesOrderDetailUseCase.get(new GetHqSalesOrderDetailQuery(code, role));
+        };
+        return ResponseEntity.ok(SalesOrderDetailResponse.from(detail));
     }
 
     @Operation(summary = "지점 발주 KPI 조회")
@@ -290,17 +293,6 @@ public class SalesOrderController {
                 .map(HqSalesOrderSummaryResponse::from)
                 .toList();
         return ResponseEntity.ok(HqSalesOrderPageResponse.from(summaryPage, content));
-    }
-
-    @Operation(summary = "본사 발주 상세 조회")
-    @GetMapping("/hq/{code}")
-    public ResponseEntity<HqSalesOrderDetailResponse> getHqOrderDetail(
-            @AuthenticationPrincipal Jwt jwt,
-            @Parameter(description = "발주 코드") @PathVariable String code
-    ) {
-        UserRole role = JwtClaimExtractor.extractRole(jwt);
-        HqSalesOrderDetail detail = getHqSalesOrderDetailUseCase.get(new GetHqSalesOrderDetailQuery(code, role));
-        return ResponseEntity.ok(HqSalesOrderDetailResponse.from(detail));
     }
 
     @Operation(summary = "본사 발주 KPI 조회")

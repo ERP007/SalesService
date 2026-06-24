@@ -2,7 +2,7 @@ package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderDetailQuery;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrderDetailUseCase;
-import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -39,7 +39,7 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
      */
     @Override
     @Transactional(readOnly = true)
-    public HqSalesOrderDetail get(GetHqSalesOrderDetailQuery query) {
+    public SalesOrderDetail get(GetHqSalesOrderDetailQuery query) {
         if (!query.role().isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
@@ -48,7 +48,7 @@ public class GetHqSalesOrderDetailService implements GetHqSalesOrderDetailUseCas
 
         ActorRef requester = order.getRequest() != null ? order.getRequest().requestedBy() : null;
 
-        return new HqSalesOrderDetail(
+        return new SalesOrderDetail(
                 order,
                 order.getFrom().nameSnapshot(),
                 order.getTo().nameSnapshot(),

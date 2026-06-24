@@ -1,8 +1,8 @@
 package com.fallguys.salesservice.application.port.inbound.usecase;
 
 import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderDetailQuery;
-import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
 
 public interface GetHqSalesOrderDetailUseCase {
-    HqSalesOrderDetail get(GetHqSalesOrderDetailQuery query);
+    SalesOrderDetail get(GetHqSalesOrderDetailQuery query);
 }

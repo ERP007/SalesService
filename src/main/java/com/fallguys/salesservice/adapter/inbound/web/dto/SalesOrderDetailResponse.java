@@ -1,14 +1,14 @@
 package com.fallguys.salesservice.adapter.inbound.web.dto;
 
-import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
-import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 
 import java.time.Instant;
 import java.util.List;
 
-public record HqSalesOrderDetailResponse(
+public record SalesOrderDetailResponse(
         String code,
         String status,
         WarehouseInfo fromWarehouse,
@@ -37,7 +37,7 @@ public record HqSalesOrderDetailResponse(
         }
     }
 
-    public static HqSalesOrderDetailResponse from(HqSalesOrderDetail detail) {
+    public static SalesOrderDetailResponse from(SalesOrderDetail detail) {
         SalesOrder order = detail.salesOrder();
         SalesOrderRequest request = order.getRequest();
 
@@ -45,7 +45,7 @@ public record HqSalesOrderDetailResponse(
                 ? order.getLines().stream().map(LineResponse::from).toList()
                 : List.of();
 
-        return new HqSalesOrderDetailResponse(
+        return new SalesOrderDetailResponse(
                 order.getCode(),
                 order.getStatus().name(),
                 new WarehouseInfo(order.getFrom().code(), detail.fromWarehouseName()),
