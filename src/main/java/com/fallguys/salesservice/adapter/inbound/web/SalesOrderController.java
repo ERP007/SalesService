@@ -130,7 +130,7 @@ public class SalesOrderController {
 
     // ── DRAFT → REQUESTED ─────────────────────────────────────────────────────
 
-    @Operation(summary = "발주 제출(수정 포함)", description = "DRAFT 발주를 REQUESTED로 전환한다. 라인·창고·날짜를 함께 수정한다.")
+    @Operation(summary = "발주 제출(수정 포함)", description = "DRAFT 발주를 REQUESTED로 전환한다. 라인·창고를 함께 수정한다.")
     @PutMapping("/{code}")
     public ResponseEntity<SalesOrderStatusChangedResponse> submit(
             @AuthenticationPrincipal Jwt jwt,
@@ -146,7 +146,7 @@ public class SalesOrderController {
         return ResponseEntity.ok(SalesOrderStatusChangedResponse.from(salesOrder));
     }
 
-    @Operation(summary = "발주 제출(기존 데이터 그대로)", description = "DRAFT 발주를 REQUESTED로 전환한다. 기존 라인·창고·날짜 그대로 사용. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
+    @Operation(summary = "발주 제출(기존 데이터 그대로)", description = "DRAFT 발주를 REQUESTED로 전환한다. 기존 라인·창고 그대로 사용. BRANCH_MANAGER·BRANCH_STAFF만 허용.")
     @PatchMapping("/{code}/request")
     public ResponseEntity<SalesOrderStatusChangedResponse> request(
             @AuthenticationPrincipal Jwt jwt,
