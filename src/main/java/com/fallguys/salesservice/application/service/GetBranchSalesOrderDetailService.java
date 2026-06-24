@@ -10,6 +10,7 @@ import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
@@ -54,15 +55,23 @@ public class GetBranchSalesOrderDetailService implements GetBranchSalesOrderDeta
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
         }
 
-        String fromWarehouseName = loadWarehousePort.load(salesOrder.getFrom().code()).warehouseName();
-        String toWarehouseName = salesOrder.getTo().code() != null
-                ? loadWarehousePort.load(salesOrder.getTo().code()).warehouseName()
-                : null;
+        // 확정(REQUESTED 이후)은 박제된 창고명 스냅샷을 쓴다(이력 보존 + Inventory 호출 제거).
+        // DRAFT는 스냅샷이 없으므로 현재값을 live 조회한다(임시저장 = 현재 진실).
+        boolean draft = salesOrder.getStatus() == SalesOrderStatus.DRAFT;
+        String fromWarehouseName = warehouseName(salesOrder.getFrom(), draft);
+        String toWarehouseName = warehouseName(salesOrder.getTo(), draft);
 
         ActorRef requester = salesOrder.getRequest() != null ? salesOrder.getRequest().requestedBy() : null;
 
         return new SalesOrderDetail(salesOrder, fromWarehouseName, toWarehouseName, requester,
                 findApprovedActor(query.soCode()));
+    }
+
+    private String warehouseName(WarehouseRef ref, boolean draft) {
+        if (ref == null || ref.code() == null) {
+            return null;
+        }
+        return draft ? loadWarehousePort.load(ref.code()).warehouseName() : ref.nameSnapshot();
     }
 
     // 승인자는 상태 변경 이력의 APPROVED 행 actor 스냅샷에서 가져온다(미승인이면 null).
