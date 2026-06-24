@@ -8,13 +8,15 @@ import java.util.List;
 public record SalesOrderHistoryResponse(
         String status,
         PersonInfo changedBy,
-        Instant changedAt
+        Instant changedAt,
+        StatusChangeMeta meta
 ) {
     public static SalesOrderHistoryResponse from(SalesOrderHistoryEntry entry) {
         return new SalesOrderHistoryResponse(
                 entry.status().name(),
                 PersonInfo.from(entry.changedBy()),
-                entry.changedAt()
+                entry.changedAt(),
+                StatusChangeMeta.from(entry.payload())
         );
     }
 

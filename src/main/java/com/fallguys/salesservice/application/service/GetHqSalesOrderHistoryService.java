@@ -44,7 +44,7 @@ public class GetHqSalesOrderHistoryService implements GetHqSalesOrderHistoryUseC
         loadSalesOrderPort.load(query.soCode());
 
         return loadHistoryPort.loadBySoCode(query.soCode()).stream()
-                .map(h -> new SalesOrderHistoryEntry(h.status(), h.actor(), h.createdAt()))
+                .map(h -> new SalesOrderHistoryEntry(h.status(), h.actor(), h.createdAt(), h.payload()))
                 .toList();
     }
 }

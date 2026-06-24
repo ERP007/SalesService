@@ -54,7 +54,7 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
         }
 
         return loadHistoryPort.loadBySoCode(query.soCode()).stream()
-                .map(h -> new SalesOrderHistoryEntry(h.status(), h.actor(), h.createdAt()))
+                .map(h -> new SalesOrderHistoryEntry(h.status(), h.actor(), h.createdAt(), h.payload()))
                 .toList();
     }
 }
