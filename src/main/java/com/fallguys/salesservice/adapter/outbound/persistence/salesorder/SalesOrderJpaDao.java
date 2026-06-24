@@ -17,7 +17,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
     @Query("""
             SELECT s.status, COUNT(s)
             FROM SalesOrderEntity s
-            WHERE s.fromWarehouseCode = :warehouseCode
+            WHERE s.from.code = :warehouseCode
             GROUP BY s.status
             """)
     List<Object[]> countGroupByStatus(@Param("warehouseCode") String warehouseCode);
@@ -34,7 +34,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
     // searchPattern은 어댑터에서 %/_/\를 이스케이프 후 전달. ESCAPE '\\'로 와일드카드 인젝션 차단.
     @Query(value = """
             SELECT s FROM SalesOrderEntity s
-            WHERE s.fromWarehouseCode = :warehouseCode
+            WHERE s.from.code = :warehouseCode
               AND (:searchPattern IS NULL
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
@@ -49,7 +49,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
             """,
             countQuery = """
             SELECT COUNT(s) FROM SalesOrderEntity s
-            WHERE s.fromWarehouseCode = :warehouseCode
+            WHERE s.from.code = :warehouseCode
               AND (:searchPattern IS NULL
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
@@ -75,7 +75,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
     // searchPattern은 어댑터에서 %/_/\를 이스케이프 후 전달. ESCAPE '\\'로 와일드카드 인젝션 차단.
     @Query(value = """
             SELECT s FROM SalesOrderEntity s
-            WHERE (:warehouseCode IS NULL OR s.fromWarehouseCode = :warehouseCode)
+            WHERE (:warehouseCode IS NULL OR s.from.code = :warehouseCode)
               AND (:searchPattern IS NULL
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
@@ -90,7 +90,7 @@ public interface SalesOrderJpaDao extends JpaRepository<SalesOrderEntity, String
             """,
             countQuery = """
             SELECT COUNT(s) FROM SalesOrderEntity s
-            WHERE (:warehouseCode IS NULL OR s.fromWarehouseCode = :warehouseCode)
+            WHERE (:warehouseCode IS NULL OR s.from.code = :warehouseCode)
               AND (:searchPattern IS NULL
                    OR s.code LIKE :searchPattern ESCAPE '\\'
                    OR EXISTS (
