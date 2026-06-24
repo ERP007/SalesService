@@ -27,15 +27,9 @@ public class SalesOrder {
 
     private List<SalesOrderLine> lines;
 
-    /**
-     * 기존 9-arg 호출부(생성·테스트) 호환용. sagaStatus는 NONE으로 초기화한다.
-     * 영속성 복원(toDomain)은 sagaStatus를 포함한 @AllArgsConstructor 10-arg를 사용한다.
-     */
-    public SalesOrder(String code, WarehouseRef from, WarehouseRef to,
-                      SalesOrderStatus status, String requestMemo,
-                      SalesOrderCreation creation, SalesOrderRequest request, List<SalesOrderLine> lines) {
-        this(code, from, to, status, SagaStatus.NONE,
-                requestMemo, creation, request, lines);
+    /** 화면 표시용 진행 상태(status·sagaStatus 조합 파생). 조합 규칙은 OrderProgress가 소유. */
+    public OrderProgress progress() {
+        return OrderProgress.from(status, sagaStatus);
     }
 
     /**
@@ -56,7 +50,7 @@ public class SalesOrder {
                 ? new SalesOrderRequest(createdBy, now)
                 : null;
         return new SalesOrder(
-                code, from, to, status, requestMemo,
+                code, from, to, status, SagaStatus.NONE, requestMemo,
                 new SalesOrderCreation(createdBy, now),
                 request,
                 lines

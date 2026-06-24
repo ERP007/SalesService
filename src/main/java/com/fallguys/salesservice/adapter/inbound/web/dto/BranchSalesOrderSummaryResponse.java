@@ -6,6 +6,7 @@ import com.fallguys.salesservice.domain.model.salesorder.BranchSalesOrderSummary
 public record BranchSalesOrderSummaryResponse(
         String code,
         SalesOrderStatus status,
+        String progress,
         RequestInfo request,
         int itemCount
 ) {
@@ -13,6 +14,7 @@ public record BranchSalesOrderSummaryResponse(
         return new BranchSalesOrderSummaryResponse(
                 summary.code(),
                 summary.status(),
+                summary.progress().name(),
                 RequestInfo.from(summary.request()),
                 summary.itemCount()
         );

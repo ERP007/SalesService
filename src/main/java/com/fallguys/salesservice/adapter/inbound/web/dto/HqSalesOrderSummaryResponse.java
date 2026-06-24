@@ -8,7 +8,8 @@ public record HqSalesOrderSummaryResponse(
         WarehouseInfo fromWarehouse,
         RequestInfo request,
         int itemCount,
-        SalesOrderStatus status
+        SalesOrderStatus status,
+        String progress
 ) {
     public static HqSalesOrderSummaryResponse from(HqSalesOrderSummary summary) {
         return new HqSalesOrderSummaryResponse(
@@ -16,7 +17,8 @@ public record HqSalesOrderSummaryResponse(
                 WarehouseInfo.from(summary.from()),
                 RequestInfo.from(summary.request()),
                 summary.itemCount(),
-                summary.status()
+                summary.status(),
+                summary.progress().name()
         );
     }
 }

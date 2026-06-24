@@ -11,6 +11,7 @@ import java.util.List;
 public record SalesOrderDetailResponse(
         String code,
         String status,
+        String progress,
         WarehouseInfo fromWarehouse,
         WarehouseInfo toWarehouse,
         PersonInfo requester,
@@ -48,6 +49,7 @@ public record SalesOrderDetailResponse(
         return new SalesOrderDetailResponse(
                 order.getCode(),
                 order.getStatus().name(),
+                order.progress().name(),
                 new WarehouseInfo(order.getFrom().code(), detail.fromWarehouseName()),
                 new WarehouseInfo(order.getTo().code(), detail.toWarehouseName()),
                 PersonInfo.from(detail.requester()),

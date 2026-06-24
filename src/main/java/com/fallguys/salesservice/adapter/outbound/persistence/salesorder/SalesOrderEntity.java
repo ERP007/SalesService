@@ -3,6 +3,7 @@ package com.fallguys.salesservice.adapter.outbound.persistence.salesorder;
 import com.fallguys.salesservice.adapter.outbound.persistence.salesorderline.SalesOrderLineEntity;
 import com.fallguys.salesservice.domain.model.salesorder.BranchSalesOrderSummary;
 import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
+import com.fallguys.salesservice.domain.model.salesorder.OrderProgress;
 import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
@@ -94,11 +95,13 @@ public class SalesOrderEntity {
     // 목록 조회용 요약 변환. itemCount는 @Formula 스칼라라 lines 컬렉션 로드를 유발하지 않는다.
     // 요청 정보는 SalesOrderRequest로 묶어 넘긴다(미요청 DRAFT는 null).
     public BranchSalesOrderSummary toBranchSummary() {
-        return new BranchSalesOrderSummary(code, status, requestSnapshot(), itemCount);
+        return new BranchSalesOrderSummary(
+                code, status, OrderProgress.from(status, sagaStatus), requestSnapshot(), itemCount);
     }
 
     public HqSalesOrderSummary toHqSummary() {
-        return new HqSalesOrderSummary(code, from.toDomain(), status, requestSnapshot(), itemCount);
+        return new HqSalesOrderSummary(
+                code, from.toDomain(), status, OrderProgress.from(status, sagaStatus), requestSnapshot(), itemCount);
     }
 
     private SalesOrderRequest requestSnapshot() {
