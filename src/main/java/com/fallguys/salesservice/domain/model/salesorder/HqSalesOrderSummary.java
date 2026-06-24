@@ -1,7 +1,6 @@
 package com.fallguys.salesservice.domain.model.salesorder;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 public record HqSalesOrderSummary(
         String code,
@@ -11,7 +10,6 @@ public record HqSalesOrderSummary(
         String requesterPosition,
         SalesOrderStatus status,
         Instant requestedAt,
-        LocalDate desiredArrivalDate,
         int itemCount,
         int totalQuantity,
         String unitSnapshot

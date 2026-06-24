@@ -10,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.BatchSize;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,9 +50,6 @@ public class SalesOrderEntity {
     @Column(name = "saga_status", nullable = false)
     private SagaStatus sagaStatus;
 
-    @Column(nullable = false)
-    private LocalDate desiredArrivalDate;
-
     @Column(columnDefinition = "text")
     private String requestMemo;
 
@@ -74,7 +70,7 @@ public class SalesOrderEntity {
                 .toList();
 
         return new SalesOrder(
-                code, from.toDomain(), to.toDomain(), status, sagaStatus, desiredArrivalDate, requestMemo,
+                code, from.toDomain(), to.toDomain(), status, sagaStatus, requestMemo,
                 creation.toDomain(),
                 request != null ? request.toDomain() : null,
                 domainLines
@@ -117,7 +113,6 @@ public class SalesOrderEntity {
         this.to = WarehouseEmbeddable.from(domain.getTo());
         this.status = domain.getStatus();
         this.sagaStatus = domain.getSagaStatus();
-        this.desiredArrivalDate = domain.getDesiredArrivalDate();
         this.requestMemo = domain.getRequestMemo();
         this.creation = CreationEmbeddable.from(domain.getCreation());
         this.request = RequestEmbeddable.from(domain.getRequest());

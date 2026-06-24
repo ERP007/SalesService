@@ -25,8 +25,8 @@ public record BranchSalesOrderRequest(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         LocalDate endDate,
 
-        @Pattern(regexp = "requestedAt|desiredArrivalDate",
-                message = "sortField는 requestedAt, desiredArrivalDate 중 하나여야 합니다")
+        @Pattern(regexp = "requestedAt",
+                message = "sortField는 requestedAt만 허용됩니다")
         String sortField,
 
         @Pattern(regexp = "asc|desc",
@@ -83,11 +83,8 @@ public record BranchSalesOrderRequest(
     }
 
     private static SalesOrderSortField resolveSortField(String sortField) {
-        if (sortField == null) return SalesOrderSortField.REQUESTED_AT;
-        return switch (sortField) {
-            case "desiredArrivalDate" -> SalesOrderSortField.DESIRED_ARRIVAL_DATE;
-            default -> SalesOrderSortField.REQUESTED_AT;
-        };
+        // 정렬 기준은 현재 REQUESTED_AT 하나뿐이다.
+        return SalesOrderSortField.REQUESTED_AT;
     }
 
     private static SortDirection resolveSortDirection(String sortDirection) {

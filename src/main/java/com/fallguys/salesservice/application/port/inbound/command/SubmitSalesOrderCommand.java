@@ -2,7 +2,6 @@ package com.fallguys.salesservice.application.port.inbound.command;
 
 import com.fallguys.salesservice.domain.model.UserRole;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public record SubmitSalesOrderCommand(
@@ -13,7 +12,6 @@ public record SubmitSalesOrderCommand(
         UserRole role,
         String requesterWarehouseCode,
         String toWarehouseCode,
-        LocalDate desiredArrivalDate,
         String requestMemo,
         List<CreateSalesOrderLineCommand> lines
 ) {

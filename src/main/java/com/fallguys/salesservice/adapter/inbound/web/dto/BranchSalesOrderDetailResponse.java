@@ -5,7 +5,6 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 public record BranchSalesOrderDetailResponse(
@@ -13,7 +12,6 @@ public record BranchSalesOrderDetailResponse(
         String status,
         WarehouseInfo fromWarehouse,
         WarehouseInfo toWarehouse,
-        LocalDate desiredArrivalDate,
         String memo,
         Instant approvedAt,
         String invoiceNumber,
@@ -55,7 +53,6 @@ public record BranchSalesOrderDetailResponse(
                 order.getStatus().name(),
                 new WarehouseInfo(order.getFrom().code(), detail.fromWarehouseName()),
                 new WarehouseInfo(order.getTo().code(), detail.toWarehouseName()),
-                order.getDesiredArrivalDate(),
                 order.getRequestMemo(),
                 approvedAt,
                 invoiceNumber,

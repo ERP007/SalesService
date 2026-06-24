@@ -6,7 +6,6 @@ import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 public record HqSalesOrderDetailResponse(
@@ -17,7 +16,6 @@ public record HqSalesOrderDetailResponse(
         PersonInfo requester,
         Instant requestedAt,
         String requestMemo,
-        LocalDate desiredArrivalDate,
         PersonInfo approval,
         List<LineResponse> lines
 ) {
@@ -55,7 +53,6 @@ public record HqSalesOrderDetailResponse(
                 PersonInfo.from(detail.requester()),
                 request != null ? request.requestedAt() : null,
                 order.getRequestMemo(),
-                order.getDesiredArrivalDate(),
                 PersonInfo.from(detail.approver()),
                 lines
         );

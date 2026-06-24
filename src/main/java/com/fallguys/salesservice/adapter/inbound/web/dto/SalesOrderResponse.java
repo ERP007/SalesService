@@ -4,8 +4,6 @@ import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 
-import java.time.LocalDate;
-
 /**
  * 발주 상태 전환(생성·제출·승인·반려·취소·입고) 공통 응답.
  *
@@ -16,7 +14,6 @@ public record SalesOrderResponse(
         String code,
         String fromWarehouseCode,
         String toWarehouseCode,
-        LocalDate desiredArrivalDate,
         SalesOrderStatus status,
         int totalQuantity
 ) {
@@ -28,7 +25,6 @@ public record SalesOrderResponse(
                 order.getCode(),
                 order.getFrom().code(),
                 order.getTo().code(),
-                order.getDesiredArrivalDate(),
                 order.getStatus(),
                 totalQuantity
         );

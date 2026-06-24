@@ -9,7 +9,6 @@ public enum SalesErrorCode implements ErrorCode {
     // 400 BAD_REQUEST
     INVALID_REQUEST("SO-001", "요청 본문이 유효하지 않습니다"),
     DUPLICATE_ITEM("SO-002", "동일한 부품이 중복 포함되어 있습니다"),
-    INVALID_DESIRED_ARRIVAL_DATE("SO-003", "도착 희망일이 유효하지 않습니다"),
     WAREHOUSE_INACTIVE("SO-004", "비활성화된 창고입니다"),
     ITEM_INACTIVE("SO-005", "비활성화된 부품입니다"),
     INVALID_APPROVED_DATE("SO-007", "승인일은 요청일보다 이전일 수 없습니다"),

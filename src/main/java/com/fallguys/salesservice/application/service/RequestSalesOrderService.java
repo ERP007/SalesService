@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +47,6 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
      * 1) SO 존재 확인 (local DB)
      * 2) SO 소유 지점과 요청자 창고 일치 검증 (local)
      * 3) 중복 부품 코드 검증 (local, 기존 라인 기준)
-     * 4) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 5) 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
      * 5-1) 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
      * 6) 부품 존재 확인 및 스냅샷 수집 (Item 서비스)
@@ -64,7 +62,6 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
      * - SO 소유 지점 불일치: ForbiddenException (SO-013, 403)
      * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 중복 부품: SalesOrderException (SO-002, 400)
-     * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
      * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)
      * - 부품 미존재: ResourceNotFoundException (SO-016, 404)
@@ -83,7 +80,6 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
         }
 
         validateNoDuplicateItems(salesOrder.getLines());
-        validateDesiredArrivalDate(salesOrder.getDesiredArrivalDate());
 
         verifyWarehousePort.verify(salesOrder.getFrom().code());
         verifyWarehousePort.verify(salesOrder.getTo().code());
@@ -106,7 +102,7 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
                 loadWarehousePort.load(salesOrder.getTo().code()).warehouseName());
         salesOrder.submitRequest(
                 requestedBy, now, from, to,
-                salesOrder.getDesiredArrivalDate(), salesOrder.getRequestMemo(), lines
+                salesOrder.getRequestMemo(), lines
         );
 
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
@@ -122,18 +118,6 @@ public class RequestSalesOrderService implements RequestSalesOrderUseCase {
                 throw new SalesOrderException(SalesErrorCode.DUPLICATE_ITEM,
                         "부품 코드 " + line.getItemCode() + "이(가) 중복되었습니다");
             }
-        }
-    }
-
-    private void validateDesiredArrivalDate(LocalDate date) {
-        LocalDate today = LocalDate.now();
-        if (!date.isAfter(today)) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘 이후여야 합니다");
-        }
-        if (date.isAfter(today.plusDays(60))) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘로부터 60일 이내여야 합니다");
         }
     }
 

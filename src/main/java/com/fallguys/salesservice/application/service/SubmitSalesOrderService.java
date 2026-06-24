@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -49,7 +48,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * 1) SO 존재 확인 (local DB)
      * 2) DRAFT 상태 검증 (local)
      * 3) 중복 부품 코드 검증 (local)
-     * 4) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 5) 요청자 창고 코드(JWT)와 SO 소유 지점 일치 검증 (local)
      * 6) 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
      * 6-1) 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
@@ -65,7 +63,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
      * - SO 미존재: ResourceNotFoundException (SO-014, 404)
      * - DRAFT 아님: InvalidStatusTransitionException (SO-018, 409)
      * - 중복 부품: SalesOrderException (SO-002, 400)
-     * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
      * - SO 소유 지점 불일치: ForbiddenException (SO-013, 403)
      * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)
@@ -81,7 +78,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
 
         validateLinesNotEmpty(command.lines());
         validateNoDuplicateItems(command.lines());
-        validateDesiredArrivalDate(command.desiredArrivalDate());
 
         if (!command.requesterWarehouseCode().equals(salesOrder.getFrom().code())) {
             throw new ForbiddenException(SalesErrorCode.SO_FORBIDDEN);
@@ -107,7 +103,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
                 loadWarehousePort.load(command.toWarehouseCode()).warehouseName());
         salesOrder.submitRequest(
                 requestedBy, now, from, to,
-                command.desiredArrivalDate(), command.requestMemo(), lines
+                command.requestMemo(), lines
         );
 
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
@@ -130,18 +126,6 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
                 throw new SalesOrderException(SalesErrorCode.DUPLICATE_ITEM,
                         "부품 코드 " + line.itemCode() + "이(가) 중복되었습니다");
             }
-        }
-    }
-
-    private void validateDesiredArrivalDate(LocalDate date) {
-        LocalDate today = LocalDate.now();
-        if (!date.isAfter(today)) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘 이후여야 합니다");
-        }
-        if (date.isAfter(today.plusDays(60))) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘로부터 60일 이내여야 합니다");
         }
     }
 

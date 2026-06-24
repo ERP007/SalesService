@@ -59,7 +59,6 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
     private static String toJpaSortField(SalesOrderSortField field) {
         return switch (field) {
             case REQUESTED_AT -> "request.requestedAt";
-            case DESIRED_ARRIVAL_DATE -> "desiredArrivalDate";
         };
     }
 
@@ -90,11 +89,6 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         );
     }
 
-    private static final List<SalesOrderStatus> DELAYED_STATUSES = List.of(
-            SalesOrderStatus.REQUESTED,
-            SalesOrderStatus.APPROVED
-    );
-
     private static final Set<SalesOrderStatus> HQ_ACTIVE_STATUSES = Set.of(
             SalesOrderStatus.REQUESTED,
             SalesOrderStatus.APPROVED,
@@ -110,12 +104,10 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         long total = HQ_ACTIVE_STATUSES.stream()
                 .mapToLong(s -> counts.getOrDefault(s, 0L))
                 .sum();
-        long delayed = salesOrderJpaDao.countDelayed(DELAYED_STATUSES, LocalDate.now());
         return new HqSalesOrderKpi(
                 total,
                 counts.getOrDefault(SalesOrderStatus.REQUESTED, 0L),
-                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L),
-                delayed
+                counts.getOrDefault(SalesOrderStatus.APPROVED, 0L)
         );
     }
 
@@ -254,7 +246,6 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
                 request != null ? request.requestedByPosition() : null,
                 entity.getStatus(),
                 request != null ? request.requestedAt() : null,
-                entity.getDesiredArrivalDate(),
                 lines.size(),
                 totalQuantity,
                 unitSnapshot
@@ -279,7 +270,6 @@ public class SalesOrderPersistenceAdapter implements SaveSalesOrderPort, LoadSal
         return new SalesOrderSummary(
                 entity.getCode(),
                 entity.getStatus(),
-                entity.getDesiredArrivalDate(),
                 requestedAt,
                 lines.size(),
                 totalQuantity,

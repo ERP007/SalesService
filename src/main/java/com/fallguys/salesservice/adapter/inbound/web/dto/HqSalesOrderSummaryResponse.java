@@ -4,7 +4,6 @@ import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 public record HqSalesOrderSummaryResponse(
         String code,
@@ -13,7 +12,6 @@ public record HqSalesOrderSummaryResponse(
         String requesterName,
         String requesterPosition,
         Instant requestedAt,
-        LocalDate desiredArrivalDate,
         int itemCount,
         int totalQuantity,
         String unitSnapshot,
@@ -27,7 +25,6 @@ public record HqSalesOrderSummaryResponse(
                 summary.requesterName(),
                 summary.requesterPosition(),
                 summary.requestedAt(),
-                summary.desiredArrivalDate(),
                 summary.itemCount(),
                 summary.totalQuantity(),
                 summary.unitSnapshot(),

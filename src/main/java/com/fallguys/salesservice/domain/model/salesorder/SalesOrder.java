@@ -9,7 +9,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -21,7 +20,6 @@ public class SalesOrder {
     private WarehouseRef to;
     private SalesOrderStatus status;
     private SagaStatus sagaStatus;
-    private LocalDate desiredArrivalDate;
     private String requestMemo;
 
     private final SalesOrderCreation creation;
@@ -34,10 +32,10 @@ public class SalesOrder {
      * 영속성 복원(toDomain)은 sagaStatus를 포함한 @AllArgsConstructor 10-arg를 사용한다.
      */
     public SalesOrder(String code, WarehouseRef from, WarehouseRef to,
-                      SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
+                      SalesOrderStatus status, String requestMemo,
                       SalesOrderCreation creation, SalesOrderRequest request, List<SalesOrderLine> lines) {
         this(code, from, to, status, SagaStatus.NONE,
-                desiredArrivalDate, requestMemo, creation, request, lines);
+                requestMemo, creation, request, lines);
     }
 
     /**
@@ -52,13 +50,13 @@ public class SalesOrder {
      * 상태별 분기(REQUESTED → request 기록)는 도메인 규칙이므로 여기서 결정한다.
      */
     public static SalesOrder create(String code, WarehouseRef from, WarehouseRef to,
-                                    SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,
+                                    SalesOrderStatus status, String requestMemo,
                                     ActorRef createdBy, Instant now, List<SalesOrderLine> lines) {
         SalesOrderRequest request = status == SalesOrderStatus.REQUESTED
                 ? new SalesOrderRequest(createdBy, now)
                 : null;
         return new SalesOrder(
-                code, from, to, status, desiredArrivalDate, requestMemo,
+                code, from, to, status, requestMemo,
                 new SalesOrderCreation(createdBy, now),
                 request,
                 lines
@@ -70,19 +68,17 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) DRAFT 상태인지 검증한다.
-     * 2) 창고·날짜·메모·라인을 덮어쓴다. 상태는 변경하지 않는다.
+     * 2) 창고·메모·라인을 덮어쓴다. 상태는 변경하지 않는다.
      *
      * 예외:
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
-    public void updateDraft(WarehouseRef to, LocalDate desiredArrivalDate,
-                            String requestMemo, List<SalesOrderLine> lines) {
+    public void updateDraft(WarehouseRef to, String requestMemo, List<SalesOrderLine> lines) {
         if (this.status != SalesOrderStatus.DRAFT) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DRAFT 상태에서만 수정 가능합니다. 현재 상태: " + this.status);
         }
         this.to = to;
-        this.desiredArrivalDate = desiredArrivalDate;
         this.requestMemo = requestMemo;
         this.lines = lines;
     }
@@ -92,7 +88,7 @@ public class SalesOrder {
      *
      * 흐름:
      * 1) DRAFT 상태인지 검증한다.
-     * 2) 요청 데이터(창고, 날짜, 메모, 라인)를 덮어쓴다. 확정 시점이므로 from·to 창고명을
+     * 2) 요청 데이터(창고, 메모, 라인)를 덮어쓴다. 확정 시점이므로 from·to 창고명을
      *    박제한 WarehouseRef로 교체한다(DRAFT 동안 code만 들고 있던 것을 확정).
      * 3) 상태를 REQUESTED로, request(요청자·요청시각) 운영 정보를 기록한다.
      *
@@ -102,15 +98,13 @@ public class SalesOrder {
      * - DRAFT가 아닌 경우: InvalidStatusTransitionException (SO-018, 409)
      */
     public void submitRequest(ActorRef requestedBy, Instant now, WarehouseRef from, WarehouseRef to,
-                              LocalDate desiredArrivalDate, String requestMemo,
-                              List<SalesOrderLine> lines) {
+                              String requestMemo, List<SalesOrderLine> lines) {
         if (this.status != SalesOrderStatus.DRAFT) {
             throw new InvalidStatusTransitionException(SalesErrorCode.INVALID_STATUS_TRANSITION,
                     "DRAFT 상태에서만 요청 가능합니다. 현재 상태: " + this.status);
         }
         this.from = from;
         this.to = to;
-        this.desiredArrivalDate = desiredArrivalDate;
         this.requestMemo = requestMemo;
         this.lines = lines;
         this.status = SalesOrderStatus.REQUESTED;

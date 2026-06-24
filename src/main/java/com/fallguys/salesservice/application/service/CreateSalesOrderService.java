@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +46,6 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      *
      * 흐름:
      * 1) 중복 부품 코드 검증 (local)
-     * 2) 도착 희망일 범위 검증 (local) — 오늘 초과 ~ 60일 이내
      * 3) User 서비스 호출 → 사번으로 지점 창고 코드(fromWarehouseCode) 확보
      * 4) [REQUESTED만] 지점 창고(fromWarehouseCode) 활성 검증 (Inventory 서비스)
      * 4-1) [REQUESTED만] 본사 창고(toWarehouseCode) 활성 검증 (Inventory 서비스)
@@ -62,7 +60,6 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
      * 예외:
      * - HQ 계열 또는 미허용 역할: ForbiddenException (ER-403, 403)
      * - 중복 부품: SalesOrderException (SO-002, 400)
-     * - 도착 희망일 범위 초과: SalesOrderException (SO-003, 400)
      * - 사번 미존재: ResourceNotFoundException (SO-017, 404)
      * - 창고 미존재: ResourceNotFoundException (SO-015, 404)
      * - 창고 비활성: SalesOrderException (SO-004, 400)
@@ -75,7 +72,6 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }
         validateNoDuplicateItems(command.lines());
-        validateDesiredArrivalDate(command.desiredArrivalDate());
 
         Map<String, ItemInfo> itemMap = null;
         if (command.status() == SalesOrderStatus.REQUESTED) {
@@ -115,7 +111,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
 
         SalesOrder salesOrder = SalesOrder.create(
                 soCode, from, to, command.status(),
-                command.desiredArrivalDate(), command.requestMemo(),
+                command.requestMemo(),
                 createdBy, now, lines
         );
 
@@ -132,18 +128,6 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
                 throw new SalesOrderException(SalesErrorCode.DUPLICATE_ITEM,
                         "부품 코드 " + line.itemCode() + "이(가) 중복되었습니다");
             }
-        }
-    }
-
-    private void validateDesiredArrivalDate(LocalDate date) {
-        LocalDate today = LocalDate.now();
-        if (!date.isAfter(today)) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘 이후여야 합니다");
-        }
-        if (date.isAfter(today.plusDays(60))) {
-            throw new SalesOrderException(SalesErrorCode.INVALID_DESIRED_ARRIVAL_DATE,
-                    "도착 희망일은 오늘로부터 60일 이내여야 합니다");
         }
     }
 
