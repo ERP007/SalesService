@@ -47,9 +47,9 @@ public class SalesOrder {
      * 1) 생성 이력(createdBy, now)을 항상 기록한다.
      * 2) 즉시 요청(REQUESTED)이면 요청 이력(requestedBy=createdBy, now)도 기록하고, DRAFT면 남기지 않는다.
      *
-     * createdBy·from·to는 호출자(서비스)가 단계에 맞게 구성한다 — DRAFT는 code만(codeOnly),
-     * REQUESTED는 name·position·창고명을 박제(of)해 넘긴다. 상태별 분기(REQUESTED → request 기록)는
-     * 도메인 규칙이므로 여기서 결정한다.
+     * createdBy(행위자)는 단계 무관 항상 name·position을 박제해 넘긴다(이력에 남는 불변 사실).
+     * from·to(창고)는 변동 가능하므로 DRAFT는 code만(codeOnly), REQUESTED는 창고명을 박제(of)해 넘긴다.
+     * 상태별 분기(REQUESTED → request 기록)는 도메인 규칙이므로 여기서 결정한다.
      */
     public static SalesOrder create(String code, WarehouseRef from, WarehouseRef to,
                                     SalesOrderStatus status, LocalDate desiredArrivalDate, String requestMemo,

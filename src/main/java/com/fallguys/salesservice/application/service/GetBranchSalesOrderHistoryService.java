@@ -39,7 +39,7 @@ public class GetBranchSalesOrderHistoryService implements GetBranchSalesOrderHis
      * 3) 소속 창고 검증 — fromWarehouse가 요청자 창고와 일치해야 함
      * 4) 이력 테이블 조회(created_at DESC) — DRAFT(생성) 행 포함
      * 5) 담당자 이름·직급은 각 이력 행에 박제된 actor 스냅샷에서 읽는다(외부 호출 없음).
-     *    DRAFT 단계 행은 code만 들고 있어 이름이 비어 있을 수 있다.
+     *    행위자는 DRAFT(생성) 행부터 박제되므로 이름이 채워져 있다.
      *
      * 트랜잭션: 읽기 전용. 외부 서비스 호출 없음(스냅샷 사용).
      *

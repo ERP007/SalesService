@@ -98,20 +98,20 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         }
         Instant now = Instant.now();
 
-        // 확정(REQUESTED) 단계에서만 창고명·행위자 name/position을 박제한다. DRAFT는 code만 보관.
+        // 행위자(createdBy)는 누가 만들었는지 불변 사실이므로 DRAFT부터 name/position을 박제해
+        // 이력에 남긴다. 창고명은 변동 가능하므로 확정(REQUESTED) 시점에만 박제하고 DRAFT는 code만 보관.
+        ActorRef createdBy = ActorRef.of(
+                command.requestedBy(), command.requesterName(), command.requesterPosition());
         WarehouseRef from;
         WarehouseRef to;
-        ActorRef createdBy;
         if (command.status() == SalesOrderStatus.REQUESTED) {
             from = WarehouseRef.of(command.fromWarehouseCode(),
                     loadWarehousePort.load(command.fromWarehouseCode()).warehouseName());
             to = WarehouseRef.of(command.toWarehouseCode(),
                     loadWarehousePort.load(command.toWarehouseCode()).warehouseName());
-            createdBy = ActorRef.of(command.requestedBy(), command.requesterName(), command.requesterPosition());
         } else {
             from = WarehouseRef.codeOnly(command.fromWarehouseCode());
             to = WarehouseRef.codeOnly(command.toWarehouseCode());
-            createdBy = ActorRef.codeOnly(command.requestedBy());
         }
 
         SalesOrder salesOrder = SalesOrder.create(
