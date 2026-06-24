@@ -7,6 +7,7 @@ import com.fallguys.salesservice.application.port.outbound.port.PendingStatusCha
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorderhistory.PendingStatusChange;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,15 +44,20 @@ public class CompleteStockSagaService implements CompleteStockSagaUseCase {
         if (!saga.inProgress()) {
             return;
         }
+
+        // 불변식: saga가 진행 중이면 staging은 행위 시점에 같은 트랜잭션으로 저장됐어야 한다.
+        // 없으면 데이터 손상/버그이므로 조용히 DONE 확정해 이력을 잃지 말고, 트랜잭션을 롤백해 표면화한다.
+        PendingStatusChange pending = pendingStatusChangePort.findBySoCode(soCode)
+                .orElseThrow(() -> new IllegalStateException(
+                        "saga 확정 시 staging된 상태 변경이 없습니다(불변식 위반): soCode=" + soCode));
+
         if (saga == SagaStatus.SENDING) {
             order.markSagaProcessing();
         }
         order.markSagaDone();
         saveSalesOrderPort.save(order);
 
-        pendingStatusChangePort.findBySoCode(soCode).ifPresent(pending -> {
-            appendHistoryPort.append(pending.toHistory());
-            pendingStatusChangePort.removeBySoCode(soCode);
-        });
+        appendHistoryPort.append(pending.toHistory());
+        pendingStatusChangePort.removeBySoCode(soCode);
     }
 }
