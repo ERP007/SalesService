@@ -1,18 +1,20 @@
 package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrderDetailQuery;
-import com.fallguys.salesservice.application.port.inbound.model.HqSalesOrderDetail;
+import com.fallguys.salesservice.application.port.inbound.model.SalesOrderDetail;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
-import com.fallguys.salesservice.application.port.outbound.port.LoadUserInfoPort;
-import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
-import com.fallguys.salesservice.application.port.outbound.model.UserInfo;
-import com.fallguys.salesservice.application.port.outbound.model.WarehouseInfo;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
-import com.fallguys.salesservice.domain.model.*;
-import com.fallguys.salesservice.domain.model.salesorder.*;
+import com.fallguys.salesservice.domain.model.ActorRef;
+import com.fallguys.salesservice.domain.model.UserRole;
+import com.fallguys.salesservice.domain.model.WarehouseRef;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.SalesOrderStatusHistory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,9 +26,8 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,8 +39,6 @@ class GetHqSalesOrderDetailServiceTest {
 
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock LoadSalesOrderStatusHistoryPort loadHistoryPort;
-    @Mock LoadWarehousePort loadWarehousePort;
-    @Mock LoadUserInfoPort loadUserInfoPort;
 
     @InjectMocks
     GetHqSalesOrderDetailService service;
@@ -52,22 +51,20 @@ class GetHqSalesOrderDetailServiceTest {
     private static final String TO_WAREHOUSE = "WH-HQ-01";
     private static final String TO_WAREHOUSE_NAME = "본사 중앙창고";
     private static final Instant FIXED_INSTANT = Instant.parse("2026-06-08T09:00:00Z");
-    private static final LocalDate FIXED_DATE = LocalDate.of(2026, 6, 8);
+
+    private static final ActorRef REQUESTER = ActorRef.of(REQUESTER_CODE, "정유진", "서비스 매니저");
+    private static final ActorRef APPROVER = ActorRef.of(APPROVER_CODE, "강지석", "본사 매니저");
 
     @BeforeEach
     void setUp() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder());
         given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
-                .willReturn(java.util.Optional.empty());
-        given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME));
-        given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, TO_WAREHOUSE_NAME));
-        given(loadUserInfoPort.loadByUserCodes(List.of(REQUESTER_CODE)))
-                .willReturn(Map.of(REQUESTER_CODE, new UserInfo(REQUESTER_CODE, "정유진", "서비스 매니저")));
+                .willReturn(Optional.empty());
     }
 
     @Test
     void HQ_MANAGER_상세_조회_성공() {
-        HqSalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
+        SalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
 
         assertThat(result.salesOrder().getCode()).isEqualTo(SO_CODE);
         assertThat(result.fromWarehouseName()).isEqualTo(FROM_WAREHOUSE_NAME);
@@ -76,38 +73,26 @@ class GetHqSalesOrderDetailServiceTest {
 
     @Test
     void HQ_STAFF_상세_조회_성공() {
-        HqSalesOrderDetail result = service.get(query(UserRole.HQ_STAFF));
-
-        assertThat(result.salesOrder().getCode()).isEqualTo(SO_CODE);
+        assertThat(service.get(query(UserRole.HQ_STAFF)).salesOrder().getCode()).isEqualTo(SO_CODE);
     }
 
     @Test
     void ADMIN_상세_조회_성공() {
-        HqSalesOrderDetail result = service.get(query(UserRole.ADMIN));
-
-        assertThat(result.salesOrder().getCode()).isEqualTo(SO_CODE);
+        assertThat(service.get(query(UserRole.ADMIN)).salesOrder().getCode()).isEqualTo(SO_CODE);
     }
 
     @Test
     void BRANCH_MANAGER_조회_시도시_ForbiddenException() {
         assertThatThrownBy(() -> service.get(query(UserRole.BRANCH_MANAGER)))
                 .isInstanceOf(ForbiddenException.class);
-
         then(loadSalesOrderPort).shouldHaveNoInteractions();
         then(loadHistoryPort).shouldHaveNoInteractions();
-        then(loadWarehousePort).shouldHaveNoInteractions();
-        then(loadUserInfoPort).shouldHaveNoInteractions();
     }
 
     @Test
     void BRANCH_STAFF_조회_시도시_ForbiddenException() {
         assertThatThrownBy(() -> service.get(query(UserRole.BRANCH_STAFF)))
                 .isInstanceOf(ForbiddenException.class);
-
-        then(loadSalesOrderPort).shouldHaveNoInteractions();
-        then(loadHistoryPort).shouldHaveNoInteractions();
-        then(loadWarehousePort).shouldHaveNoInteractions();
-        then(loadUserInfoPort).shouldHaveNoInteractions();
     }
 
     @Test
@@ -120,67 +105,35 @@ class GetHqSalesOrderDetailServiceTest {
     }
 
     @Test
-    void toWarehouseCode_null이면_toWarehouseName_null_반환() {
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(orderWithoutToWarehouse());
+    void requester는_요청_스냅샷에서_반환됨() {
+        SalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
 
-        HqSalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
-
-        assertThat(result.toWarehouseName()).isNull();
-        then(loadWarehousePort).should(never()).load(null);
+        assertThat(result.requester()).isNotNull();
+        assertThat(result.requester().nameSnapshot()).isEqualTo("정유진");
+        assertThat(result.requester().positionSnapshot()).isEqualTo("서비스 매니저");
     }
 
     @Test
-    void requesterInfo_조회_후_반환됨() {
-        HqSalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
-
-        assertThat(result.requesterInfo()).isNotNull();
-        assertThat(result.requesterInfo().name()).isEqualTo("정유진");
-        assertThat(result.requesterInfo().position()).isEqualTo("서비스 매니저");
-    }
-
-    @Test
-    void 승인된_발주_requester와_approver_batch_조회됨() {
+    void approver는_APPROVED_이력_actor_스냅샷에서_반환됨() {
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(approvedOrder());
         given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
-                .willReturn(java.util.Optional.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
-                        APPROVER_CODE, FIXED_INSTANT)));
-        given(loadUserInfoPort.loadByUserCodes(argThat(codes ->
-                codes.contains(REQUESTER_CODE) && codes.contains(APPROVER_CODE) && codes.size() == 2
-        ))).willReturn(Map.of(
-                REQUESTER_CODE, new UserInfo(REQUESTER_CODE, "정유진", "서비스 매니저"),
-                APPROVER_CODE, new UserInfo(APPROVER_CODE, "강지석", "본사 매니저")
-        ));
+                .willReturn(Optional.of(SalesOrderStatusHistory.of(
+                        SO_CODE, SalesOrderStatus.APPROVED, APPROVER, FIXED_INSTANT)));
 
-        HqSalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
+        SalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
 
-        assertThat(result.requesterInfo().name()).isEqualTo("정유진");
-        assertThat(result.approverInfo().name()).isEqualTo("강지석");
+        assertThat(result.requester().nameSnapshot()).isEqualTo("정유진");
+        assertThat(result.approver().nameSnapshot()).isEqualTo("강지석");
     }
 
     @Test
-    void requester와_approver_동일인이면_user_서비스_1회만_호출됨() {
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(selfApprovedOrder());
-        given(loadHistoryPort.findLatestBySoCodeAndStatus(SO_CODE, SalesOrderStatus.APPROVED))
-                .willReturn(java.util.Optional.of(SalesOrderStatusHistory.of(SO_CODE, SalesOrderStatus.APPROVED,
-                        REQUESTER_CODE, FIXED_INSTANT)));
-        given(loadUserInfoPort.loadByUserCodes(List.of(REQUESTER_CODE)))
-                .willReturn(Map.of(REQUESTER_CODE, new UserInfo(REQUESTER_CODE, "정유진", "서비스 매니저")));
-
-        service.get(query(UserRole.HQ_MANAGER));
-
-        then(loadUserInfoPort).should().loadByUserCodes(List.of(REQUESTER_CODE));
+    void 미승인_발주_approver_null() {
+        assertThat(service.get(query(UserRole.HQ_MANAGER)).approver()).isNull();
     }
 
     @Test
-    void 미승인_발주_approverInfo_null() {
-        HqSalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
-
-        assertThat(result.approverInfo()).isNull();
-    }
-
-    @Test
-    void 창고명이_응답에_올바르게_매핑됨() {
-        HqSalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
+    void 창고명이_스냅샷에서_매핑됨() {
+        SalesOrderDetail result = service.get(query(UserRole.HQ_MANAGER));
 
         assertThat(result.fromWarehouseName()).isEqualTo(FROM_WAREHOUSE_NAME);
         assertThat(result.toWarehouseName()).isEqualTo(TO_WAREHOUSE_NAME);
@@ -191,40 +144,21 @@ class GetHqSalesOrderDetailServiceTest {
     }
 
     private SalesOrder requestedOrder() {
-        return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.REQUESTED, FIXED_DATE.plusDays(3), null,
-                new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
-                new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
-                List.of()
-        );
-    }
-
-    private SalesOrder orderWithoutToWarehouse() {
-        return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, null,
-                SalesOrderStatus.DRAFT, FIXED_DATE.plusDays(3), null,
-                new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
-                null, List.of()
-        );
+        return order(SalesOrderStatus.REQUESTED);
     }
 
     private SalesOrder approvedOrder() {
-        return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.APPROVED, FIXED_DATE.plusDays(3), null,
-                new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
-                new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
-                List.of()
-        );
+        return order(SalesOrderStatus.APPROVED);
     }
 
-    private SalesOrder selfApprovedOrder() {
+    private SalesOrder order(SalesOrderStatus status) {
         return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.APPROVED, FIXED_DATE.plusDays(3), null,
-                new SalesOrderCreation(REQUESTER_CODE, FIXED_INSTANT),
-                new SalesOrderRequest(REQUESTER_CODE, FIXED_INSTANT),
+                SO_CODE,
+                WarehouseRef.of(FROM_WAREHOUSE, FROM_WAREHOUSE_NAME),
+                WarehouseRef.of(TO_WAREHOUSE, TO_WAREHOUSE_NAME),
+                status, SagaStatus.NONE, null,
+                new SalesOrderCreation(REQUESTER, FIXED_INSTANT),
+                new SalesOrderRequest(REQUESTER, FIXED_INSTANT),
                 List.of()
         );
     }

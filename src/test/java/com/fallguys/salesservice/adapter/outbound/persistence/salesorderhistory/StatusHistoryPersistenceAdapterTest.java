@@ -1,5 +1,6 @@
 package com.fallguys.salesservice.adapter.outbound.persistence.salesorderhistory;
 
+import com.fallguys.salesservice.domain.model.ActorRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.model.salesorderhistory.ApprovalPayload;
 import com.fallguys.salesservice.domain.model.salesorderhistory.CancellationPayload;
@@ -40,7 +41,7 @@ class StatusHistoryPersistenceAdapterTest {
     // append → load 라운드트립으로 status별 payload 직렬화/역직렬화를 검증한다.
     private void assertRoundTrip(SalesOrderStatus status, StatusChangePayload payload) {
         SalesOrderStatusHistory original = new SalesOrderStatusHistory(
-                "SO-2026-06-0001", status, "EMP-1", payload, Instant.parse("2026-06-19T00:00:00Z"));
+                "SO-2026-06-0001", status, ActorRef.of("EMP-1", "정유진", "담당"), payload, Instant.parse("2026-06-19T00:00:00Z"));
 
         ArgumentCaptor<SalesOrderStatusHistoryEntity> captor =
                 ArgumentCaptor.forClass(SalesOrderStatusHistoryEntity.class);
@@ -90,7 +91,7 @@ class StatusHistoryPersistenceAdapterTest {
     @Test
     void 최신_상태_이력을_상태별로_단건_조회한다() {
         SalesOrderStatusHistory original = new SalesOrderStatusHistory(
-                "SO-2026-06-0001", SalesOrderStatus.APPROVED, "EMP-1",
+                "SO-2026-06-0001", SalesOrderStatus.APPROVED, ActorRef.of("EMP-1", "정유진", "담당"),
                 new ApprovalPayload(LocalDate.of(2026, 6, 20), CarrierType.VEHICLE, "INV-1"),
                 Instant.parse("2026-06-19T00:00:00Z"));
         SalesOrderStatusHistoryEntity entity = SalesOrderStatusHistoryEntity.from(
