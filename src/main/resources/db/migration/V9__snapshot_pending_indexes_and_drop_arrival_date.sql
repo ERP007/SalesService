@@ -12,7 +12,8 @@ ALTER TABLE sales_orders
     ADD COLUMN created_by_name       VARCHAR(255),
     ADD COLUMN created_by_position   VARCHAR(255),
     ADD COLUMN requested_by_name     VARCHAR(255),
-    ADD COLUMN requested_by_position VARCHAR(255);
+    ADD COLUMN requested_by_position VARCHAR(255),
+    ADD COLUMN last_failure_reason   TEXT;
 
 -- 2) 도착 희망일 제거
 ALTER TABLE sales_orders
