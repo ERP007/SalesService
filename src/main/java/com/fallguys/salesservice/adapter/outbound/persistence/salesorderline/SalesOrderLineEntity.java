@@ -7,7 +7,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "sales_order_lines")
+@Table(name = "sales_order_lines", indexes = {
+        // so_code로 라인을 묶어 조회(EXISTS 검색·@Formula itemCount·라인 로드)하므로 FK 인덱스 필수.
+        @Index(name = "idx_sol_so_code", columnList = "so_code")
+})
 @Getter
 @NoArgsConstructor
 public class SalesOrderLineEntity {

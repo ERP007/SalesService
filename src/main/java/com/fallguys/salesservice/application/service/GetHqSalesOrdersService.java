@@ -3,8 +3,9 @@ package com.fallguys.salesservice.application.service;
 import com.fallguys.salesservice.application.port.inbound.query.GetHqSalesOrdersQuery;
 import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrdersUseCase;
 import com.fallguys.salesservice.application.port.outbound.filter.HqSalesOrderFilter;
-import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
+import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
 import com.fallguys.salesservice.application.port.outbound.port.LoadHqSalesOrdersPort;
+import com.fallguys.salesservice.domain.model.salesorder.HqSalesOrderSummary;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
@@ -43,7 +44,7 @@ public class GetHqSalesOrdersService implements GetHqSalesOrdersUseCase {
      */
     @Override
     @Transactional(readOnly = true)
-    public HqSalesOrderSummaryPage getOrders(GetHqSalesOrdersQuery query) {
+    public SalesOrderSummaryPage<HqSalesOrderSummary> getOrders(GetHqSalesOrdersQuery query) {
         if (!query.role().isHqUser()) {
             throw new ForbiddenException(CommonErrorCode.UNAUTHORIZED);
         }

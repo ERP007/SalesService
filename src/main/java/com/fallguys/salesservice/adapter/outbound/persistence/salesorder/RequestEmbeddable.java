@@ -22,7 +22,12 @@ public record RequestEmbeddable(
 
     public SalesOrderRequest toDomain() {
         if (requestedBy == null) return null;
-        return new SalesOrderRequest(
-                ActorRef.of(requestedBy, requestedByName, requestedByPosition), requestedAt);
+        return new SalesOrderRequest(toActor(), requestedAt);
+    }
+
+    /** 요청자 스냅샷을 ActorRef로 묶는다. 요청 전(DRAFT)은 null. */
+    public ActorRef toActor() {
+        if (requestedBy == null) return null;
+        return ActorRef.of(requestedBy, requestedByName, requestedByPosition);
     }
 }

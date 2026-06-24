@@ -1,10 +1,7 @@
 package com.fallguys.salesservice.domain.model.salesorder;
 
-import com.fallguys.salesservice.domain.model.WarehouseRef;
-
-public record HqSalesOrderSummary(
+public record BranchSalesOrderSummary(
         String code,
-        WarehouseRef from,
         SalesOrderStatus status,
         SalesOrderRequest request,
         int itemCount

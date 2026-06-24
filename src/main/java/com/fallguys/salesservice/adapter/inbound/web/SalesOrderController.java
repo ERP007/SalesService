@@ -47,8 +47,6 @@ import com.fallguys.salesservice.application.port.inbound.usecase.SubmitSalesOrd
 import com.fallguys.salesservice.application.port.inbound.usecase.UpdateDraftSalesOrderUseCase;
 import com.fallguys.salesservice.application.port.outbound.model.BranchSalesOrderKpi;
 import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderKpi;
-import com.fallguys.salesservice.application.port.outbound.model.HqSalesOrderSummaryPage;
-import com.fallguys.salesservice.application.port.outbound.model.SalesOrderSummaryPage;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.UserRole;
 import io.swagger.v3.oas.annotations.Operation;
@@ -248,7 +246,7 @@ public class SalesOrderController {
         String userCode = JwtClaimExtractor.extractUserCode(jwt);
         UserRole role = JwtClaimExtractor.extractRole(jwt);
         String warehouseCode = JwtClaimExtractor.extractWarehouseCode(jwt);
-        SalesOrderSummaryPage summaryPage = getBranchSalesOrdersUseCase.getBranchOrders(request.toQuery(userCode, role, warehouseCode));
+        var summaryPage = getBranchSalesOrdersUseCase.getBranchOrders(request.toQuery(userCode, role, warehouseCode));
         return ResponseEntity.ok(BranchSalesOrderPageResponse.from(summaryPage));
     }
 
@@ -287,7 +285,7 @@ public class SalesOrderController {
             @Valid @ModelAttribute HqSalesOrderRequest request
     ) {
         UserRole role = JwtClaimExtractor.extractRole(jwt);
-        HqSalesOrderSummaryPage summaryPage = getHqSalesOrdersUseCase.getOrders(request.toQuery(role));
+        var summaryPage = getHqSalesOrdersUseCase.getOrders(request.toQuery(role));
         List<HqSalesOrderSummaryResponse> content = summaryPage.content().stream()
                 .map(HqSalesOrderSummaryResponse::from)
                 .toList();
