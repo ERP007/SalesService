@@ -41,10 +41,11 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      * 흐름:
      * 1) 역할 검증 — ADMIN·HQ_MANAGER·HQ_STAFF만 허용
      * 2) SO 조회
-     * 3) 승인일 검증 — approvedDate가 requestedAt 날짜보다 이전이면 거부
-     * 4) 도메인 상태 전환 — APPROVED 전환(provisional) + saga SENDING
-     * 5) 저장 + 승인 staging 보관(이력은 saga DONE 확정 후 승격)
-     * 6) 출고 이벤트를 outbox에 적재(동일 트랜잭션)
+     * 3) 라인 검증 — 발주 라인이 1개 이상인지 확인(없으면 승인 거부)
+     * 4) 승인일 검증 — approvedDate가 requestedAt 날짜보다 이전이면 거부
+     * 5) 도메인 상태 전환 — APPROVED 전환(provisional) + saga SENDING
+     * 6) 저장 + 승인 staging 보관(이력은 saga DONE 확정 후 승격)
+     * 7) 출고 이벤트를 outbox에 적재(동일 트랜잭션)
      *
      * 트랜잭션: 쓰기. 상태 전환·저장·이력·outbox 적재가 한 트랜잭션으로 커밋된다.
      * 동기 REST 호출이 아니라 outbox 적재이므로 비즈니스 변경과 메시지가 원자적으로 커밋되고,
@@ -53,6 +54,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
      * 예외:
      * - 미허용 역할: ForbiddenException (ER-403, 403)
      * - SO 미존재: ResourceNotFoundException (SO-014, 404)
+     * - 발주 라인 없음: SalesOrderException (SO-020, 400)
      * - 승인일 < 요청일: SalesOrderException (SO-007, 400)
      * - REQUESTED 아님: InvalidStatusTransitionException (SO-018, 409)
      */
@@ -65,6 +67,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
 
         SalesOrder order = loadSalesOrderPort.load(command.soCode());
 
+        validateHasLines(order);
         validateApprovedDate(command.approvedDate(), order);
 
         Instant now = Instant.now();
@@ -82,6 +85,12 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
         outboundStockPort.outbound(saved, new Executor(command.approvedBy(), command.approverName()));
 
         return saved;
+    }
+
+    private void validateHasLines(SalesOrder order) {
+        if (order.getLines() == null || order.getLines().isEmpty()) {
+            throw new SalesOrderException(SalesErrorCode.EMPTY_ORDER_LINES);
+        }
     }
 
     private void validateApprovedDate(LocalDate approvedDate, SalesOrder order) {

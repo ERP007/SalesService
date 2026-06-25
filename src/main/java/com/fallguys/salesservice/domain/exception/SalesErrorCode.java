@@ -17,6 +17,7 @@ public enum SalesErrorCode implements ErrorCode {
     INVALID_QUERY_PARAM("SO-010", "유효하지 않은 조회 파라미터입니다"),
     INVENTORY_INBOUND_FAILED("SO-011", "재고 입고 처리에 실패했습니다"),
     INVENTORY_OUTBOUND_FAILED("SO-012", "재고 출고 처리에 실패했습니다"),
+    EMPTY_ORDER_LINES("SO-020", "발주 라인이 없어 승인할 수 없습니다"),
 
     // 403 FORBIDDEN
     SO_FORBIDDEN("SO-013", "해당 발주에 대한 접근 권한이 없습니다"),
