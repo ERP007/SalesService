@@ -130,7 +130,7 @@ class GetBranchSalesOrderHistoryServiceTest {
         List<SalesOrderHistoryEntry> result = service.get(query(UserRole.BRANCH_MANAGER));
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).status()).isEqualTo(SalesOrderStatus.DRAFT);
+        assertThat(result.getFirst().status()).isEqualTo(SalesOrderStatus.DRAFT);
     }
 
     private GetBranchSalesOrderHistoryQuery query(UserRole role) {
@@ -143,7 +143,8 @@ class GetBranchSalesOrderHistoryServiceTest {
                 SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
                 new SalesOrderCreation(BRANCH_ACTOR, T1),
                 new SalesOrderRequest(BRANCH_ACTOR, T2),
-                List.of()
+                List.of(),
+                null
         );
     }
 

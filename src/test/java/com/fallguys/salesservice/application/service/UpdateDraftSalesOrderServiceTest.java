@@ -10,6 +10,7 @@ import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
@@ -26,7 +27,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -40,25 +40,29 @@ class UpdateDraftSalesOrderServiceTest {
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
 
+    @Mock UserActivityRecorder userActivityRecorder;
+
     @InjectMocks
     UpdateDraftSalesOrderService service;
 
     private static final String SO_CODE = "SO-2026-06-0001";
     private static final String USER_CODE = "branch001";
+    private static final String USER_NAME = "정유진";
+    private static final String USER_POSITION = "지점 담당";
     private static final String FROM_WAREHOUSE = "WH-BRANCH-01";
     private static final String OLD_TO_WAREHOUSE = "WH-HQ-OLD";
     private static final String NEW_TO_WAREHOUSE = "WH-HQ-NEW";
-    private static final LocalDate OLD_DATE = LocalDate.now().plusDays(5);
-    private static final LocalDate NEW_DATE = LocalDate.now().plusDays(10);
+    private static final ActorRef ACTOR = ActorRef.of(USER_CODE, USER_NAME, USER_POSITION);
 
     @BeforeEach
     void setUp() {
         SalesOrder draftSalesOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, OLD_TO_WAREHOUSE,
-                SalesOrderStatus.DRAFT, OLD_DATE, "old memo",
-                new SalesOrderCreation(USER_CODE, Instant.now()),
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, null), WarehouseRef.of(OLD_TO_WAREHOUSE, null),
+                SalesOrderStatus.DRAFT, SagaStatus.NONE, "old memo",
+                new SalesOrderCreation(ACTOR, Instant.now()),
                 null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL)),
+                null
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
@@ -75,8 +79,7 @@ class UpdateDraftSalesOrderServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.DRAFT);
         assertThat(result.getRequest()).isNull();
-        assertThat(result.getToWarehouseCode()).isEqualTo(NEW_TO_WAREHOUSE);
-        assertThat(result.getDesiredArrivalDate()).isEqualTo(NEW_DATE);
+        assertThat(result.getTo().code()).isEqualTo(NEW_TO_WAREHOUSE);
         assertThat(result.getRequestMemo()).isEqualTo("new memo");
         assertThat(result.getLines()).hasSize(1);
         SalesOrderLine line = result.getLines().getFirst();
@@ -99,7 +102,7 @@ class UpdateDraftSalesOrderServiceTest {
     void updateDraft_hqRole_throwsForbiddenException() {
         UpdateDraftSalesOrderCommand command = new UpdateDraftSalesOrderCommand(
                 SO_CODE, USER_CODE, UserRole.HQ_MANAGER, FROM_WAREHOUSE,
-                NEW_TO_WAREHOUSE, NEW_DATE, "new memo",
+                NEW_TO_WAREHOUSE, "new memo",
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
         );
 
@@ -121,7 +124,7 @@ class UpdateDraftSalesOrderServiceTest {
     void updateDraft_warehouseMismatch_throwsForbiddenException() {
         UpdateDraftSalesOrderCommand command = new UpdateDraftSalesOrderCommand(
                 SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, "WH-BRANCH-99",
-                NEW_TO_WAREHOUSE, NEW_DATE, "new memo",
+                NEW_TO_WAREHOUSE, "new memo",
                 List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
         );
 
@@ -132,11 +135,12 @@ class UpdateDraftSalesOrderServiceTest {
     @Test
     void updateDraft_notDraft_throwsInvalidStatusTransitionException() {
         SalesOrder requestedOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, OLD_TO_WAREHOUSE,
-                SalesOrderStatus.REQUESTED, OLD_DATE, null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                new SalesOrderRequest(USER_CODE, Instant.now()),
-                List.of()
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, null), WarehouseRef.of(OLD_TO_WAREHOUSE, null),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(ACTOR, Instant.now()),
+                new SalesOrderRequest(ACTOR, Instant.now()),
+                List.of(),
+                null
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 
@@ -154,33 +158,9 @@ class UpdateDraftSalesOrderServiceTest {
                 .hasMessageContaining("ITEM-01");
     }
 
-    @Test
-    void updateDraft_desiredArrivalDateToday_throwsSalesOrderException() {
-        UpdateDraftSalesOrderCommand command = new UpdateDraftSalesOrderCommand(
-                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE,
-                NEW_TO_WAREHOUSE, LocalDate.now(), "new memo",
-                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
-        );
-
-        assertThatThrownBy(() -> service.updateDraft(command))
-                .isInstanceOf(SalesOrderException.class);
-    }
-
-    @Test
-    void updateDraft_desiredArrivalDateOver60Days_throwsSalesOrderException() {
-        UpdateDraftSalesOrderCommand command = new UpdateDraftSalesOrderCommand(
-                SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE,
-                NEW_TO_WAREHOUSE, LocalDate.now().plusDays(61), "new memo",
-                List.of(new CreateSalesOrderLineCommand("ITEM-01", 1, Priority.NORMAL))
-        );
-
-        assertThatThrownBy(() -> service.updateDraft(command))
-                .isInstanceOf(SalesOrderException.class);
-    }
-
     private UpdateDraftSalesOrderCommand command(List<CreateSalesOrderLineCommand> lines) {
         return new UpdateDraftSalesOrderCommand(
                 SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE,
-                NEW_TO_WAREHOUSE, NEW_DATE, "new memo", lines);
+                NEW_TO_WAREHOUSE, "new memo", lines);
     }
 }

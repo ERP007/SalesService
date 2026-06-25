@@ -40,6 +40,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
     private final GenerateSoCodePort generateSoCodePort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    private final UserActivityRecorder userActivityRecorder;
 
     /**
      * 발주(SalesOrder)를 생성한다.
@@ -118,6 +119,7 @@ public class CreateSalesOrderService implements CreateSalesOrderUseCase {
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
                 saved.getCode(), command.status(), createdBy, now));
+        userActivityRecorder.created(saved, command.requestedBy(), now);
         return saved;
     }
 

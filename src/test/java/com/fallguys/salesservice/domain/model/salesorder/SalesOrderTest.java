@@ -93,7 +93,7 @@ class SalesOrderTest {
         order.approve();
         order.markSagaProcessing();
 
-        order.compensateApprove();
+        order.compensateApprove("재고 출고 실패");
 
         assertThat(order.getStatus()).isEqualTo(SalesOrderStatus.REQUESTED);
         assertThat(order.getSagaStatus()).isEqualTo(SagaStatus.FAILED);
@@ -103,7 +103,7 @@ class SalesOrderTest {
     void compensateApprove_fails_when_not_APPROVED() {
         SalesOrder order = requestedOrder();
 
-        assertThatThrownBy(order::compensateApprove)
+        assertThatThrownBy(() -> order.compensateApprove("재고 출고 실패"))
                 .isInstanceOf(InvalidStatusTransitionException.class);
     }
 
@@ -116,7 +116,7 @@ class SalesOrderTest {
         order.deliver();
         order.markSagaProcessing();
 
-        order.compensateDeliver();
+        order.compensateDeliver("재고 입고 실패");
 
         assertThat(order.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
         assertThat(order.getSagaStatus()).isEqualTo(SagaStatus.FAILED);
@@ -127,7 +127,7 @@ class SalesOrderTest {
         SalesOrder order = requestedOrder();
         order.approve();
 
-        assertThatThrownBy(order::compensateDeliver)
+        assertThatThrownBy(() -> order.compensateDeliver("재고 입고 실패"))
                 .isInstanceOf(InvalidStatusTransitionException.class);
     }
 
@@ -136,7 +136,7 @@ class SalesOrderTest {
         SalesOrder order = requestedOrder();
         order.approve();
         order.markSagaProcessing();
-        order.compensateApprove();
+        order.compensateApprove("재고 출고 실패");
 
         order.approve();
 

@@ -11,6 +11,8 @@ import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.WarehouseRef;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
+
+import java.time.Instant;
 import com.fallguys.salesservice.domain.model.salesorderline.SalesOrderLine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
 
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
+    private final UserActivityRecorder userActivityRecorder;
 
     /**
      * DRAFT 발주를 DRAFT 그대로 수정한다.
@@ -68,7 +71,9 @@ public class UpdateDraftSalesOrderService implements UpdateDraftSalesOrderUseCas
                 command.requestMemo(), lines
         );
 
-        return saveSalesOrderPort.save(salesOrder);
+        SalesOrder saved = saveSalesOrderPort.save(salesOrder);
+        userActivityRecorder.updated(saved, command.requestedBy(), Instant.now());
+        return saved;
     }
 
     private void validateNoDuplicateItems(List<CreateSalesOrderLineCommand> lines) {

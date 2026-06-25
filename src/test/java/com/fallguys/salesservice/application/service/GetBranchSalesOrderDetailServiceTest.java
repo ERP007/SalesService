@@ -120,11 +120,12 @@ class GetBranchSalesOrderDetailServiceTest {
 
     private SalesOrder requestedOrder(String fromCode, String toCode) {
         return new SalesOrder(
-                SO_CODE, WarehouseRef.of(fromCode, null), WarehouseRef.of(toCode, null),
+                SO_CODE, WarehouseRef.of(fromCode, FROM_WAREHOUSE_NAME), WarehouseRef.of(toCode, TO_WAREHOUSE_NAME),
                 SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
                 new SalesOrderCreation(ACTOR, Instant.now()),
                 new SalesOrderRequest(ACTOR, Instant.now()),
-                List.of()
+                List.of(),
+                null
         );
     }
 }

@@ -20,6 +20,7 @@ public class CompleteStockSagaService implements CompleteStockSagaUseCase {
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
     private final PendingStatusChangePort pendingStatusChangePort;
+    private final UserActivityRecorder userActivityRecorder;
 
     /**
      * 성공 응답 수신 시 saga를 DONE으로 종료하고, staging된 상태 변경을 이력으로 승격한다.
@@ -58,6 +59,9 @@ public class CompleteStockSagaService implements CompleteStockSagaUseCase {
         saveSalesOrderPort.save(order);
 
         appendHistoryPort.append(pending.toHistory());
+        // saga 확정(approve/deliver) 시점에 사용자 활동도 함께 발행한다(이력과 동일 타이밍).
+        userActivityRecorder.statusChanged(
+                pending.soCode(), pending.status(), pending.actor().code(), pending.occurredAt());
         pendingStatusChangePort.removeBySoCode(soCode);
     }
 }

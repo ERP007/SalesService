@@ -5,6 +5,7 @@ import com.fallguys.salesservice.application.port.inbound.usecase.GetHqSalesOrde
 import com.fallguys.salesservice.application.port.inbound.model.SalesOrderHistoryEntry;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
+import com.fallguys.salesservice.domain.model.salesorder.SalesOrderStatus;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class GetHqSalesOrderHistoryService implements GetHqSalesOrderHistoryUseC
         loadSalesOrderPort.load(query.soCode());
 
         return loadHistoryPort.loadBySoCode(query.soCode()).stream()
+                .filter(h -> h.status() != SalesOrderStatus.DRAFT)
                 .map(h -> new SalesOrderHistoryEntry(h.status(), h.actor(), h.createdAt(), h.payload()))
                 .toList();
     }
