@@ -6,6 +6,11 @@ client:
   user:
     base-url: ${USER_SERVICE_URL:http://localhost:8084}
 
+# 재고 입고/출고 처리 방식. true=동기 REST(부하 테스트용), false=outbox 기반 async(기본).
+sales:
+  stock:
+    sync-mode: ${STOCK_SYNC_MODE:false}
+
 spring:
   application:
     name: salesService

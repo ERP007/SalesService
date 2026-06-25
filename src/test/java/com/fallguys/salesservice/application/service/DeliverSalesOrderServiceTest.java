@@ -1,11 +1,13 @@
 package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.command.DeliverSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.InboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.PendingStatusChangePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SyncInboundStockPort;
 import com.fallguys.salesservice.domain.exception.CommonErrorCode;
 import com.fallguys.salesservice.domain.exception.ExternalServiceException;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
@@ -35,6 +37,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -54,6 +57,8 @@ class DeliverSalesOrderServiceTest {
     @Mock SaveSalesOrderPort saveSalesOrderPort;
     @Mock PendingStatusChangePort pendingStatusChangePort;
     @Mock InboundStockPort inboundStockPort;
+    @Mock SyncInboundStockPort syncInboundStockPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     DeliverSalesOrderService service;
@@ -189,6 +194,31 @@ class DeliverSalesOrderServiceTest {
         assertThatThrownBy(() -> service.deliver(command(UserRole.BRANCH_MANAGER)))
                 .isInstanceOf(ExternalServiceException.class);
         then(saveSalesOrderPort).should().save(any());
+    }
+
+    @Test
+    void sync모드_도착_성공시_동기_입고호출_saga_DONE_이력_즉시기록() {
+        ReflectionTestUtils.setField(service, "stockSyncMode", true);
+
+        SalesOrder result = service.deliver(command(UserRole.BRANCH_MANAGER));
+
+        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.DELIVERED);
+        assertThat(result.getSagaStatus()).isEqualTo(SagaStatus.DONE);
+        then(syncInboundStockPort).should().inbound(any(SalesOrder.class));
+        then(appendHistoryPort).should().append(any());
+        then(pendingStatusChangePort).shouldHaveNoInteractions();
+        then(inboundStockPort).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void sync모드_동기_입고_실패시_예외전파_이력없음() {
+        ReflectionTestUtils.setField(service, "stockSyncMode", true);
+        willThrow(new SalesOrderException(SalesErrorCode.INVENTORY_INBOUND_FAILED))
+                .given(syncInboundStockPort).inbound(any(SalesOrder.class));
+
+        assertThatThrownBy(() -> service.deliver(command(UserRole.BRANCH_MANAGER)))
+                .isInstanceOf(SalesOrderException.class);
+        then(appendHistoryPort).shouldHaveNoInteractions();
     }
 
     private DeliverSalesOrderCommand command(UserRole role) {

@@ -1,10 +1,12 @@
 package com.fallguys.salesservice.application.service;
 
 import com.fallguys.salesservice.application.port.inbound.command.ApproveSalesOrderCommand;
+import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.OutboundStockPort;
 import com.fallguys.salesservice.application.port.outbound.port.PendingStatusChangePort;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.SyncOutboundStockPort;
 import com.fallguys.salesservice.domain.exception.ForbiddenException;
 import com.fallguys.salesservice.domain.exception.InvalidStatusTransitionException;
 import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
@@ -30,6 +32,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -48,6 +51,8 @@ class ApproveSalesOrderServiceTest {
     @Mock SaveSalesOrderPort saveSalesOrderPort;
     @Mock PendingStatusChangePort pendingStatusChangePort;
     @Mock OutboundStockPort outboundStockPort;
+    @Mock SyncOutboundStockPort syncOutboundStockPort;
+    @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
     @InjectMocks
     ApproveSalesOrderService service;
@@ -185,6 +190,49 @@ class ApproveSalesOrderServiceTest {
         assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER)))
                 .isInstanceOf(SalesOrderException.class);
         then(saveSalesOrderPort).should().save(any());
+    }
+
+    @Test
+    void 발주_라인이_없으면_SalesOrderException() {
+        given(loadSalesOrderPort.load(SO_CODE)).willReturn(new SalesOrder(
+                SO_CODE, WarehouseRef.of("WH-BRANCH-01", "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(BRANCH_ACTOR, REQUESTED_AT.minusSeconds(60)),
+                new SalesOrderRequest(BRANCH_ACTOR, REQUESTED_AT),
+                List.of()));
+
+        assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER)))
+                .isInstanceOf(SalesOrderException.class)
+                .extracting("code")
+                .isEqualTo(SalesErrorCode.EMPTY_ORDER_LINES.getCode());
+        then(saveSalesOrderPort).shouldHaveNoInteractions();
+        then(outboundStockPort).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void sync모드_승인_성공시_동기_출고호출_saga_DONE_이력_즉시기록() {
+        ReflectionTestUtils.setField(service, "stockSyncMode", true);
+
+        SalesOrder result = service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER));
+
+        assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.APPROVED);
+        assertThat(result.getSagaStatus()).isEqualTo(SagaStatus.DONE);
+        then(syncOutboundStockPort).should().outbound(any(SalesOrder.class));
+        then(appendHistoryPort).should().append(any());
+        // sync 경로는 staging/outbox를 쓰지 않는다.
+        then(pendingStatusChangePort).shouldHaveNoInteractions();
+        then(outboundStockPort).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void sync모드_동기_출고_실패시_예외전파_이력없음() {
+        ReflectionTestUtils.setField(service, "stockSyncMode", true);
+        willThrow(new SalesOrderException(SalesErrorCode.INVENTORY_OUTBOUND_FAILED))
+                .given(syncOutboundStockPort).outbound(any(SalesOrder.class));
+
+        assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER)))
+                .isInstanceOf(SalesOrderException.class);
+        then(appendHistoryPort).shouldHaveNoInteractions();
     }
 
     private ApproveSalesOrderCommand command(UserRole role, LocalDate approvedDate, String invoiceNumber) {
