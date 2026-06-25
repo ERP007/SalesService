@@ -29,7 +29,7 @@ public class UserActivityRecorder {
     public void updated(SalesOrder order, String employeeNo, Instant occurredAt) {
         publishUserActivityPort.publish(new UserActivity(
                 employeeNo, UserActivityAction.SALES_ORDER_UPDATED, occurredAt,
-                order.getCode(), lineContent(order), "발주 수정"));
+                order.getCode(), lineContent(order), null));
     }
 
     public void statusChanged(String soCode, SalesOrderStatus status, String employeeNo, Instant occurredAt) {
@@ -46,11 +46,11 @@ public class UserActivityRecorder {
     private String statusLabel(SalesOrderStatus status) {
         return switch (status) {
             case DRAFT -> "임시저장";
-            case REQUESTED -> "발주 요청";
-            case APPROVED -> "출고 승인";
-            case REJECTED -> "발주 반려";
-            case CANCELED -> "발주 취소";
-            case DELIVERED -> "입고 완료";
+            case REQUESTED -> "출고대기";
+            case APPROVED -> "출고";
+            case REJECTED -> "거절";
+            case CANCELED -> "취소";
+            case DELIVERED -> "입고";
         };
     }
 }

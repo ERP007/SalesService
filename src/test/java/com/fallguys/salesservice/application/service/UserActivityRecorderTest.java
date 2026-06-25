@@ -62,7 +62,7 @@ class UserActivityRecorderTest {
         assertThat(a.occurredAt()).isEqualTo(NOW);
         assertThat(a.title()).isEqualTo(SO_CODE);
         assertThat(a.content()).isEqualTo("발주 라인 1건");
-        assertThat(a.status()).isEqualTo("발주 요청");
+        assertThat(a.status()).isEqualTo("출고대기");
     }
 
     @Test
@@ -77,7 +77,7 @@ class UserActivityRecorderTest {
 
         UserActivity a = capture();
         assertThat(a.action()).isEqualTo(UserActivityAction.SALES_ORDER_UPDATED);
-        assertThat(a.status()).isEqualTo("발주 수정");
+        assertThat(a.status()).isNull();
     }
 
     @Test
@@ -89,6 +89,6 @@ class UserActivityRecorderTest {
         assertThat(a.action()).isEqualTo(UserActivityAction.SALES_ORDER_STATUS_CHANGED);
         assertThat(a.title()).isEqualTo(SO_CODE);
         assertThat(a.content()).isNull();
-        assertThat(a.status()).isEqualTo("출고 승인");
+        assertThat(a.status()).isEqualTo("출고");
     }
 }
