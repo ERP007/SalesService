@@ -199,7 +199,7 @@ class ApproveSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
                 new SalesOrderCreation(BRANCH_ACTOR, REQUESTED_AT.minusSeconds(60)),
                 new SalesOrderRequest(BRANCH_ACTOR, REQUESTED_AT),
-                List.of()));
+                List.of(), null));
 
         assertThatThrownBy(() -> service.approve(command(UserRole.ADMIN, TODAY, INVOICE_NUMBER)))
                 .isInstanceOf(SalesOrderException.class)
@@ -247,7 +247,8 @@ class ApproveSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
                 new SalesOrderCreation(BRANCH_ACTOR, REQUESTED_AT.minusSeconds(60)),
                 new SalesOrderRequest(BRANCH_ACTOR, REQUESTED_AT),
-                List.of(line)
+                List.of(line),
+                null
         );
     }
 
@@ -256,7 +257,9 @@ class ApproveSalesOrderServiceTest {
                 SO_CODE, WarehouseRef.of("WH-BRANCH-01", "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
                 status, SagaStatus.NONE, null,
                 new SalesOrderCreation(BRANCH_ACTOR, Instant.now()),
-                request, List.of()
+                request,
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-001", "브레이크 패드", "EA", 10, Priority.NORMAL)),
+                null
         );
     }
 }

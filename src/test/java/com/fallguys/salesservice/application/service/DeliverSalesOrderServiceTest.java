@@ -176,7 +176,8 @@ class DeliverSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
                 new SalesOrderCreation(ACTOR, Instant.now()),
                 new SalesOrderRequest(ACTOR, Instant.now()),
-                List.of()
+                List.of(),
+                null
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 
@@ -236,7 +237,8 @@ class DeliverSalesOrderServiceTest {
                 SalesOrderStatus.APPROVED, SagaStatus.DONE, null,
                 new SalesOrderCreation(ACTOR, Instant.now()),
                 new SalesOrderRequest(ACTOR, Instant.now()),
-                lines
+                lines,
+                null
         );
     }
 }

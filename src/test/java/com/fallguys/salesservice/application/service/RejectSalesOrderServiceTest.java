@@ -23,7 +23,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -43,7 +42,10 @@ class RejectSalesOrderServiceTest {
 
     private static final String SO_CODE = "SO-2026-06-0001";
     private static final String HQ_USER_CODE = "HQ-001";
+    private static final String HQ_USER_NAME = "강지석";
+    private static final String HQ_USER_POSITION = "본사 매니저";
     private static final String FROM_WAREHOUSE = "WH-BRANCH-01";
+    private static final ActorRef HQ_ACTOR = ActorRef.of(HQ_USER_CODE, HQ_USER_NAME, HQ_USER_POSITION);
 
     @BeforeEach
     void setUp() {
@@ -58,7 +60,7 @@ class RejectSalesOrderServiceTest {
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.REJECTED);
         then(appendHistoryPort).should().append(argThat(h ->
                 h.status() == SalesOrderStatus.REJECTED &&
-                h.actorCode().equals(HQ_USER_CODE) &&
+                h.actor().code().equals(HQ_USER_CODE) &&
                 h.payload() instanceof RejectionPayload p &&
                 p.rejectReasonCategory() == RejectReasonCategory.OUT_OF_STOCK));
     }
@@ -148,26 +150,28 @@ class RejectSalesOrderServiceTest {
     }
 
     private RejectSalesOrderCommand command(UserRole role, RejectReasonCategory category, String memo) {
-        return new RejectSalesOrderCommand(SO_CODE, HQ_USER_CODE, role, category, memo);
+        return new RejectSalesOrderCommand(SO_CODE, HQ_USER_CODE, HQ_USER_NAME, HQ_USER_POSITION, role, category, memo);
     }
 
     private SalesOrder requestedOrder() {
         return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.REQUESTED, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(HQ_USER_CODE, Instant.now()),
-                new SalesOrderRequest(HQ_USER_CODE, Instant.now()),
-                List.of()
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, null), WarehouseRef.of("WH-HQ-01", null),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(HQ_ACTOR, Instant.now()),
+                new SalesOrderRequest(HQ_ACTOR, Instant.now()),
+                List.of(),
+                null
         );
     }
 
     private SalesOrder approvedOrder() {
         return new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, "WH-HQ-01",
-                SalesOrderStatus.APPROVED, LocalDate.now().plusDays(3), null,
-                new SalesOrderCreation(HQ_USER_CODE, Instant.now()),
-                new SalesOrderRequest(HQ_USER_CODE, Instant.now()),
-                List.of()
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, null), WarehouseRef.of("WH-HQ-01", null),
+                SalesOrderStatus.APPROVED, SagaStatus.NONE, null,
+                new SalesOrderCreation(HQ_ACTOR, Instant.now()),
+                new SalesOrderRequest(HQ_ACTOR, Instant.now()),
+                List.of(),
+                null
         );
     }
 }

@@ -159,7 +159,8 @@ class GetHqSalesOrderDetailServiceTest {
                 status, SagaStatus.NONE, null,
                 new SalesOrderCreation(REQUESTER, FIXED_INSTANT),
                 new SalesOrderRequest(REQUESTER, FIXED_INSTANT),
-                List.of()
+                List.of(),
+                null
         );
     }
 }

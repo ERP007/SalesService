@@ -4,6 +4,8 @@ import com.fallguys.salesservice.application.port.inbound.command.RequestSalesOr
 import com.fallguys.salesservice.application.port.outbound.model.ItemInfo;
 import com.fallguys.salesservice.application.port.outbound.port.LoadItemPort;
 import com.fallguys.salesservice.application.port.outbound.port.LoadSalesOrderPort;
+import com.fallguys.salesservice.application.port.outbound.port.LoadWarehousePort;
+import com.fallguys.salesservice.application.port.outbound.model.WarehouseInfo;
 import com.fallguys.salesservice.application.port.outbound.port.SaveSalesOrderPort;
 import com.fallguys.salesservice.application.port.outbound.port.AppendSalesOrderStatusHistoryPort;
 import com.fallguys.salesservice.application.port.outbound.port.VerifyWarehousePort;
@@ -13,6 +15,7 @@ import com.fallguys.salesservice.domain.exception.ResourceNotFoundException;
 import com.fallguys.salesservice.domain.exception.SalesErrorCode;
 import com.fallguys.salesservice.domain.exception.SalesOrderException;
 import com.fallguys.salesservice.domain.model.*;
+import com.fallguys.salesservice.domain.model.salesorder.SagaStatus;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrder;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderCreation;
 import com.fallguys.salesservice.domain.model.salesorder.SalesOrderRequest;
@@ -29,7 +32,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +48,8 @@ class RequestSalesOrderServiceTest {
     @Mock
     VerifyWarehousePort verifyWarehousePort;
     @Mock
+    LoadWarehousePort loadWarehousePort;
+    @Mock
     LoadItemPort loadItemPort;
     @Mock
     SaveSalesOrderPort saveSalesOrderPort;
@@ -57,24 +61,29 @@ class RequestSalesOrderServiceTest {
 
     private static final String SO_CODE = "SO-2026-06-0001";
     private static final String USER_CODE = "branch001";
+    private static final String USER_NAME = "정유진";
+    private static final String USER_POSITION = "지점 담당";
     private static final String FROM_WAREHOUSE = "WH-BRANCH-01";
     private static final String TO_WAREHOUSE = "WH-HQ-01";
-    private static final LocalDate VALID_DATE = LocalDate.now().plusDays(3);
+    private static final ActorRef ACTOR = ActorRef.of(USER_CODE, USER_NAME, USER_POSITION);
 
     @BeforeEach
     void setUp() {
         SalesOrder draftSalesOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.DRAFT, VALID_DATE, null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, null), WarehouseRef.of(TO_WAREHOUSE, null),
+                SalesOrderStatus.DRAFT, SagaStatus.NONE, null,
+                new SalesOrderCreation(ACTOR, Instant.now()),
                 null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
+                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL)),
+                null
         );
 
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftSalesOrder);
         given(loadItemPort.loadAll(any())).willReturn(
                 Map.of("ITEM-01", new ItemInfo("ITEM-01", "브레이크패드", "EA"))
         );
+        given(loadWarehousePort.load(FROM_WAREHOUSE)).willReturn(new WarehouseInfo(FROM_WAREHOUSE, "강남 1지점"));
+        given(loadWarehousePort.load(TO_WAREHOUSE)).willReturn(new WarehouseInfo(TO_WAREHOUSE, "본사"));
         given(saveSalesOrderPort.save(any())).willAnswer(inv -> inv.getArgument(0));
     }
 
@@ -84,25 +93,25 @@ class RequestSalesOrderServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(SalesOrderStatus.REQUESTED);
         assertThat(result.getRequest()).isNotNull();
-        assertThat(result.getRequest().requestedBy()).isEqualTo(USER_CODE);
+        assertThat(result.getRequest().requestedBy().code()).isEqualTo(USER_CODE);
         assertThat(result.getLines()).hasSize(1);
         assertThat(result.getLines().getFirst().getItemNameSnapshot()).isEqualTo("브레이크패드");
         assertThat(result.getLines().getFirst().getUnitSnapshot()).isEqualTo("EA");
-        assertThat(result.getToWarehouseCode()).isEqualTo(TO_WAREHOUSE);
-        assertThat(result.getDesiredArrivalDate()).isEqualTo(VALID_DATE);
+        assertThat(result.getTo().code()).isEqualTo(TO_WAREHOUSE);
 
         then(verifyWarehousePort).should().verify(FROM_WAREHOUSE);
         then(verifyWarehousePort).should().verify(TO_WAREHOUSE);
 
         then(appendHistoryPort).should().append(argThat(h ->
                 h.status() == SalesOrderStatus.REQUESTED &&
-                h.actorCode().equals(USER_CODE) &&
+                h.actor().code().equals(USER_CODE) &&
                 h.payload() == null));
     }
 
     @Test
     void request_hqRole_throwsForbiddenException() {
-        RequestSalesOrderCommand command = new RequestSalesOrderCommand(SO_CODE, USER_CODE, UserRole.HQ_MANAGER, FROM_WAREHOUSE);
+        RequestSalesOrderCommand command = new RequestSalesOrderCommand(
+                SO_CODE, USER_CODE, USER_NAME, USER_POSITION, UserRole.HQ_MANAGER, FROM_WAREHOUSE);
 
         assertThatThrownBy(() -> service.request(command))
                 .isInstanceOf(ForbiddenException.class);
@@ -119,7 +128,8 @@ class RequestSalesOrderServiceTest {
 
     @Test
     void request_warehouseMismatch_throwsForbiddenException() {
-        RequestSalesOrderCommand command = new RequestSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, "WH-BRANCH-99");
+        RequestSalesOrderCommand command = new RequestSalesOrderCommand(
+                SO_CODE, USER_CODE, USER_NAME, USER_POSITION, UserRole.BRANCH_STAFF, "WH-BRANCH-99");
 
         assertThatThrownBy(() -> service.request(command))
                 .isInstanceOf(ForbiddenException.class);
@@ -128,11 +138,12 @@ class RequestSalesOrderServiceTest {
     @Test
     void request_notDraft_throwsInvalidStatusTransitionException() {
         SalesOrder requestedOrder = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.REQUESTED, VALID_DATE, null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                new SalesOrderRequest(USER_CODE, Instant.now()),
-                List.of()
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, null), WarehouseRef.of(TO_WAREHOUSE, null),
+                SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
+                new SalesOrderCreation(ACTOR, Instant.now()),
+                new SalesOrderRequest(ACTOR, Instant.now()),
+                List.of(),
+                null
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(requestedOrder);
 
@@ -143,50 +154,21 @@ class RequestSalesOrderServiceTest {
     @Test
     void request_duplicateItems_throwsSalesOrderException() {
         SalesOrder draftWithDuplicates = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.DRAFT, VALID_DATE, null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
+                SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, null), WarehouseRef.of(TO_WAREHOUSE, null),
+                SalesOrderStatus.DRAFT, SagaStatus.NONE, null,
+                new SalesOrderCreation(ACTOR, Instant.now()),
                 null,
                 List.of(
                     new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL),
                     new SalesOrderLine(2L, SO_CODE, "ITEM-01", null, null, 3, Priority.NORMAL)
-                )
+                ),
+                null
         );
         given(loadSalesOrderPort.load(SO_CODE)).willReturn(draftWithDuplicates);
 
         assertThatThrownBy(() -> service.request(command()))
                 .isInstanceOf(SalesOrderException.class)
                 .hasFieldOrPropertyWithValue("code", SalesErrorCode.DUPLICATE_ITEM.getCode());
-    }
-
-    @Test
-    void request_desiredArrivalDateToday_throwsSalesOrderException() {
-        SalesOrder soWithTodayDate = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.DRAFT, LocalDate.now(), null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
-        );
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithTodayDate);
-
-        assertThatThrownBy(() -> service.request(command()))
-                .isInstanceOf(SalesOrderException.class);
-    }
-
-    @Test
-    void request_desiredArrivalDateOver60Days_throwsSalesOrderException() {
-        SalesOrder soWithLateDate = new SalesOrder(
-                SO_CODE, FROM_WAREHOUSE, TO_WAREHOUSE,
-                SalesOrderStatus.DRAFT, LocalDate.now().plusDays(61), null,
-                new SalesOrderCreation(USER_CODE, Instant.now()),
-                null,
-                List.of(new SalesOrderLine(1L, SO_CODE, "ITEM-01", null, null, 2, Priority.NORMAL))
-        );
-        given(loadSalesOrderPort.load(SO_CODE)).willReturn(soWithLateDate);
-
-        assertThatThrownBy(() -> service.request(command()))
-                .isInstanceOf(SalesOrderException.class);
     }
 
     @Test
@@ -244,6 +226,7 @@ class RequestSalesOrderServiceTest {
     }
 
     private RequestSalesOrderCommand command() {
-        return new RequestSalesOrderCommand(SO_CODE, USER_CODE, UserRole.BRANCH_STAFF, FROM_WAREHOUSE);
+        return new RequestSalesOrderCommand(
+                SO_CODE, USER_CODE, USER_NAME, USER_POSITION, UserRole.BRANCH_STAFF, FROM_WAREHOUSE);
     }
 }

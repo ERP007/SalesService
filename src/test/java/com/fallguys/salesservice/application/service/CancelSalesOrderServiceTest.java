@@ -156,7 +156,8 @@ class CancelSalesOrderServiceTest {
                 SalesOrderStatus.REQUESTED, SagaStatus.NONE, null,
                 new SalesOrderCreation(actor, Instant.now()),
                 new SalesOrderRequest(actor, Instant.now()),
-                List.of()
+                List.of(),
+                null
         );
     }
 
@@ -166,7 +167,8 @@ class CancelSalesOrderServiceTest {
                 SO_CODE, WarehouseRef.of(FROM_WAREHOUSE, "지점"), WarehouseRef.of("WH-HQ-01", "본사"),
                 SalesOrderStatus.DRAFT, SagaStatus.NONE, null,
                 new SalesOrderCreation(actor, Instant.now()),
-                null, List.of()
+                null, List.of(),
+                null
         );
     }
 }

@@ -158,7 +158,8 @@ class GetHqSalesOrderHistoryServiceTest {
                 status, SagaStatus.NONE, null,
                 new SalesOrderCreation(BRANCH_ACTOR, T1),
                 new SalesOrderRequest(BRANCH_ACTOR, T2),
-                List.of()
+                List.of(),
+                null
         );
     }
 
