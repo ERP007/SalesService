@@ -51,6 +51,9 @@ class CreateSalesOrderServiceTest {
     @Mock
     AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
+    @Mock
+    UserActivityRecorder userActivityRecorder;
+
     @InjectMocks
     CreateSalesOrderService service;
 

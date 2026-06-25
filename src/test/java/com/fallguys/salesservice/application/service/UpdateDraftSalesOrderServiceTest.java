@@ -40,6 +40,8 @@ class UpdateDraftSalesOrderServiceTest {
     @Mock LoadSalesOrderPort loadSalesOrderPort;
     @Mock SaveSalesOrderPort saveSalesOrderPort;
 
+    @Mock UserActivityRecorder userActivityRecorder;
+
     @InjectMocks
     UpdateDraftSalesOrderService service;
 

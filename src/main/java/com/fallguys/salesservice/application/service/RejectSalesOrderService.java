@@ -33,6 +33,7 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    private final UserActivityRecorder userActivityRecorder;
 
     /**
      * REQUESTED 상태의 발주를 REJECTED로 전환한다.
@@ -71,6 +72,7 @@ public class RejectSalesOrderService implements RejectSalesOrderUseCase {
                 saved.getCode(), SalesOrderStatus.REJECTED,
                 ActorRef.of(command.rejectedBy(), command.rejectedByName(), command.rejectedByPosition()),
                 new RejectionPayload(command.reasonCategory(), command.memo()), now));
+        userActivityRecorder.statusChanged(saved.getCode(), SalesOrderStatus.REJECTED, command.rejectedBy(), now);
         return saved;
     }
 }

@@ -39,6 +39,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
     private final SyncOutboundStockPort syncOutboundStockPort;
     private final PendingStatusChangePort pendingStatusChangePort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    private final UserActivityRecorder userActivityRecorder;
 
     // true면 재고 출고를 동기 REST로 호출(부하 테스트용), false면 outbox 기반 async. 기본 async.
     @Value("${sales.stock.sync-mode:false}")
@@ -102,6 +103,7 @@ public class ApproveSalesOrderService implements ApproveSalesOrderUseCase {
             saved.markSagaDone();
             saveSalesOrderPort.save(saved);
             appendHistoryPort.append(pending.toHistory());
+            userActivityRecorder.statusChanged(saved.getCode(), SalesOrderStatus.APPROVED, command.approvedBy(), now);
         } else {
             // async 경로(기본): 출고 saga가 DONE으로 확정돼야 이력에 남는다. 지금은 행위자·승인
             // 부가 데이터를 staging에만 보관하고, reply 성공 수신 시 이력으로 승격한다(실패 시 폐기).

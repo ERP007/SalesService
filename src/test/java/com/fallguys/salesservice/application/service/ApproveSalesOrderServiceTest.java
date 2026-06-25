@@ -54,6 +54,8 @@ class ApproveSalesOrderServiceTest {
     @Mock SyncOutboundStockPort syncOutboundStockPort;
     @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
+    @Mock UserActivityRecorder userActivityRecorder;
+
     @InjectMocks
     ApproveSalesOrderService service;
 

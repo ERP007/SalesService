@@ -41,6 +41,8 @@ class CancelSalesOrderServiceTest {
     @Mock SaveSalesOrderPort saveSalesOrderPort;
     @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
+    @Mock UserActivityRecorder userActivityRecorder;
+
     @InjectMocks
     CancelSalesOrderService service;
 

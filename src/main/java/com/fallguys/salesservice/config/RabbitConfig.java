@@ -25,6 +25,9 @@ public class RabbitConfig {
     public static final String REPLY_DLX = "sales.inventory.reply.dlx";
     public static final String REPLY_DLQ = "sales.inventory.reply.dlq";
 
+    // user-service로 보내는 사용자 활동 이력 routing key (erp.events 발행)
+    public static final String RK_USER_ACTIVITY = "user.activity.occurred";
+
     // inventory가 erp.event로 발행하는 응답 routing key
     public static final String RK_OUTBOUND_APPLIED = "inventory.stock.outbound.applied.sales";
     public static final String RK_OUTBOUND_REJECTED = "inventory.stock.outbound.rejected.sales";

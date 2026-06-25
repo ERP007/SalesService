@@ -40,6 +40,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
     private final LoadItemPort loadItemPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    private final UserActivityRecorder userActivityRecorder;
 
     /**
      * DRAFT 상태의 발주를 REQUESTED로 전환한다.
@@ -109,6 +110,7 @@ public class SubmitSalesOrderService implements SubmitSalesOrderUseCase {
         SalesOrder saved = saveSalesOrderPort.save(salesOrder);
         appendHistoryPort.append(SalesOrderStatusHistory.of(
                 saved.getCode(), SalesOrderStatus.REQUESTED, requestedBy, now));
+        userActivityRecorder.statusChanged(saved.getCode(), SalesOrderStatus.REQUESTED, command.requestedBy(), now);
         return saved;
     }
 

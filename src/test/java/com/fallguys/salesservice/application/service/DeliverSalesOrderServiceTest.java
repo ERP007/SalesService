@@ -60,6 +60,8 @@ class DeliverSalesOrderServiceTest {
     @Mock SyncInboundStockPort syncInboundStockPort;
     @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
+    @Mock UserActivityRecorder userActivityRecorder;
+
     @InjectMocks
     DeliverSalesOrderService service;
 

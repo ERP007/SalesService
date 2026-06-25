@@ -37,6 +37,8 @@ class RejectSalesOrderServiceTest {
     @Mock SaveSalesOrderPort saveSalesOrderPort;
     @Mock AppendSalesOrderStatusHistoryPort appendHistoryPort;
 
+    @Mock UserActivityRecorder userActivityRecorder;
+
     @InjectMocks
     RejectSalesOrderService service;
 

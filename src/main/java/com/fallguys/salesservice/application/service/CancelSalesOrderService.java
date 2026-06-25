@@ -27,6 +27,7 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
     private final LoadSalesOrderPort loadSalesOrderPort;
     private final SaveSalesOrderPort saveSalesOrderPort;
     private final AppendSalesOrderStatusHistoryPort appendHistoryPort;
+    private final UserActivityRecorder userActivityRecorder;
 
     /**
      * REQUESTED 상태의 발주를 CANCELED로 전환한다.
@@ -75,6 +76,7 @@ public class CancelSalesOrderService implements CancelSalesOrderUseCase {
                 saved.getCode(), SalesOrderStatus.CANCELED,
                 ActorRef.of(command.canceledBy(), command.canceledByName(), command.canceledByPosition()),
                 new CancellationPayload(command.reason()), now));
+        userActivityRecorder.statusChanged(saved.getCode(), SalesOrderStatus.CANCELED, command.canceledBy(), now);
         return saved;
     }
 }
