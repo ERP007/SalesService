@@ -40,10 +40,10 @@ public record BranchSalesOrderRequest(
 ) {
     private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 20, 50);
     private static final List<SalesOrderStatus> DEFAULT_STATUSES = List.of(
-            SalesOrderStatus.DRAFT,
             SalesOrderStatus.REQUESTED,
             SalesOrderStatus.APPROVED,
-            SalesOrderStatus.DELIVERED
+            SalesOrderStatus.DELIVERED,
+            SalesOrderStatus.REJECTED
     );
 
     @AssertTrue(message = "size는 10, 20, 50 중 하나여야 합니다")
