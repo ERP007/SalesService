@@ -7,6 +7,8 @@ import com.fallguys.salesservice.application.port.inbound.usecase.ConfirmStockEv
 import com.fallguys.salesservice.config.RabbitConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpConnectException;
+import org.springframework.amqp.AmqpIOException;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
@@ -22,7 +24,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 트랜잭셔널 outbox 릴레이. 두 경로로 발행한다.
@@ -56,15 +60,22 @@ public class OutboxRelay {
     public void publishPending() {
         List<OutboxEntity> pending = outboxJpaDao.findTop100ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
         for (OutboxEntity entity : pending) {
-            publish(entity);
+            // 브로커 일시 장애 신호(false)면 배치를 중단한다. 남은 행을 행마다 confirm 타임아웃으로
+            // 돌며 폭주시키지 않고 다음 폴로 미룬다(자연 백오프).
+            if (!publish(entity)) {
+                break;
+            }
         }
     }
 
     /**
      * 한 행을 발행하고 publisher confirm을 기다린다.
-     * ack → outbox PUBLISHED + saga PROCESSING. nack/timeout → retry 증가, 한계 초과 시 FAILED.
+     * ack → outbox PUBLISHED + saga PROCESSING. nack/영구 실패 → retry 증가, 한계 초과 시 FAILED.
+     * 브로커 일시 장애(transient) → 상태·retry 그대로 PENDING 유지(폴러가 복구 후 자동 재발행).
+     *
+     * @return 계속 진행 가능하면 true, 브로커 일시 장애로 배치를 중단해야 하면 false.
      */
-    private void publish(OutboxEntity entity) {
+    private boolean publish(OutboxEntity entity) {
         UUID eventId = entity.getEventId();
         Message message = MessageBuilder
                 .withBody(entity.getPayload().getBytes(StandardCharsets.UTF_8))
@@ -89,12 +100,38 @@ public class OutboxRelay {
             } else {
                 handleFailure(entity, "broker nack: " + confirm.reason());
             }
+            return true;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            handleFailure(entity, "interrupted while waiting for publisher confirm");
+            keepPending(entity, "interrupted while waiting for publisher confirm");
+            return false;
         } catch (Exception e) {
+            if (isTransient(e)) {
+                keepPending(entity, e.getClass().getSimpleName() + ": " + e.getMessage());
+                return false;
+            }
             handleFailure(entity, e.getMessage());
+            return true;
         }
+    }
+
+    /**
+     * 브로커 unreachable·IO 유실·confirm 타임아웃 등 일시적 인프라 장애 여부.
+     * ExecutionException은 실제 원인으로 언래핑하여 판정한다.
+     * (대기 중 인터럽트는 위 전용 catch 블록이 먼저 처리하므로 여기서 다루지 않는다.)
+     */
+    private boolean isTransient(Throwable t) {
+        Throwable cause = (t instanceof ExecutionException && t.getCause() != null) ? t.getCause() : t;
+        return cause instanceof AmqpConnectException
+                || cause instanceof AmqpIOException
+                || cause instanceof TimeoutException;
+    }
+
+    /**
+     * 일시 장애로 발행을 보류한다. 상태(PENDING)·retry를 건드리지 않아 폴러가 복구 후 재발행한다.
+     */
+    private void keepPending(OutboxEntity entity, String reason) {
+        log.warn("outbox 발행 보류(브로커 일시 장애) eventId={} reason={}", entity.getEventId(), reason);
     }
 
     private void handleFailure(OutboxEntity entity, String reason) {
